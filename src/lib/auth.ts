@@ -47,6 +47,11 @@ export async function destroySession() {
   jar.delete(SESSION_COOKIE);
 }
 
+/** Signs an account out everywhere. Used when a password is reset. */
+export async function destroySessionsFor(userId: string) {
+  await db.session.deleteMany({ where: { userId } });
+}
+
 export async function getCurrentUser() {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;

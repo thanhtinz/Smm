@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import RegisterForm from "@/components/auth/register-form";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
@@ -9,7 +10,9 @@ export const metadata: Metadata = { title: "Create account" };
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const { ref } = await searchParams;
-  const { t } = await getAppContext();
+  const ctx = await getAppContext();
+  if (ctx.user) redirect(ctx.user.role === "admin" ? "/admin" : "/dashboard");
+  const { t } = ctx;
   const [open, termsRequired] = await Promise.all([
     getSetting("auth.registrationOpen"),
     getSetting("auth.termsRequired"),

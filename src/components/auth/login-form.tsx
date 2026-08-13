@@ -10,10 +10,13 @@ import CaptchaField, { type CaptchaProps } from "@/components/auth/captcha-field
 
 export default function LoginForm({
   captcha,
+  notice,
   labels,
 }: {
   /** Null when captcha is off or not configured. */
   captcha: CaptchaProps | null;
+  /** One-off message from a redirect, e.g. after a password reset. */
+  notice?: string;
   labels: Record<"title" | "sub" | "identifier" | "password" | "remember" | "forgot" | "submit" | "noaccount" | "signup", string>;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, {});
@@ -27,6 +30,13 @@ export default function LoginForm({
         <div className="alert alert-danger mt-6" role="alert">
           <Icon name="alert" size={16} />
           <span>{state.error}</span>
+        </div>
+      )}
+
+      {notice && (
+        <div className="alert alert-success mt-6" role="status">
+          <Icon name="checkCircle" size={16} />
+          <span>{notice}</span>
         </div>
       )}
 

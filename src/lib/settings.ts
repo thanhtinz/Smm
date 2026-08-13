@@ -94,6 +94,17 @@ export const settingDefinitions = {
   "api.enabled": { group: "api", type: "boolean", value: true },
   "api.rateLimitPerMinute": { group: "api", type: "number", value: 120 },
 
+  // --- Email --------------------------------------------------------------
+  "mail.enabled": { group: "mail", type: "boolean", value: false },
+  "mail.host": { group: "mail", type: "text", value: "" },
+  "mail.port": { group: "mail", type: "number", value: 587 },
+  "mail.secure": { group: "mail", type: "boolean", value: false },
+  "mail.user": { group: "mail", type: "text", value: "" },
+  "mail.password": { group: "mail", type: "password", value: "" },
+  "mail.fromName": { group: "mail", type: "text", value: "" },
+  "mail.fromAddress": { group: "mail", type: "text", value: "" },
+  "mail.resetWindowMinutes": { group: "mail", type: "number", value: 60 },
+
   // --- Support ------------------------------------------------------------
   "support.enabled": { group: "support", type: "boolean", value: true },
   "support.maxOpenTickets": { group: "support", type: "number", value: 5 },
