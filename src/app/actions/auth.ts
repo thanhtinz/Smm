@@ -119,7 +119,7 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
       locale: locale as string,
       currency: currency as string,
       theme: theme as string,
-      colorMode: mode === "light" ? "light" : "dark",
+      colorMode: String(mode) === "light" ? "light" : "dark",
     },
   });
 

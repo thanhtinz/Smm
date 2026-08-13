@@ -17,6 +17,19 @@ async function nextId(entity: string): Promise<number> {
   return (await db.counter.update({ where: { name: entity }, data: { value: { increment: 1 } } })).value;
 }
 
+/** Short, honest blurb rendered in the order summary. */
+function describe(name: string): string {
+  const bits: string[] = [];
+  if (/vietnam/i.test(name)) bits.push("Targeted at Vietnamese accounts.");
+  if (/real|high quality/i.test(name)) bits.push("Sourced from accounts with profile photos and activity.");
+  if (/instant|fast/i.test(name)) bits.push("Starts within minutes of being placed.");
+  if (/no refill/i.test(name)) bits.push("No refill guarantee — drops are not replaced.");
+  else if (/refill/i.test(name)) bits.push("Covered by a refill guarantee for the stated period.");
+  if (/non drop|ads safe/i.test(name)) bits.push("Safe for monetised accounts.");
+  bits.push("Link must be public at the time the order is placed.");
+  return bits.join(" ");
+}
+
 async function main() {
   // --- Languages ----------------------------------------------------------
   const languages = [
@@ -232,6 +245,9 @@ async function main() {
             max,
             refill: /refill/i.test(name) && !/no refill/i.test(name),
             cancel: true,
+            // Gradual-delivery services are the ones worth drip-feeding.
+            dripfeed: /view|like|follower/i.test(name),
+            description: describe(name),
             averageTime: ["1 hour", "3 hours", "12 hours", "30 minutes"][si % 4],
             position: si,
           },
