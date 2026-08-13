@@ -12,11 +12,13 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
     select: { slug: true, title: true },
   });
 
-  const socials: { key: string; icon: IconName; href: string }[] = [
-    { key: "site.telegram", icon: "telegram", href: settings["site.telegram"] as string },
-    { key: "site.facebook", icon: "facebook", href: settings["site.facebook"] as string },
-    { key: "site.whatsapp", icon: "mail", href: settings["site.whatsapp"] as string },
-  ].filter((s) => s.href);
+  const socials = (
+    [
+      { key: "site.telegram", icon: "telegram", href: settings["site.telegram"] as string },
+      { key: "site.facebook", icon: "facebook", href: settings["site.facebook"] as string },
+      { key: "site.whatsapp", icon: "mail", href: settings["site.whatsapp"] as string },
+    ] satisfies { key: string; icon: IconName; href: string }[]
+  ).filter((s) => s.href);
 
   return (
     <footer className="mt-24 border-t border-[var(--border)]">

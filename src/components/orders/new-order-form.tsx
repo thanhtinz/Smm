@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { placeOrderAction, type OrderState } from "@/app/actions/orders";
 import { Field, TextInput } from "@/components/ui/field";
+import Combobox from "@/components/ui/combobox";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
 
@@ -16,12 +17,66 @@ export type ServiceOption = {
   min: number;
   max: number;
   refill: boolean;
+  cancel: boolean;
+  dripfeed: boolean;
   averageTime: string;
   description: string;
 };
 
 export type CategoryOption = { id: string; name: string; platformId: string | null };
 export type PlatformOption = { id: string; name: string; icon: string; color: string };
+
+export type OrderLabels = Record<
+  | "platform"
+  | "category"
+  | "service"
+  | "link"
+  | "quantity"
+  | "charge"
+  | "submit"
+  | "min"
+  | "max"
+  | "rate"
+  | "balance"
+  | "addFunds"
+  | "selectCategory"
+  | "selectService"
+  | "selectPlatformFirst"
+  | "selectCategoryFirst"
+  | "searchService"
+  | "noResults"
+  | "averageTime"
+  | "refillLabel"
+  | "cancelLabel"
+  | "yes"
+  | "no"
+  | "placed"
+  | "track"
+  | "insufficient"
+  | "dripfeed"
+  | "runs"
+  | "interval"
+  | "intervalHint"
+  | "total",
+  string
+>;
+
+export type Currency = {
+  code: string;
+  symbol: string;
+  symbolBefore: boolean;
+  decimals: number;
+  rate: number;
+  locale: string;
+};
+
+export function formatCurrency(base: number, currency: Currency) {
+  const value = new Intl.NumberFormat(currency.locale === "vi" ? "vi-VN" : currency.locale, {
+    minimumFractionDigits: currency.decimals,
+    maximumFractionDigits: currency.decimals,
+  }).format(base * currency.rate);
+  return currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+}
 
 export default function NewOrderForm({
   platforms,
@@ -35,35 +90,8 @@ export default function NewOrderForm({
   categories: CategoryOption[];
   services: ServiceOption[];
   balance: number;
-  /** Conversion + formatting for the viewer's display currency. */
-  currency: { code: string; symbol: string; symbolBefore: boolean; decimals: number; rate: number; locale: string };
-  labels: Record<
-    | "platform"
-    | "category"
-    | "service"
-    | "link"
-    | "quantity"
-    | "charge"
-    | "submit"
-    | "min"
-    | "max"
-    | "rate"
-    | "balance"
-    | "addFunds"
-    | "choose"
-    | "selectCategory"
-    | "selectService"
-    | "selectPlatformFirst"
-    | "selectCategoryFirst"
-    | "averageTime"
-    | "refillLabel"
-    | "yes"
-    | "no"
-    | "placed"
-    | "track"
-    | "insufficient",
-    string
-  >;
+  currency: Currency;
+  labels: OrderLabels;
 }) {
   const [state, action] = useActionState<OrderState, FormData>(placeOrderAction, {});
 
@@ -84,19 +112,17 @@ export default function NewOrderForm({
   const service = visibleServices.find((s) => s.id === serviceId);
 
   const [quantity, setQuantity] = useState("");
+  const [dripfeed, setDripfeed] = useState(false);
+  const [runs, setRuns] = useState("");
+  const [interval, setInterval] = useState("");
+
   const qty = Number(quantity);
-  const charge = service && Number.isFinite(qty) && qty > 0 ? Math.round((service.rate * qty) / 1000) : 0;
+  const runsNum = Number(runs);
+  const units = dripfeed && runsNum > 1 ? qty * runsNum : qty;
+  const charge = service && Number.isFinite(units) && units > 0 ? Math.round((service.rate * units) / 1000) : 0;
   const affordable = charge <= balance;
-
-  const fmt = (base: number) => {
-    const value = new Intl.NumberFormat(currency.locale === "vi" ? "vi-VN" : currency.locale, {
-      minimumFractionDigits: currency.decimals,
-      maximumFractionDigits: currency.decimals,
-    }).format(base * currency.rate);
-    return currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
-  };
-
   const outOfRange = service && qty > 0 && (qty < service.min || qty > service.max);
+  const fmt = (base: number) => formatCurrency(base, currency);
 
   if (state.success) {
     return (
@@ -124,7 +150,7 @@ export default function NewOrderForm({
 
   return (
     <form action={action} className="grid gap-5 lg:grid-cols-[1.45fr_1fr]" noValidate>
-      <div className="card card-pad space-y-4">
+      <div className="card card-pad min-w-0 space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">
             <Icon name="alert" size={16} />
@@ -185,23 +211,27 @@ export default function NewOrderForm({
           </select>
         </Field>
 
+        {/* A catalogue runs to hundreds of services, so this is a searchable
+            listbox rather than a native select. */}
         <Field name="serviceId" label={labels.service} error={state.fieldErrors?.serviceId}>
-          <select
-            id="serviceId"
+          <Combobox
             name="serviceId"
-            className="field"
             value={serviceId}
+            onChange={setServiceId}
             disabled={!categoryId}
-            onChange={(e) => setServiceId(e.target.value)}
-            aria-invalid={state.fieldErrors?.serviceId ? true : undefined}
-          >
-            <option value="">{categoryId ? labels.selectService : labels.selectCategoryFirst}</option>
-            {visibleServices.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.publicId} — {s.name}
-              </option>
-            ))}
-          </select>
+            disabledLabel={categoryId ? labels.selectService : labels.selectCategoryFirst}
+            placeholder={labels.selectService}
+            searchPlaceholder={labels.searchService}
+            emptyLabel={labels.noResults}
+            invalid={Boolean(state.fieldErrors?.serviceId)}
+            options={visibleServices.map((s) => ({
+              value: s.id,
+              label: s.name,
+              code: String(s.publicId),
+              meta: fmt(s.rate),
+              keywords: s.description,
+            }))}
+          />
         </Field>
 
         <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>
@@ -217,8 +247,17 @@ export default function NewOrderForm({
         <Field
           name="quantity"
           label={labels.quantity}
-          error={state.fieldErrors?.quantity ?? (outOfRange ? rangeMessage(service, labels) : undefined)}
-          hint={service ? `${labels.min} ${service.min.toLocaleString()} · ${labels.max} ${service.max.toLocaleString()}` : undefined}
+          error={
+            state.fieldErrors?.quantity ??
+            (outOfRange && service
+              ? `${labels.min} ${service.min.toLocaleString()} — ${labels.max} ${service.max.toLocaleString()}`
+              : undefined)
+          }
+          hint={
+            service
+              ? `${labels.min} ${service.min.toLocaleString()} · ${labels.max} ${service.max.toLocaleString()}`
+              : undefined
+          }
           required
         >
           <TextInput
@@ -234,34 +273,94 @@ export default function NewOrderForm({
             hint={service ? "range" : undefined}
           />
         </Field>
+
+        {/* Progressive disclosure: drip-feed appears only for services that
+            support it, and its inputs stay collapsed until it is switched on. */}
+        {service?.dripfeed && (
+          <div className="surface-2 rounded-xl p-4">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+              <input
+                type="checkbox"
+                name="dripfeed"
+                checked={dripfeed}
+                onChange={(e) => setDripfeed(e.target.checked)}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              <Icon name="clock" size={16} />
+              {labels.dripfeed}
+            </label>
+
+            {dripfeed && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Field name="runs" label={labels.runs} error={state.fieldErrors?.runs} required>
+                  <TextInput
+                    name="runs"
+                    type="number"
+                    inputMode="numeric"
+                    min={2}
+                    value={runs}
+                    onChange={(e) => setRuns(e.target.value)}
+                    placeholder="10"
+                    error={state.fieldErrors?.runs}
+                  />
+                </Field>
+                <Field
+                  name="interval"
+                  label={labels.interval}
+                  error={state.fieldErrors?.interval}
+                  hint={labels.intervalHint}
+                  required
+                >
+                  <TextInput
+                    name="interval"
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    value={interval}
+                    onChange={(e) => setInterval(e.target.value)}
+                    placeholder="60"
+                    error={state.fieldErrors?.interval}
+                    hint={labels.intervalHint}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ------------------------------------------------------ summary */}
-      <aside className="space-y-4">
+      <aside className="min-w-0">
         <div className="card card-pad lg:sticky lg:top-20">
-          <h2 className="font-semibold">{labels.charge}</h2>
-
           {service ? (
             <>
-              <p className="muted mt-3 text-sm leading-relaxed">{service.name}</p>
+              <p className="text-sm font-semibold">{service.name}</p>
+              <p className="muted mt-0.5 font-mono text-xs">#{service.publicId}</p>
 
-              <dl className="mt-4 space-y-2.5 text-sm">
+              {service.description && (
+                <p className="muted mt-3 border-l-2 border-[var(--border)] pl-3 text-xs leading-relaxed">
+                  {service.description}
+                </p>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                <Flag on={service.refill} label={labels.refillLabel} />
+                <Flag on={service.cancel} label={labels.cancelLabel} />
+                <Flag on={service.dripfeed} label={labels.dripfeed} />
+              </div>
+
+              <div className="divider my-4" />
+
+              <dl className="space-y-2.5 text-sm">
                 <Row label={labels.rate} value={fmt(service.rate)} />
-                <Row label={labels.quantity} value={qty > 0 ? qty.toLocaleString() : "—"} />
                 {service.averageTime && <Row label={labels.averageTime} value={service.averageTime} />}
-                <Row
-                  label={labels.refillLabel}
-                  value={
-                    service.refill ? (
-                      <span className="badge badge-success">
-                        <Icon name="refresh" size={12} />
-                        {labels.yes}
-                      </span>
-                    ) : (
-                      <span className="badge badge-muted">{labels.no}</span>
-                    )
-                  }
-                />
+                <Row label={labels.quantity} value={qty > 0 ? qty.toLocaleString() : "—"} />
+                {dripfeed && runsNum > 1 && (
+                  <>
+                    <Row label={labels.runs} value={runsNum.toLocaleString()} />
+                    <Row label={labels.total} value={units.toLocaleString()} />
+                  </>
+                )}
               </dl>
 
               <div className="divider my-4" />
@@ -296,7 +395,18 @@ export default function NewOrderForm({
               )}
             </>
           ) : (
-            <p className="muted mt-3 text-sm">{labels.choose}</p>
+            <div className="py-8 text-center">
+              <span className="muted inline-flex">
+                <Icon name="package" size={28} />
+              </span>
+              <p className="muted mt-2 text-sm">
+                {!platformId
+                  ? labels.selectPlatformFirst
+                  : !categoryId
+                    ? labels.selectCategoryFirst
+                    : labels.selectService}
+              </p>
+            </div>
           )}
         </div>
       </aside>
@@ -304,9 +414,13 @@ export default function NewOrderForm({
   );
 }
 
-function rangeMessage(service: ServiceOption | undefined, labels: Record<string, string>) {
-  if (!service) return undefined;
-  return `${labels.min} ${service.min.toLocaleString()} — ${labels.max} ${service.max.toLocaleString()}`;
+function Flag({ on, label }: { on: boolean; label: string }) {
+  return (
+    <span className={`badge ${on ? "badge-success" : "badge-muted"}`}>
+      <Icon name={on ? "check" : "close"} size={11} />
+      {label}
+    </span>
+  );
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
