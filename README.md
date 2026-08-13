@@ -60,6 +60,16 @@ Credentials for each are entered in Admin → Payment methods; nothing lives in 
 
 Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screenshots/`.
 
+### Dashboard and ordering
+
+| Dashboard | New order |
+| --------- | --------- |
+| ![](docs/screenshots/08-dashboard.png) | ![](docs/screenshots/11-new-order.png) |
+
+| Orders | Service catalogue |
+| ------ | ----------------- |
+| ![](docs/screenshots/13-orders.png) | ![](docs/screenshots/09-services.png) |
+
 ### Landing page
 
 | Aurora / dark | Aurora / light |
@@ -75,9 +85,9 @@ Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screens
 Features land one at a time, each verified with a screenshot before the next begins.
 
 - [x] 1 — Foundation: data model, theme engine, i18n, currency, icon set, landing page
-- [ ] 2 — Authentication
-- [ ] 3 — Service catalogue
-- [ ] 4 — User dashboard and ordering
+- [x] 2 — Authentication
+- [x] 3 — Service catalogue
+- [x] 4 — User dashboard and ordering
 - [ ] 5 — Wallet and payment gateways
 - [ ] 6 — Support tickets and notifications
 - [ ] 7 — Admin area

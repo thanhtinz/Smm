@@ -43,10 +43,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
 
   return (
     <div className="container-page py-12">
-      <header className="mx-auto max-w-2xl text-center">
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("nav.services")}</h1>
-        <p className="muted mt-3">{t("landing.features.sub")}</p>
-      </header>
+      <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">{t("nav.services")}</h1>
 
       {/* --------------------------------------------------------- filters */}
       <div className="mt-9 space-y-4">
@@ -176,16 +173,6 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
         </div>
       )}
 
-      <div className="card card-pad mt-10 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h2 className="font-semibold">{t("landing.cta.final.title")}</h2>
-          <p className="muted mt-1 text-sm">{t("landing.cta.final.body")}</p>
-        </div>
-        <Link href={ctx.user ? "/dashboard/new-order" : "/register"} className="btn btn-primary">
-          {ctx.user ? t("dash.newOrder") : t("landing.cta.primary")}
-          <Icon name="arrowRight" size={16} />
-        </Link>
-      </div>
     </div>
   );
 }
