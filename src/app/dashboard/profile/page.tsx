@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import QRCode from "qrcode";
 import { db } from "@/lib/db";
+import { SESSION_COOKIE } from "@/lib/auth";
+import { describeDevice } from "@/lib/devices";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
 import { otpauthUrl } from "@/lib/totp";
 import { STAFF_ROLES, twoFactorRequired, unusedRecoveryCount } from "@/lib/two-factor";
 import ProfileForms from "@/components/account/profile-forms";
 import PreferencesPanel from "@/components/account/preferences-panel";
+import SessionsPanel, { type SessionRow } from "@/components/account/sessions-panel";
 import TwoFactorPanel from "@/components/account/two-factor-panel";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -34,6 +38,26 @@ export default async function ProfilePage() {
   });
   const staff = STAFF_ROLES.has(fresh.role);
   const day = new Intl.DateTimeFormat(ctx.locale === "vi" ? "vi-VN" : ctx.locale, { dateStyle: "medium" });
+  const stamp = new Intl.DateTimeFormat(ctx.locale === "vi" ? "vi-VN" : ctx.locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+
+  // Expired rows are swept lazily rather than on a schedule: they are only
+  // ever read here, and a row past its date is not a sign-in anyone has.
+  const token = (await cookies()).get(SESSION_COOKIE)?.value ?? "";
+  const sessions = await db.session.findMany({
+    where: { userId: user.id, expiresAt: { gt: new Date() } },
+    orderBy: { createdAt: "desc" },
+  });
+  const sessionRows: SessionRow[] = sessions.map((s) => ({
+    id: s.id,
+    device: describeDevice(s.userAgent, t("profile.unknownDevice")),
+    ip: s.ip,
+    signedIn: stamp.format(s.createdAt),
+    expires: day.format(s.expiresAt),
+    current: s.token === token,
+  }));
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
@@ -77,6 +101,25 @@ export default async function ProfilePage() {
           currency: t("common.currency"),
           theme: t("common.theme"),
           fixed: t("profile.preferencesFixed"),
+        }}
+      />
+
+      <SessionsPanel
+        rows={sessionRows}
+        labels={{
+          title: t("profile.sessions"),
+          hint: t("profile.sessionsHint"),
+          device: t("profile.device"),
+          ip: t("profile.ip"),
+          signedIn: t("profile.signedIn"),
+          expires: t("profile.expires"),
+          current: t("profile.thisDevice"),
+          revoke: t("profile.revoke"),
+          revokeOthers: t("profile.revokeOthers"),
+          confirmOthers: t("profile.revokeOthersConfirm"),
+          closed: t("profile.sessionsClosed"),
+          none: t("common.none"),
+          unknownIp: t("profile.unknownIp"),
         }}
       />
 
