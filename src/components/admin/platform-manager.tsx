@@ -6,13 +6,16 @@ import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import IconPicker from "@/components/admin/icon-picker";
-import { Icon, type IconName } from "@/components/icons";
+import ImageUpload from "@/components/admin/image-upload";
+import PlatformMark from "@/components/platform-mark";
+import { Icon } from "@/components/icons";
 
 export type PlatformRow = {
   id: string;
   slug: string;
   name: string;
   icon: string;
+  image: string;
   color: string;
   visible: boolean;
   position: number;
@@ -76,12 +79,7 @@ export default function PlatformManager({ rows, labels }: { rows: PlatformRow[];
                 {rows.map((row) => (
                   <tr key={row.id}>
                     <td>
-                      <span
-                        className="flex h-9 w-9 items-center justify-center rounded-lg"
-                        style={{ background: `${row.color}22`, color: row.color }}
-                      >
-                        <Icon name={row.icon as IconName} size={18} />
-                      </span>
+                      <PlatformMark platform={row} box={36} />
                     </td>
                     <td className="font-medium">{row.name}</td>
                     <td className="muted font-mono text-xs">{row.slug}</td>
@@ -171,7 +169,16 @@ function PlatformForm({
         <TextInput name="slug" defaultValue={row?.slug} error={state.fieldErrors?.slug} hint={labels.slugHint} placeholder="instagram" />
       </Field>
 
-      <IconPicker name="icon" value={row?.icon ?? "globe"} color={row?.color} label={labels.icon} />
+      <ImageUpload
+        name="image"
+        value={row?.image ?? ""}
+        label={labels.image}
+        hint={labels.imageHint}
+        uploadLabel={labels.upload}
+        removeLabel={labels.remove}
+      />
+
+      <IconPicker name="icon" value={row?.icon ?? "globe"} color={row?.color} label={labels.iconFallback} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field name="color" label={labels.color}>

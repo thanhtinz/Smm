@@ -228,6 +228,11 @@ export const en = {
   "admin.services.count": "services",
   "admin.needPlatform": "Create a platform first — categories belong to one.",
   "admin.needCategory": "Create a category first — services belong to one.",
+  "admin.image": "Logo",
+  "admin.imageHint": "PNG, JPEG, WebP, GIF or AVIF up to 512 KB. Leave empty to use the icon below.",
+  "admin.iconFallback": "Icon (used when no logo is uploaded)",
+  "admin.upload": "Upload",
+  "admin.remove": "Remove",
 } as const;
 
 export const vi: Partial<Record<keyof typeof en, string>> = {
@@ -454,6 +459,11 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "admin.services.count": "dịch vụ",
   "admin.needPlatform": "Hãy tạo nền tảng trước — danh mục phải thuộc về một nền tảng.",
   "admin.needCategory": "Hãy tạo danh mục trước — dịch vụ phải thuộc về một danh mục.",
+  "admin.image": "Ảnh logo",
+  "admin.imageHint": "PNG, JPEG, WebP, GIF hoặc AVIF, tối đa 512 KB. Bỏ trống sẽ dùng icon bên dưới.",
+  "admin.iconFallback": "Icon (dùng khi không tải ảnh lên)",
+  "admin.upload": "Tải lên",
+  "admin.remove": "Xoá ảnh",
 };
 
 export const bundledDictionaries: Record<string, Record<string, string>> = {

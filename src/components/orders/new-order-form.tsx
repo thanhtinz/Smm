@@ -7,6 +7,7 @@ import { Field, TextInput } from "@/components/ui/field";
 import Combobox from "@/components/ui/combobox";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
+import PlatformMark from "@/components/platform-mark";
 
 export type ServiceOption = {
   id: string;
@@ -24,7 +25,7 @@ export type ServiceOption = {
 };
 
 export type CategoryOption = { id: string; name: string; platformId: string | null };
-export type PlatformOption = { id: string; name: string; icon: string; color: string };
+export type PlatformOption = { id: string; name: string; icon: string; image: string; color: string };
 
 export type OrderLabels = Record<
   | "platform"
@@ -180,9 +181,7 @@ export default function NewOrderForm({
                       : "muted border-[var(--border)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
                   }`}
                 >
-                  <span style={p.id === platformId ? undefined : { color: p.color }}>
-                    <Icon name={p.icon as IconName} size={16} />
-                  </span>
+                  <PlatformMark platform={p} size={16} />
                   {p.name}
                 </button>
               ))}

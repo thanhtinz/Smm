@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { displayMoney } from "@/lib/currency";
 import { Icon, type IconName } from "@/components/icons";
+import PlatformMark from "@/components/platform-mark";
 import ServiceSearch from "@/components/services/service-search";
 
 export const metadata: Metadata = { title: "Services" };
@@ -57,9 +58,8 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                 key={p.id}
                 href={buildHref({ q: query, platform: p.slug })}
                 active={activePlatform?.id === p.id}
-                icon={p.icon as IconName}
+                platform={p}
                 label={p.name}
-                color={p.color}
               />
             ))}
           </div>
@@ -88,12 +88,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
             <section key={category.id} className="card overflow-hidden">
               <header className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] px-5 py-4">
                 {category.platform && (
-                  <span
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                    style={{ background: `${category.platform.color}22`, color: category.platform.color }}
-                  >
-                    <Icon name={category.platform.icon as IconName} size={18} />
-                  </span>
+                  <PlatformMark platform={category.platform} box={36} />
                 )}
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate font-semibold">{category.name}</h2>
@@ -189,14 +184,14 @@ function FilterChip({
   href,
   active,
   icon,
+  platform,
   label,
-  color,
 }: {
   href: string;
   active: boolean;
-  icon: IconName;
+  icon?: IconName;
+  platform?: { name: string; icon: string; image: string; color: string };
   label: string;
-  color?: string;
 }) {
   return (
     <Link
@@ -208,9 +203,7 @@ function FilterChip({
           : "muted border-[var(--border)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
       }`}
     >
-      <span style={!active && color ? { color } : undefined}>
-        <Icon name={icon} size={16} />
-      </span>
+      {platform ? <PlatformMark platform={platform} size={16} /> : icon ? <Icon name={icon} size={16} /> : null}
       {label}
     </Link>
   );

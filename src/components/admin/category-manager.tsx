@@ -5,7 +5,8 @@ import { deleteCategoryAction, saveCategoryAction, type ActionResult } from "@/a
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
+import PlatformMark from "@/components/platform-mark";
 
 export type CategoryRow = {
   id: string;
@@ -17,7 +18,7 @@ export type CategoryRow = {
   serviceCount: number;
 };
 
-export type PlatformOption = { id: string; name: string; icon: string; color: string };
+export type PlatformOption = { id: string; name: string; icon: string; image: string; color: string };
 
 export default function CategoryManager({
   rows,
@@ -121,9 +122,7 @@ export default function CategoryManager({
                       <td>
                         {platform ? (
                           <span className="flex items-center gap-2">
-                            <span style={{ color: platform.color }}>
-                              <Icon name={platform.icon as IconName} size={16} />
-                            </span>
+                            <PlatformMark platform={platform} size={16} />
                             {platform.name}
                           </span>
                         ) : (
