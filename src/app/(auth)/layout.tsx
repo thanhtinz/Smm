@@ -4,10 +4,13 @@ import PreferenceMenu from "@/components/preference-menu";
 import { Icon, type IconName } from "@/components/icons";
 import { getAppContext } from "@/lib/context";
 import { guardPanel } from "@/lib/tenancy";
+import PanelSuspended from "@/components/panel-suspended";
 import { redirect } from "next/navigation";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
-  await guardPanel();
+  const panel = await guardPanel();
+  if (panel.status !== "active") return <PanelSuspended name={panel.name} note={panel.statusNote} />;
+
   const ctx = await getAppContext();
   if (ctx.user) redirect(ctx.user.role === "admin" ? "/admin" : "/dashboard");
 

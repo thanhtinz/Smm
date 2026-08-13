@@ -85,6 +85,13 @@ export const settingDefinitions = {
     value: ["general", "payment", "order", "api", "other"],
   },
 
+  // --- Child panels -------------------------------------------------------
+  "panel.childrenEnabled": { group: "panel", type: "boolean", value: false },
+  "panel.maxDepth": { group: "panel", type: "number", value: 3 },
+  "panel.maxChildren": { group: "panel", type: "number", value: 0 },
+  "panel.cloudflareToken": { group: "panel", type: "password", value: "" },
+  "panel.cloudflareZoneId": { group: "panel", type: "text", value: "" },
+
   // --- Maintenance --------------------------------------------------------
   "maintenance.enabled": { group: "maintenance", type: "boolean", value: false },
   "maintenance.message": {
