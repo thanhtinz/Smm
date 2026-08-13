@@ -87,6 +87,48 @@ body {
     padding: 1.25rem 1.35rem;
   }
 
+  /* Admin-written page bodies. Styled here because the markup comes from the
+     database, so the elements cannot carry classes of their own. */
+  .prose-page {
+    line-height: 1.75;
+  }
+  .prose-page > * + * {
+    margin-top: 1rem;
+  }
+  .prose-page h2 {
+    margin-top: 2rem;
+    font-size: 1.35rem;
+    font-weight: 700;
+  }
+  .prose-page h3 {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+  }
+  .prose-page ul,
+  .prose-page ol {
+    padding-left: 1.4rem;
+  }
+  .prose-page ul {
+    list-style: disc;
+  }
+  .prose-page ol {
+    list-style: decimal;
+  }
+  .prose-page li + li {
+    margin-top: 0.35rem;
+  }
+  .prose-page a {
+    color: var(--primary);
+    text-decoration: underline;
+  }
+  .prose-page code {
+    background: var(--surface2);
+    border-radius: 0.35rem;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.9em;
+  }
+
   /* --------------------------------------------------------------- surface */
   .surface-2 {
     background: var(--surface2);
