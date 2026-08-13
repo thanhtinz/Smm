@@ -74,6 +74,7 @@ export default async function AdminOrdersPage({
     remains: t("order.remains"),
     providerOrderId: t("order.providerOrderId"),
     note: t("admin.note"),
+    comments: t("order.comments"),
     source: t("order.source"),
     fromChild: t("order.fromChild"),
   };
@@ -131,6 +132,7 @@ export default async function AdminOrdersPage({
           remains: o.remains,
           providerOrderId: o.providerOrderId,
           note: o.note,
+          comments: o.comments,
           fromChild: Boolean(o.sourceOrderId),
         }))}
         money={Object.fromEntries(orders.map((o) => [o.id, displayMoney(o.charge, currency, locale)]))}

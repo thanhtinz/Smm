@@ -361,6 +361,15 @@ function ServiceForm({
         <textarea id="description" name="description" rows={3} className="field" defaultValue={row?.description} />
       </Field>
 
+      {/* The type decides what the order form asks for: a quantity, or the
+          comments themselves with the quantity coming from the line count. */}
+      <Field name="type" label={labels.type}>
+        <select id="type" name="type" className="field" defaultValue={row?.type ?? "default"}>
+          <option value="default">{labels.typeDefault}</option>
+          <option value="custom_comments">{labels.typeCustomComments}</option>
+        </select>
+      </Field>
+
       <div className="grid gap-4 sm:grid-cols-2">
         <Field name="rate" label={labels.rate} error={state.fieldErrors?.rate} required>
           <TextInput

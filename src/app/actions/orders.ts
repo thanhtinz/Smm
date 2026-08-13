@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
-import { calculateCharge, isValidOrderLink } from "@/lib/orders";
+import { calculateCharge, commentLines, isValidOrderLink } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 
@@ -27,14 +27,21 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const link = String(formData.get("link") ?? "").trim();
   const quantityRaw = String(formData.get("quantity") ?? "").trim();
 
+  // A comment service is bought by the comment, so the lines the customer
+  // wrote are the quantity. Parsed before validation, since everything below
+  // then treats both kinds the same.
+  const comments = commentLines(String(formData.get("comments") ?? ""));
+
   const fieldErrors: Record<string, string> = {};
   if (!serviceId) fieldErrors.serviceId = "Choose a service";
   if (!link) fieldErrors.link = "Enter the link for this order";
   else if (!isValidOrderLink(link)) fieldErrors.link = "Enter a full link starting with http:// or https://";
 
-  const quantity = Number(quantityRaw);
-  if (!quantityRaw) fieldErrors.quantity = "Enter a quantity";
-  else if (!Number.isInteger(quantity) || quantity <= 0) fieldErrors.quantity = "Quantity must be a whole number";
+  const quantity = comments.length > 0 ? comments.length : Number(quantityRaw);
+  if (comments.length === 0) {
+    if (!quantityRaw) fieldErrors.quantity = "Enter a quantity";
+    else if (!Number.isInteger(quantity) || quantity <= 0) fieldErrors.quantity = "Quantity must be a whole number";
+  }
 
   // Drip-feed splits one order into `runs` deliveries spaced `interval`
   // minutes apart, so the charge is quantity × runs.
@@ -50,6 +57,9 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
 
   const service = await db.service.findFirst({ where: { id: serviceId, enabled: true } });
   if (!service) return { fieldErrors: { serviceId: "That service is no longer available" } };
+  if (service.type === "custom_comments" && comments.length === 0) {
+    return { fieldErrors: { comments: "Write at least one comment" } };
+  }
   if (dripfeed && !service.dripfeed) {
     return { fieldErrors: { dripfeed: "This service does not support drip-feed" } };
   }
@@ -101,6 +111,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           charge,
           remains: totalQuantity,
           status: "pending",
+          comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
         },
@@ -129,6 +140,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
       await writeUpstream(tx, plan.hops, {
         downstreamOrderId: order.id,
         link,
+        comments: comments.join("\n"),
         quantity: totalQuantity,
         runs: dripfeed ? runs : null,
         interval: dripfeed ? interval : null,
@@ -215,6 +227,12 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
     }
     if (!isValidOrderLink(link)) {
       results.push({ line, raw, ok: false, message: "Invalid link" });
+      return;
+    }
+    // A comment service is bought by the comment, and a line of this form has
+    // nowhere to put them, so it cannot be ordered here.
+    if (service.type === "custom_comments") {
+      results.push({ line, raw, ok: false, message: `Service ${idPart} takes comments — order it one at a time` });
       return;
     }
     const quantity = Number(qtyPart);

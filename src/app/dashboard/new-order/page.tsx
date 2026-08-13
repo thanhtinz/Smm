@@ -44,6 +44,7 @@ export default async function NewOrderPage() {
     refill: s.refill,
     cancel: s.cancel,
     dripfeed: s.dripfeed,
+    type: s.type,
     averageTime: s.averageTime,
     description: s.description,
   }));
@@ -86,6 +87,8 @@ export default async function NewOrderPage() {
                 min: t("order.min"),
                 max: t("order.max"),
                 rate: t("order.rate"),
+                comments: t("order.comments"),
+                commentsHint: t("order.commentsHint"),
                 balance: t("common.balance"),
                 addFunds: t("dash.addFunds"),
                 selectCategory: t("order.selectCategory"),
