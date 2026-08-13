@@ -47,6 +47,12 @@ export async function saveSettingsAction(_prev: ActionResult, form: FormData): P
           .map((s) => s.trim())
           .filter(Boolean);
         break;
+      case "password": {
+        const raw = String(form.get(key) ?? "");
+        if (raw === "") continue;
+        value = raw;
+        break;
+      }
       case "json":
         try {
           value = JSON.parse(String(form.get(key) ?? "{}"));

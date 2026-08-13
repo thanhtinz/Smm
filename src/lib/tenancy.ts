@@ -30,7 +30,12 @@ export function panelOverride(): string | null {
 const findPanel = cache(async (id: string) => basePrisma.panel.findUnique({ where: { id } }));
 
 const findPanelByHost = cache(async (host: string) => {
-  const domain = await basePrisma.panelDomain.findUnique({ where: { host }, include: { panel: true } });
+  // Unverified hostnames are stored but never served: pointing a domain you do
+  // not own at the panel should achieve nothing until the TXT record proves it.
+  const domain = await basePrisma.panelDomain.findFirst({
+    where: { host, verified: true },
+    include: { panel: true },
+  });
   return domain?.panel ?? null;
 });
 
@@ -116,4 +121,19 @@ export async function panelBaseUrl(): Promise<string> {
   const template = new URL(fallback);
   template.hostname = domain.host;
   return template.origin;
+}
+
+/**
+ * Reads one setting key across several panels at once.
+ *
+ * A deliberate cross-panel read: walking the ancestor chain one runAsPanel at
+ * a time would be a query per level for a value the caller needs all of.
+ */
+export async function readSettingAcross(panelIds: string[], key: string): Promise<Map<string, string>> {
+  if (panelIds.length === 0) return new Map();
+  const rows = await basePrisma.setting.findMany({
+    where: { panelId: { in: panelIds }, key },
+    select: { panelId: true, value: true },
+  });
+  return new Map(rows.map((r) => [r.panelId, r.value]));
 }

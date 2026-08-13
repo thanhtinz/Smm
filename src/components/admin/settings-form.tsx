@@ -117,6 +117,23 @@ function SettingControl({ field, error }: { field: SettingField; error?: string 
     );
   }
 
+  if (field.type === "password") {
+    // Blank means "keep the stored secret" — the same rule the payment method
+    // credential fields use, so an admin can edit neighbours without retyping.
+    return (
+      <Field name={field.key} label={label} error={error}>
+        <TextInput
+          name={field.key}
+          type="password"
+          autoComplete="off"
+          placeholder={field.value ? "\u2022".repeat(12) : ""}
+          defaultValue=""
+          error={error}
+        />
+      </Field>
+    );
+  }
+
   if (field.type === "json") {
     return (
       <Field name={field.key} label={label} error={error} hint="JSON">

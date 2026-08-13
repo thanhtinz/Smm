@@ -31,6 +31,23 @@ const TENANT_MODELS = new Set([
   "Page",
 ]);
 
+/**
+ * Refuses a query that names a different panel than the one in context.
+ *
+ * Without this the injected panelId would silently win and the query would
+ * quietly return the wrong panel's rows — which reads as an empty result or a
+ * zero count, not as an error. Reading another panel on purpose is spelled
+ * `runAsPanel`, and this is what makes forgetting that loud.
+ */
+function assertSamePanel(model: string, operation: string, where: unknown, panelId: string) {
+  const named = (where as { panelId?: unknown } | undefined)?.panelId;
+  if (named === undefined || named === panelId) return;
+  throw new Error(
+    `${model}.${operation} filtered on a different panel than the one in context. ` +
+      `Wrap the call in runAsPanel(panelId, ...) to read another panel deliberately.`,
+  );
+}
+
 /** Operations whose `where` selects the rows to read or change. */
 const FILTERED = new Set([
   "findUnique",
@@ -57,6 +74,9 @@ const FILTERED = new Set([
  *
  *   - Nested writes (`{ messages: { create: ... } }`) do not pass through
  *     here; those callsites set panelId themselves.
+ *   - A panelId passed in a `where` is overwritten, not merged, so no caller
+ *     can read another panel by asking nicely. Legitimate cross-panel reads —
+ *     a parent counting its child's orders — go through `runAsPanel`.
  *   - Relations loaded through `include`/`select` are not filtered either.
  *     They are safe only because a row never references a row in another
  *     panel — an invariant the test asserts across every foreign key rather
@@ -73,6 +93,7 @@ export const db = basePrisma.$extends({
         const next = args as Record<string, unknown>;
 
         if (FILTERED.has(operation)) {
+          assertSamePanel(model, operation, next.where, panelId);
           next.where = { ...((next.where as object) ?? {}), panelId };
         } else if (operation === "create") {
           next.data = { ...((next.data as object) ?? {}), panelId };
@@ -82,6 +103,7 @@ export const db = basePrisma.$extends({
             ? data.map((row) => ({ ...(row as object), panelId }))
             : { ...((data as object) ?? {}), panelId };
         } else if (operation === "upsert") {
+          assertSamePanel(model, operation, next.where, panelId);
           next.where = { ...((next.where as object) ?? {}), panelId };
           next.create = { ...((next.create as object) ?? {}), panelId };
         }

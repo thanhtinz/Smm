@@ -2,10 +2,13 @@ import { redirect } from "next/navigation";
 import AppShell, { type NavGroup, type NavItem } from "@/components/app-shell";
 import { getAppContext } from "@/lib/context";
 import { guardPanel } from "@/lib/tenancy";
+import PanelSuspended from "@/components/panel-suspended";
 import { db } from "@/lib/db";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  await guardPanel();
+  const panel = await guardPanel();
+  if (panel.status !== "active") return <PanelSuspended name={panel.name} note={panel.statusNote} />;
+
   const ctx = await getAppContext();
   if (!ctx.user) redirect("/login");
 
