@@ -1,23 +1,20 @@
 import type { Metadata } from "next";
 import { getAppContext } from "@/lib/context";
 import { getAvailableMethods } from "@/lib/payments";
+import { getSetting } from "@/lib/settings";
 import DepositForm from "@/components/wallet/deposit-form";
 
 export const metadata: Metadata = { title: "Add funds" };
 
-/** Quick-pick amounts, sized to each currency rather than converted. */
-const PRESETS: Record<string, number[]> = {
-  VND: [50_000, 100_000, 200_000, 500_000, 1_000_000],
-  USD: [5, 10, 25, 50, 100],
-  EUR: [5, 10, 25, 50, 100],
-  TRY: [100, 250, 500, 1000],
-  INR: [500, 1000, 2500, 5000],
-};
-
 export default async function WalletPage() {
   const ctx = await getAppContext();
   const { t } = ctx;
-  const methods = await getAvailableMethods();
+  const [methods, presets] = await Promise.all([
+    getAvailableMethods(),
+    // Quick-pick amounts are per-currency and live in settings, so an operator
+    // can retune them without a deploy.
+    getSetting("wallet.quickAmounts"),
+  ]);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -31,7 +28,7 @@ export default async function WalletPage() {
           symbolBefore: c.symbolBefore,
           decimals: c.decimals,
         }))}
-        presets={PRESETS}
+        presets={presets as Record<string, number[]>}
         locale={ctx.locale}
         labels={{
           method: t("wallet.method"),
