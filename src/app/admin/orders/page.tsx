@@ -56,6 +56,8 @@ export default async function AdminOrdersPage({
     hour: "2-digit",
     minute: "2-digit",
   });
+  // An expiry is a day, so it is shown without a clock and with its year.
+  const fmtDay = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, { dateStyle: "medium" });
 
   const labels: Record<string, string> = {
     empty: t("common.none"),
@@ -75,6 +77,12 @@ export default async function AdminOrdersPage({
     providerOrderId: t("order.providerOrderId"),
     note: t("admin.note"),
     comments: t("order.comments"),
+    username: t("order.username"),
+    posts: t("order.posts"),
+    perPost: t("order.perPost"),
+    delay: t("order.delay"),
+    expiry: t("order.expiry"),
+    minutes: t("order.minutes"),
     source: t("order.source"),
     fromChild: t("order.fromChild"),
   };
@@ -133,6 +141,15 @@ export default async function AdminOrdersPage({
           providerOrderId: o.providerOrderId,
           note: o.note,
           comments: o.comments,
+          subscription: o.posts
+            ? {
+                posts: o.posts,
+                minPerPost: o.minPerPost ?? 0,
+                maxPerPost: o.maxPerPost ?? 0,
+                delay: o.delay ?? 0,
+                expiry: o.expiry ? fmtDay.format(o.expiry) : "",
+              }
+            : null,
           fromChild: Boolean(o.sourceOrderId),
         }))}
         money={Object.fromEntries(orders.map((o) => [o.id, displayMoney(o.charge, currency, locale)]))}

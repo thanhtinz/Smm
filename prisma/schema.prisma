@@ -351,6 +351,15 @@ model Order {
   note            String         @default("")
   runs            Int?
   interval        Int?
+  /// Subscription services watch a profile and deliver on each new post. For
+  /// those orders `link` holds the username being watched rather than a URL,
+  /// and `quantity` is the ceiling that was charged: posts x maxPerPost.
+  posts           Int?
+  minPerPost      Int?
+  maxPerPost      Int?
+  /// Minutes to wait after a post appears before delivering.
+  delay           Int?
+  expiry          DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
   requests        OrderRequest[]

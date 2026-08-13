@@ -22,6 +22,8 @@ export type AdminOrderRow = {
   providerOrderId: string;
   note: string;
   comments: string;
+  /** Set on subscription orders; `link` then holds the username watched. */
+  subscription: { posts: number; minPerPost: number; maxPerPost: number; delay: number; expiry: string } | null;
   /** Set when this order was bought on behalf of a panel below. */
   fromChild: boolean;
 };
@@ -181,6 +183,17 @@ function OrderDrawer({
           {row.providerOrderId && <Row label={labels.providerOrderId} value={row.providerOrderId} mono />}
           {row.fromChild && <Row label={labels.source} value={labels.fromChild} />}
           {row.note && <Row label={labels.note} value={row.note} />}
+          {row.subscription && (
+            <>
+              <Row label={labels.posts} value={row.subscription.posts.toLocaleString()} />
+              <Row
+                label={labels.perPost}
+                value={`${row.subscription.minPerPost.toLocaleString()} – ${row.subscription.maxPerPost.toLocaleString()}`}
+              />
+              <Row label={labels.delay} value={`${row.subscription.delay} ${labels.minutes}`} />
+              {row.subscription.expiry && <Row label={labels.expiry} value={row.subscription.expiry} />}
+            </>
+          )}
         </dl>
 
         {/* Read-only: the comments are what the customer paid for, and the
@@ -194,7 +207,12 @@ function OrderDrawer({
           </div>
         )}
 
-        <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>
+        <Field
+          name="link"
+          label={row.subscription ? labels.username : labels.link}
+          error={state.fieldErrors?.link}
+          required
+        >
           <TextInput name="link" defaultValue={row.link} error={state.fieldErrors?.link} />
         </Field>
 

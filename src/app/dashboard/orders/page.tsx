@@ -120,9 +120,15 @@ export default async function OrdersPage({
                         )}
                       </td>
                       <td className="max-w-[14rem] truncate">
-                        <a href={o.link} target="_blank" rel="noopener noreferrer" className="muted hover:text-[var(--text)]">
-                          {o.link}
-                        </a>
+                        {o.posts ? (
+                          <span className="muted">
+                            @{o.link} · {o.posts.toLocaleString()} {t("order.posts").toLowerCase()}
+                          </span>
+                        ) : (
+                          <a href={o.link} target="_blank" rel="noopener noreferrer" className="muted hover:text-[var(--text)]">
+                            {o.link}
+                          </a>
+                        )}
                       </td>
                       <td className="text-right tabular-nums">{o.quantity.toLocaleString()}</td>
                       <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
@@ -155,7 +161,9 @@ export default async function OrdersPage({
                     <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
                   </div>
                   <p className="mt-1.5 text-sm font-medium">{o.service.name}</p>
-                  <p className="muted mt-0.5 truncate text-xs">{o.link}</p>
+                  <p className="muted mt-0.5 truncate text-xs">
+                    {o.posts ? `@${o.link} · ${o.posts.toLocaleString()} ${t("order.posts").toLowerCase()}` : o.link}
+                  </p>
                   {o.comments && (
                     <details className="mt-1.5">
                       <summary className="muted cursor-pointer text-xs">{t("order.comments")}</summary>

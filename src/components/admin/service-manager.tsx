@@ -367,6 +367,7 @@ function ServiceForm({
         <select id="type" name="type" className="field" defaultValue={row?.type ?? "default"}>
           <option value="default">{labels.typeDefault}</option>
           <option value="custom_comments">{labels.typeCustomComments}</option>
+          <option value="subscription">{labels.typeSubscription}</option>
         </select>
       </Field>
 
