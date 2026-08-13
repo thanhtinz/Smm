@@ -185,15 +185,34 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     position: num(form, "position"),
   };
 
-  if (id) {
-    await db.service.update({ where: { id }, data });
-    await logActivity(admin.id, "admin.service.update", name);
-  } else {
-    await db.service.create({ data: { ...data, publicId: await nextPublicId("service") } });
-    await logActivity(admin.id, "admin.service.create", name);
+  const service = id
+    ? await db.service.update({ where: { id }, data })
+    : await db.service.create({ data: { ...data, publicId: await nextPublicId("service") } });
+  await logActivity(admin.id, id ? "admin.service.update" : "admin.service.create", name);
+
+  // Per-tier prices are edited alongside the price they override, so they are
+  // saved with the service rather than from a separate screen. A blank field
+  // clears the override and hands the service back to the tier percentage.
+  const tiers = await db.userTier.findMany({ select: { id: true } });
+  for (const tier of tiers) {
+    const raw = String(form.get(`tierPrice:${tier.id}`) ?? "").trim();
+    if (raw === "") {
+      await db.tierPrice.deleteMany({ where: { tierId: tier.id, serviceId: service.id } });
+      continue;
+    }
+    const tierRate = Number(raw);
+    if (!Number.isFinite(tierRate) || tierRate < 0) {
+      return { fieldErrors: { [`tierPrice:${tier.id}`]: "Enter a price" } };
+    }
+    await db.tierPrice.upsert({
+      where: { tierId_serviceId: { tierId: tier.id, serviceId: service.id } },
+      create: { tierId: tier.id, serviceId: service.id, rate: tierRate },
+      update: { rate: tierRate },
+    });
   }
 
   revalidateCatalogue();
+  revalidatePath("/admin/tiers");
   return { ok: true };
 }
 

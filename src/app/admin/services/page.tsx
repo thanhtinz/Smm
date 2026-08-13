@@ -15,11 +15,15 @@ export default async function AdminServicesPage() {
   const panel = await requirePanel();
   const isChild = panel.parentId !== null;
 
-  const [services, categories, platforms, providers] = await Promise.all([
-    db.service.findMany({ orderBy: [{ position: "asc" }, { publicId: "asc" }] }),
+  const [services, categories, platforms, providers, tiers] = await Promise.all([
+    db.service.findMany({
+      orderBy: [{ position: "asc" }, { publicId: "asc" }],
+      include: { tierPrices: { select: { tierId: true, rate: true } } },
+    }),
     db.category.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     db.platform.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     isChild ? [] : db.provider.findMany({ orderBy: { name: "asc" } }),
+    db.userTier.findMany({ orderBy: [{ position: "asc" }, { minSpent: "asc" }] }),
   ]);
 
   // What this panel would pay for each of its parent's services, priced for
@@ -56,6 +60,7 @@ export default async function AdminServicesPage() {
           providerServiceId: s.providerServiceId,
           sourceServiceId: s.sourceServiceId,
           sourceCost: sourceCosts.get(s.sourceServiceId) ?? 0,
+          tierPrices: Object.fromEntries(s.tierPrices.map((t) => [t.tierId, String(t.rate)])),
           type: s.type,
           rate: s.rate,
           providerRate: s.providerRate,
@@ -72,6 +77,12 @@ export default async function AdminServicesPage() {
         platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
         providers={providers.map((p) => ({ id: p.id, name: p.name }))}
         sourceServices={sourceServices}
+        tiers={tiers.map((t) => ({
+          id: t.id,
+          name: t.name,
+          color: t.color,
+          discountPercent: t.discountPercent,
+        }))}
         isChild={isChild}
         currency={{
           symbol: ctx.currency.symbol,
@@ -95,6 +106,9 @@ export default async function AdminServicesPage() {
           description: t("admin.description"),
           category: t("admin.category"),
           rate: t("admin.rate"),
+          tierPrices: t("tier.prices"),
+          tierPricesHint: t("tier.pricesHint"),
+          manualPrice: t("tier.manualPrice"),
           sourceService: t("service.source"),
           sourceHint: t("service.sourceHint"),
           noSource: t("service.noSource"),

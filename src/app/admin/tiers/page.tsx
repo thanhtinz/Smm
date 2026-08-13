@@ -5,8 +5,7 @@ import TierManager from "@/components/admin/tier-manager";
 
 export const metadata: Metadata = { title: "Tiers" };
 
-export default async function AdminTiersPage({ searchParams }: { searchParams: Promise<{ tier?: string }> }) {
-  const { tier: selected } = await searchParams;
+export default async function AdminTiersPage() {
   const { t, currency, locale } = await getAppContext();
 
   const tiers = await db.userTier.findMany({
@@ -34,22 +33,9 @@ export default async function AdminTiersPage({ searchParams }: { searchParams: P
     );
   }
 
-  const priceTierId = tiers.find((x) => x.id === selected)?.id ?? tiers[0]?.id ?? "";
-
-  const services = priceTierId
-    ? await db.service.findMany({
-        orderBy: [{ position: "asc" }, { publicId: "asc" }],
-        include: {
-          category: { select: { name: true } },
-          tierPrices: { where: { tierId: priceTierId }, select: { rate: true } },
-        },
-      })
-    : [];
-
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <TierManager
-        priceTierId={priceTierId}
         money={{
           symbol: currency.symbol,
           symbolBefore: currency.symbolBefore,
@@ -69,14 +55,6 @@ export default async function AdminTiersPage({ searchParams }: { searchParams: P
           members: members.get(x.id) ?? 0,
           manualPrices: x._count.prices,
         }))}
-        services={services.map((s) => ({
-          id: s.id,
-          publicId: s.publicId,
-          name: s.name,
-          category: s.category.name,
-          rate: s.rate,
-          manual: s.tierPrices[0] ? String(s.tierPrices[0].rate) : "",
-        }))}
         labels={{
           title: t("tier.title"),
           new: t("tier.new"),
@@ -91,13 +69,6 @@ export default async function AdminTiersPage({ searchParams }: { searchParams: P
           starting: t("tier.starting"),
           members: t("tier.members"),
           manual: t("tier.manual"),
-          prices: t("tier.prices"),
-          listRate: t("tier.listRate"),
-          afterDiscount: t("tier.afterDiscount"),
-          manualPrice: t("tier.manualPrice"),
-          usePercent: t("tier.usePercent"),
-          service: t("admin.services"),
-          search: t("common.search"),
           name: t("admin.name"),
           slug: t("admin.slug"),
           color: t("admin.color"),

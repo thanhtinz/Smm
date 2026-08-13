@@ -86,43 +86,6 @@ export async function deleteTierAction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/**
- * Stores a hand-set price for one service in one tier, or clears it so the
- * tier percentage applies again.
- */
-export async function setTierPriceAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
-  const admin = await requireAdmin();
-
-  const tierId = String(form.get("tierId") ?? "");
-  const serviceId = String(form.get("serviceId") ?? "");
-  const [tier, service] = await Promise.all([
-    db.userTier.findUnique({ where: { id: tierId } }),
-    db.service.findUnique({ where: { id: serviceId } }),
-  ]);
-  if (!tier || !service) return { error: "Tier or service not found" };
-
-  const raw = String(form.get("rate") ?? "").trim();
-  if (raw === "") {
-    await db.tierPrice.deleteMany({ where: { tierId, serviceId } });
-    await logActivity(admin.id, "admin.tier.price.clear", `${tier.slug} ${service.publicId}`);
-    revalidatePricing();
-    return { ok: true };
-  }
-
-  const rate = Number(raw);
-  if (!Number.isFinite(rate) || rate < 0) return { fieldErrors: { rate: "Enter a price" } };
-
-  await db.tierPrice.upsert({
-    where: { tierId_serviceId: { tierId, serviceId } },
-    create: { tierId, serviceId, rate },
-    update: { rate },
-  });
-
-  await logActivity(admin.id, "admin.tier.price", `${tier.slug} ${service.publicId} = ${rate}`);
-  revalidatePricing();
-  return { ok: true };
-}
-
 /** Moves one customer onto a tier by hand, or back onto the spend ladder. */
 export async function setUserTierAction(userId: string, tierId: string | null): Promise<ActionResult> {
   const admin = await requireAdmin();

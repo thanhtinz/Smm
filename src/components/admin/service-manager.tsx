@@ -20,6 +20,8 @@ export type ServiceRow = {
   sourceServiceId: string;
   /** What the parent charges for it — the cost side of the margin. */
   sourceCost: number;
+  /** Hand-set price per tier id, empty where the tier percentage applies. */
+  tierPrices: Record<string, string>;
   type: string;
   rate: number;
   providerRate: number;
@@ -39,12 +41,16 @@ export type ProviderOption = { id: string; name: string };
 /** A service on the parent panel, with what this panel would pay for it. */
 export type SourceOption = { id: string; name: string; cost: string };
 
+/** A tier this panel sells to. Hand-set prices live on the service row. */
+export type TierPriceOption = { id: string; name: string; color: string; discountPercent: number };
+
 export default function ServiceManager({
   rows,
   categories,
   platforms,
   providers,
   sourceServices,
+  tiers,
   isChild,
   currency,
   labels,
@@ -54,6 +60,7 @@ export default function ServiceManager({
   platforms: PlatformOption[];
   providers: ProviderOption[];
   sourceServices: SourceOption[];
+  tiers: TierPriceOption[];
   isChild: boolean;
   currency: { symbol: string; symbolBefore: boolean; decimals: number; rate: number; locale: string };
   labels: Record<string, string>;
@@ -272,6 +279,7 @@ export default function ServiceManager({
           platforms={platforms}
           providers={providers}
           sourceServices={sourceServices}
+          tiers={tiers}
           isChild={isChild}
           labels={labels}
           onDone={close}
@@ -287,6 +295,7 @@ function ServiceForm({
   platforms,
   providers,
   sourceServices,
+  tiers,
   isChild,
   labels,
   onDone,
@@ -296,6 +305,7 @@ function ServiceForm({
   platforms: PlatformOption[];
   providers: ProviderOption[];
   sourceServices: SourceOption[];
+  tiers: TierPriceOption[];
   isChild: boolean;
   labels: Record<string, string>;
   onDone: () => void;
@@ -305,6 +315,9 @@ function ServiceForm({
     if (result.ok) onDone();
     return result;
   }, {});
+
+  // Tracked so the per-tier placeholders follow the price as it is typed.
+  const [rate, setRate] = useState(String(row?.rate ?? ""));
 
   const grouped = useMemo(() => {
     const map = new Map<string, CategoryOption[]>();
@@ -350,7 +363,14 @@ function ServiceForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field name="rate" label={labels.rate} error={state.fieldErrors?.rate} required>
-          <TextInput name="rate" type="number" step="any" defaultValue={String(row?.rate ?? "")} error={state.fieldErrors?.rate} />
+          <TextInput
+            name="rate"
+            type="number"
+            step="any"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+            error={state.fieldErrors?.rate}
+          />
         </Field>
         <Field name="providerRate" label={labels.providerRate}>
           <TextInput name="providerRate" type="number" step="any" defaultValue={String(row?.providerRate ?? 0)} />
@@ -409,6 +429,16 @@ function ServiceForm({
         </>
       )}
 
+      {tiers.length > 0 && (
+        <TierPrices
+          tiers={tiers}
+          manual={row?.tierPrices ?? {}}
+          rate={Number(rate) || 0}
+          labels={labels}
+          errors={state.fieldErrors}
+        />
+      )}
+
       <div>
         <span className="label">{labels.flags}</span>
         <div className="grid gap-2 sm:grid-cols-2">
@@ -429,6 +459,62 @@ function ServiceForm({
         </button>
       </div>
     </form>
+  );
+}
+
+/**
+ * Per-tier prices, edited next to the price they override.
+ *
+ * Each row shows what the tier percentage would give, so it is obvious when a
+ * hand-set price is worth having and what it is replacing. Blank means the
+ * percentage applies.
+ */
+function TierPrices({
+  tiers,
+  manual,
+  rate,
+  labels,
+  errors,
+}: {
+  tiers: TierPriceOption[];
+  manual: Record<string, string>;
+  rate: number;
+  labels: Record<string, string>;
+  errors?: Record<string, string>;
+}) {
+  return (
+    <div>
+      <span className="label">{labels.tierPrices}</span>
+      <div className="space-y-2">
+        {tiers.map((tier) => {
+          const discounted = rate * (1 - Math.min(100, tier.discountPercent) / 100);
+          const field = `tierPrice:${tier.id}`;
+          return (
+            <div key={tier.id} className="flex items-center gap-2.5">
+              <span className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+                <span aria-hidden className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: tier.color }} />
+                <span className="truncate">{tier.name}</span>
+                {tier.discountPercent > 0 && <span className="muted shrink-0 text-xs">-{tier.discountPercent}%</span>}
+              </span>
+              <label htmlFor={field} className="sr-only">
+                {`${labels.manualPrice} — ${tier.name}`}
+              </label>
+              <input
+                id={field}
+                name={field}
+                type="number"
+                step="any"
+                min="0"
+                defaultValue={manual[tier.id] ?? ""}
+                placeholder={Number.isFinite(discounted) ? String(Math.round(discounted)) : ""}
+                className={`field w-40 tabular-nums ${errors?.[field] ? "field-error" : ""}`}
+              />
+            </div>
+          );
+        })}
+      </div>
+      <p className="form-hint">{labels.tierPricesHint}</p>
+    </div>
   );
 }
 
