@@ -4,7 +4,9 @@ import { useActionState, useState, useTransition } from "react";
 import {
   deleteCurrencyAction,
   saveCurrencyAction,
+  refreshRatesAction,
   setBaseCurrencyAction,
+  setCurrencyAutoAction,
   type ActionResult,
 } from "@/app/actions/admin/config";
 import { Field, TextInput } from "@/components/ui/field";
@@ -23,9 +25,21 @@ export type CurrencyRow = {
   enabled: boolean;
   isBase: boolean;
   position: number;
+  autoUpdate: boolean;
+  /** Pre-formatted; empty when this rate has never been fetched. */
+  rateUpdatedAt: string;
 };
 
-export default function CurrencyManager({ rows, labels }: { rows: CurrencyRow[]; labels: Record<string, string> }) {
+export default function CurrencyManager({
+  rows,
+  autoUpdate,
+  labels,
+}: {
+  rows: CurrencyRow[];
+  /** Whether the scheduled updater is switched on, set in Settings. */
+  autoUpdate: boolean;
+  labels: Record<string, string>;
+}) {
   const [editing, setEditing] = useState<CurrencyRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -48,11 +62,29 @@ export default function CurrencyManager({ rows, labels }: { rows: CurrencyRow[];
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
-        <button type="button" onClick={() => setCreating(true)} className="btn btn-primary btn-sm">
-          <Icon name="plus" size={15} />
-          {labels.new}
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => run(() => refreshRatesAction())}
+            disabled={pending}
+            className="btn btn-ghost btn-sm"
+          >
+            <Icon name="refresh" size={15} />
+            {labels.refreshRates}
+          </button>
+          <button type="button" onClick={() => setCreating(true)} className="btn btn-primary btn-sm">
+            <Icon name="plus" size={15} />
+            {labels.new}
+          </button>
+        </div>
       </div>
+
+      {!autoUpdate && (
+        <div className="alert alert-info" role="status">
+          <Icon name="info" size={16} />
+          <span>{labels.autoOff}</span>
+        </div>
+      )}
 
       {error && (
         <div className="alert alert-danger" role="alert">
@@ -70,6 +102,7 @@ export default function CurrencyManager({ rows, labels }: { rows: CurrencyRow[];
                 <th>{labels.name}</th>
                 <th className="w-20 text-center">{labels.symbol}</th>
                 <th className="w-40 text-right">{labels.rate}</th>
+                <th className="w-32">{labels.autoRate}</th>
                 <th className="w-28">{labels.status}</th>
                 <th className="w-40 text-right">{labels.actions}</th>
               </tr>
@@ -82,6 +115,27 @@ export default function CurrencyManager({ rows, labels }: { rows: CurrencyRow[];
                   <td className="text-center">{row.symbol}</td>
                   <td className="text-right tabular-nums">
                     {row.isBase ? <span className="badge badge-info">{labels.base}</span> : row.rate.toPrecision(6)}
+                  </td>
+                  <td>
+                    {row.isBase ? (
+                      <span className="muted text-xs">—</span>
+                    ) : (
+                      <>
+                        <label className="flex cursor-pointer items-center gap-2 text-xs">
+                          <input
+                            type="checkbox"
+                            checked={row.autoUpdate}
+                            disabled={pending}
+                            onChange={(e) => run(() => setCurrencyAutoAction(row.id, e.target.checked))}
+                            className="h-4 w-4 accent-[var(--primary)]"
+                          />
+                          {row.autoUpdate ? labels.autoOn : labels.autoPinned}
+                        </label>
+                        {row.autoUpdate && row.rateUpdatedAt && (
+                          <span className="muted mt-0.5 block text-[0.7rem]">{row.rateUpdatedAt}</span>
+                        )}
+                      </>
+                    )}
                   </td>
                   <td>
                     <span className={`badge ${row.enabled ? "badge-success" : "badge-muted"}`}>

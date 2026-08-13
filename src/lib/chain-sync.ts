@@ -3,6 +3,7 @@ import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
 import { settleRefund, dispatchPendingOrders, syncOrderStatuses } from "./providers";
 import { billPanelRent } from "./billing";
+import { updateExchangeRates } from "./exchange";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -160,5 +161,6 @@ export async function runSyncCycle() {
   const chain = await propagateChainStatuses();
   const requests = await propagateRequestDecisions();
   const rent = await billPanelRent();
-  return { sent, synced, chain, requests, rent, failures };
+  const rates = await updateExchangeRates();
+  return { sent, synced, chain, requests, rent, rates, failures };
 }

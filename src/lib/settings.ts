@@ -33,9 +33,17 @@ export const settingDefinitions = {
   "locale.default": { group: "locale", type: "text", value: "vi" },
   "locale.allowUserLocale": { group: "locale", type: "boolean", value: true },
   "currency.base": { group: "locale", type: "text", value: "VND" },
+  "currency.autoUpdate": { group: "locale", type: "boolean", value: false },
+  "currency.rateApiUrl": {
+    group: "locale",
+    type: "text",
+    value: "https://open.er-api.com/v6/latest/{base}",
+  },
+  "currency.rateApiKey": { group: "locale", type: "password", value: "" },
+  "currency.rateMargin": { group: "locale", type: "number", value: 0 },
+  "currency.updateEveryHours": { group: "locale", type: "number", value: 12 },
   "currency.display": { group: "locale", type: "text", value: "VND" },
   "currency.allowUserCurrency": { group: "locale", type: "boolean", value: true },
-  "currency.autoRates": { group: "locale", type: "boolean", value: false },
 
   // --- Orders -------------------------------------------------------------
   "order.enabled": { group: "order", type: "boolean", value: true },

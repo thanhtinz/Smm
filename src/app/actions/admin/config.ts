@@ -6,6 +6,7 @@ import { requireAdmin, requireRootAdmin, logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
 import { invalidateSettings, setSetting, settingDefinitions } from "@/lib/settings";
 import { invalidateCurrencies } from "@/lib/currency";
+import { updateExchangeRates } from "@/lib/exchange";
 import { invalidateDictionaries } from "@/lib/i18n";
 import { drivers, parseConfig } from "@/lib/payments";
 import type { ActionResult } from "./catalogue";
@@ -199,6 +200,31 @@ export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
 }
 
 // ---------------------------------------------------------------- languages
+
+/** Pulls fresh rates immediately, ignoring the schedule. */
+export async function refreshRatesAction(): Promise<ActionResult> {
+  const admin = await requireRootAdmin();
+  const result = await updateExchangeRates(true);
+
+  await logActivity(admin.id, "admin.currency.refresh", JSON.stringify(result));
+  invalidateCurrencies();
+  revalidatePath("/", "layout");
+
+  if ("skipped" in result) return { error: `Rates not updated: ${result.skipped}` };
+  if (result.updated.length === 0) return { error: "The rates service returned nothing for these currencies." };
+  return { ok: true };
+}
+
+export async function setCurrencyAutoAction(id: string, autoUpdate: boolean): Promise<ActionResult> {
+  const admin = await requireRootAdmin();
+  const currency = await db.currency.findUnique({ where: { id } });
+  if (!currency) return { error: "Currency not found" };
+
+  await db.currency.update({ where: { id }, data: { autoUpdate } });
+  await logActivity(admin.id, "admin.currency.auto", `${currency.code} ${autoUpdate ? "on" : "off"}`);
+  revalidatePath("/admin/currencies");
+  return { ok: true };
+}
 
 export async function saveLanguageAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
   const admin = await requireRootAdmin();

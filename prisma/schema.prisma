@@ -75,6 +75,10 @@ model Translation {
 }
 
 model Currency {
+  /// Cleared to pin a hand-set rate against the automatic updater.
+  autoUpdate    Boolean   @default(true)
+  rateUpdatedAt DateTime?
+
   id           String   @id @default(cuid())
   code         String   @unique // VND, USD, EUR
   name         String
