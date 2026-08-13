@@ -47,7 +47,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const groups: NavGroup[] = [
     {
       title: "Overview",
-      items: [{ href: "/admin", label: t("admin.overview"), icon: "chart", exact: true }],
+      items: [
+        { href: "/admin", label: t("admin.overview"), icon: "chart", exact: true },
+        { href: "/admin/statistics", label: t("admin.statistics"), icon: "trending" },
+        { href: "/admin/logs", label: t("admin.logs"), icon: "list" },
+      ],
     },
     {
       title: t("admin.catalogue"),
