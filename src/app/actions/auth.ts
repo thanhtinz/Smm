@@ -8,9 +8,14 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { findReferrerByCode } from "@/lib/affiliate";
 import { verifyCaptcha } from "@/lib/captcha";
+import { sendVerificationEmail, verificationRequired } from "@/lib/verification";
 
 export type FormState = {
   error?: string;
+  /** Set when sign-in is blocked only because the address is unconfirmed. */
+  unverified?: string;
+  /** Set when sign-up finished but the account still needs confirming. */
+  pendingVerification?: string;
   fieldErrors?: Record<string, string>;
   values?: Record<string, string>;
 };
@@ -53,6 +58,11 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
       error: user.banReason ? `This account is suspended: ${user.banReason}` : "This account is suspended.",
       values: { identifier: raw.identifier },
     };
+  }
+  // Checked after the password, so an unverified address is only revealed to
+  // someone who already knows the credentials.
+  if (!user.emailVerified && (await verificationRequired())) {
+    return { unverified: user.email, values: { identifier: raw.identifier } };
   }
 
   await createSession(user.id);
@@ -163,8 +173,16 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
     },
   });
 
-  await createSession(user.id);
   await logActivity(user.id, "register");
+
+  // An unconfirmed account gets no session: the confirmation link is what
+  // finishes signing up.
+  if (await verificationRequired()) {
+    await sendVerificationEmail(user);
+    return { pendingVerification: user.email };
+  }
+
+  await createSession(user.id);
   redirect("/dashboard");
 }
 
@@ -180,4 +198,22 @@ function fieldErrors(error: z.ZodError): Record<string, string> {
     if (!out[key]) out[key] = issue.message;
   }
   return out;
+}
+
+/**
+ * Sends the confirmation link again.
+ *
+ * Answers the same whatever it finds: this form is reachable without signing
+ * in, so it must not report which addresses exist or which are confirmed.
+ */
+export async function resendVerificationAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { fieldErrors: { email: "Enter your email address" } };
+
+  if (await verificationRequired()) {
+    const user = await db.user.findFirst({ where: { email, emailVerified: false, banned: false } });
+    if (user) await sendVerificationEmail(user);
+  }
+
+  return { pendingVerification: email };
 }

@@ -28,12 +28,28 @@ export default function RegisterForm({
     | "submit"
     | "hasaccount"
     | "signin"
-    | "referred",
+    | "referred"
+    | "checkInbox"
+    | "sentTo",
     string
   >;
   termsRequired: boolean;
 }) {
   const [state, action] = useActionState<FormState, FormData>(registerAction, {});
+
+  // Sign-up finished but the account is not usable until the link is clicked,
+  // so the form is replaced rather than left looking unsubmitted.
+  if (state.pendingVerification) {
+    return (
+      <>
+        <h1 className="text-2xl font-bold tracking-tight">{labels.checkInbox}</h1>
+        <div className="alert alert-success mt-6" role="status">
+          <Icon name="mail" size={16} />
+          <span>{labels.sentTo.replace("{email}", state.pendingVerification)}</span>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
