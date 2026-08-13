@@ -17,6 +17,30 @@ async function nextId(entity: string): Promise<number> {
   return (await db.counter.update({ where: { name: entity }, data: { value: { increment: 1 } } })).value;
 }
 
+async function seedRootPanel() {
+  const existing = await db.panel.findFirst({ where: { parentId: null }, orderBy: { createdAt: "asc" } });
+  const panel =
+    existing ?? (await db.panel.create({ data: { slug: "root", name: "Root panel", depth: 0, path: "" } }));
+  if (!panel.path) await db.panel.update({ where: { id: panel.id }, data: { path: panel.id } });
+
+  const appHost = (() => {
+    try {
+      return new URL(process.env.APP_URL ?? "http://localhost:3000").hostname.toLowerCase();
+    } catch {
+      return "localhost";
+    }
+  })();
+
+  const hosts = [...new Set([appHost, "localhost", "127.0.0.1"])];
+  for (const [index, host] of hosts.entries()) {
+    await db.panelDomain.upsert({
+      where: { host },
+      create: { panelId: panel.id, host, verified: true, isPrimary: index === 0 },
+      update: { panelId: panel.id, verified: true },
+    });
+  }
+}
+
 /** Short, honest blurb rendered in the order summary. */
 function describe(name: string): string {
   const bits: string[] = [];
@@ -335,6 +359,11 @@ async function main() {
   for (const p of pages) {
     await db.page.upsert({ where: { slug: p.slug }, create: p, update: {} });
   }
+
+  // --- Root panel ---------------------------------------------------------
+  // Every request resolves to a panel by host, so the root panel and the hosts
+  // it answers on have to exist before anything can be served.
+  await seedRootPanel();
 
   console.log("Seed complete.");
 }
