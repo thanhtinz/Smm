@@ -72,6 +72,41 @@ export function fetchProviderBalance(provider: { apiUrl: string; apiKey: string 
   return call<{ balance: string; currency: string }>(provider, { action: "balance" });
 }
 
+/**
+ * Refill and cancel, the two request actions in the standard.
+ *
+ * Providers differ on the reply shape — some return `{refill: id}`, some a
+ * bare id, some `{cancel: [...]}` — so the id is read loosely and only used as
+ * a reference to show an operator.
+ */
+export async function requestProviderRefill(
+  provider: { apiUrl: string; apiKey: string },
+  providerOrderId: string,
+) {
+  const result = await call<{ refill?: string | number } | string | number>(provider, {
+    action: "refill",
+    order: providerOrderId,
+  });
+  if (!result.ok) return result;
+  return { ok: true as const, data: String((result.data as { refill?: string | number })?.refill ?? result.data ?? "") };
+}
+
+export async function requestProviderCancel(
+  provider: { apiUrl: string; apiKey: string },
+  providerOrderId: string,
+) {
+  const result = await call<unknown>(provider, { action: "cancel", orders: providerOrderId });
+  if (!result.ok) return result;
+
+  // `cancel` answers with an array, one entry per order asked about.
+  const row = Array.isArray(result.data) ? result.data[0] : result.data;
+  const error = (row as { cancel?: { error?: string } } | undefined)?.cancel;
+  if (error && typeof error === "object" && "error" in error && error.error) {
+    return { ok: false as const, error: String(error.error) };
+  }
+  return { ok: true as const, data: String((row as { cancel?: unknown })?.cancel ?? "") };
+}
+
 export function placeProviderOrder(
   provider: { apiUrl: string; apiKey: string },
   order: { service: string; link: string; quantity: number; runs?: number | null; interval?: number | null }

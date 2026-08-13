@@ -82,6 +82,56 @@ export async function propagateChainStatuses(limit = 200) {
 }
 
 /**
+ * Carries a resolved refill or cancel request back down to the reseller who
+ * raised it.
+ *
+ * A panel that forwarded a request left its own copy `approved`, meaning
+ * "passed on". It only reaches a final answer when the level above reaches
+ * one. Cancels need no money moved here: when the cancel actually happens the
+ * order status changes, and the refund cascade above handles it.
+ */
+export async function propagateRequestDecisions(limit = 200) {
+  const panels = await basePrisma.panel.findMany({ orderBy: { depth: "asc" } });
+  let updated = 0;
+
+  for (const panel of panels) {
+    const resolved = await runAsPanel(panel.id, async () =>
+      db.orderRequest.findMany({
+        where: { sourceRequestId: { not: "" }, status: { in: ["rejected", "completed"] } },
+        orderBy: { updatedAt: "asc" },
+        take: limit,
+      }),
+    );
+
+    for (const upstream of resolved) {
+      const downstream = await basePrisma.orderRequest.findUnique({ where: { id: upstream.sourceRequestId } });
+      if (!downstream || downstream.status === upstream.status) continue;
+      if (downstream.status === "rejected" || downstream.status === "completed") continue;
+
+      await runAsPanel(downstream.panelId, async () => {
+        await db.orderRequest.update({
+          where: { id: downstream.id },
+          data: { status: upstream.status, note: upstream.note },
+        });
+        await db.notification.create({
+          data: {
+            userId: downstream.userId,
+            title: `${downstream.type === "refill" ? "Refill" : "Cancellation"} request ${upstream.status}`,
+            body: upstream.note || "",
+            level: upstream.status === "rejected" ? "warning" : "success",
+            href: "/dashboard/orders",
+          },
+        });
+      });
+
+      updated += 1;
+    }
+  }
+
+  return { updated };
+}
+
+/**
  * One full cycle for every panel: push queued orders to outside providers,
  * pull their statuses back, then carry both down the chain.
  *
@@ -108,6 +158,7 @@ export async function runSyncCycle() {
   }
 
   const chain = await propagateChainStatuses();
+  const requests = await propagateRequestDecisions();
   const rent = await billPanelRent();
-  return { sent, synced, chain, rent, failures };
+  return { sent, synced, chain, requests, rent, failures };
 }
