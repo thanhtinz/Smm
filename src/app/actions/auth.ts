@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { createSession, destroySession, hashPassword, logActivity, verifyPassword } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
+import { findReferrerByCode } from "@/lib/affiliate";
 
 export type FormState = {
   error?: string;
@@ -109,9 +110,13 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
     getSetting("auth.signupBonus"),
   ]);
 
+  // A referral code is only honoured at signup; it cannot be attached later.
+  const referrer = await findReferrerByCode(String(formData.get("ref") ?? ""));
+
   const user = await db.user.create({
     data: {
       publicId: await nextPublicId("user"),
+      referredById: referrer?.id ?? null,
       username: parsed.data.username,
       email: parsed.data.email,
       password: await hashPassword(parsed.data.password),

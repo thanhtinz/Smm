@@ -34,7 +34,9 @@ export type WalletLabels = Record<
   | "credited"
   | "unavailable"
   | "presets"
-  | "noMethods",
+  | "noMethods"
+  | "coupon"
+  | "couponHint",
   string
 >;
 
@@ -190,6 +192,17 @@ export default function DepositForm({
             placeholder={String(method?.minAmount || 0)}
             error={state.fieldErrors?.amount}
             hint={method && method.minAmount > 0 ? "range" : undefined}
+          />
+        </Field>
+
+        <Field name="coupon" label={labels.coupon} error={state.fieldErrors?.coupon} hint={labels.couponHint}>
+          <TextInput
+            name="coupon"
+            autoCapitalize="characters"
+            autoComplete="off"
+            error={state.fieldErrors?.coupon}
+            hint={labels.couponHint}
+            placeholder=""
           />
         </Field>
 
