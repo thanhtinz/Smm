@@ -1,0 +1,223 @@
+import { db } from "@/lib/db";
+
+export type GatewayConfig = Record<string, string>;
+
+export type DepositContext = {
+  /** Amount in the payment currency, already fee-adjusted. */
+  amount: number;
+  currency: string;
+  /** Short reference the payer must include, e.g. NOVA100042. */
+  reference: string;
+  transactionId: string;
+  config: GatewayConfig;
+  appUrl: string;
+};
+
+export type DepositInstruction =
+  | { kind: "transfer"; bankName: string; accountNumber: string; accountName: string; reference: string; qrPayload?: string }
+  | { kind: "redirect"; url: string }
+  | { kind: "manual"; instructions: string; reference: string }
+  | { kind: "unconfigured"; message: string };
+
+export type Driver = {
+  key: string;
+  /** Which config fields must be non-empty for the method to be usable. */
+  required: string[];
+  /** Fields shown in the admin editor, in order. */
+  fields: { name: string; label: string; type?: "text" | "password" | "select"; options?: string[]; hint?: string }[];
+  prepare: (ctx: DepositContext) => Promise<DepositInstruction>;
+};
+
+export const drivers: Record<string, Driver> = {
+  seapay: {
+    key: "seapay",
+    required: ["accountNumber", "bankCode", "accountName"],
+    fields: [
+      { name: "accountNumber", label: "Account number" },
+      { name: "bankCode", label: "Bank", type: "select", options: [] },
+      { name: "accountName", label: "Account holder" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the transfer content, e.g. NOVA" },
+      { name: "apiToken", label: "SePay API token", type: "password" },
+      { name: "webhookSecret", label: "Webhook secret", type: "password", hint: "Sent as Authorization: Apikey <secret>" },
+    ],
+    async prepare(ctx) {
+      const { buildVietQrPayload, VIETQR_BANKS } = await import("./vietqr");
+      const bankCode = (ctx.config.bankCode || "MB").toUpperCase();
+      const bank = VIETQR_BANKS[bankCode];
+      return {
+        kind: "transfer",
+        bankName: bank?.name ?? bankCode,
+        accountNumber: ctx.config.accountNumber,
+        accountName: ctx.config.accountName,
+        reference: ctx.reference,
+        qrPayload: buildVietQrPayload({
+          bankCode,
+          accountNumber: ctx.config.accountNumber,
+          amount: Math.round(ctx.amount),
+          description: ctx.reference,
+        }),
+      };
+    },
+  },
+
+  paypal: {
+    key: "paypal",
+    required: ["clientId", "clientSecret"],
+    fields: [
+      { name: "clientId", label: "Client ID" },
+      { name: "clientSecret", label: "Client secret", type: "password" },
+      { name: "mode", label: "Mode", type: "select", options: ["sandbox", "live"] },
+    ],
+    async prepare(ctx) {
+      const base = ctx.config.mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
+      const auth = Buffer.from(`${ctx.config.clientId}:${ctx.config.clientSecret}`).toString("base64");
+
+      const tokenRes = await fetch(`${base}/v1/oauth2/token`, {
+        method: "POST",
+        headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
+        body: "grant_type=client_credentials",
+      });
+      if (!tokenRes.ok) return { kind: "unconfigured", message: "PayPal rejected the configured credentials." };
+      const { access_token } = (await tokenRes.json()) as { access_token: string };
+
+      const orderRes = await fetch(`${base}/v2/checkout/orders`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${access_token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intent: "CAPTURE",
+          purchase_units: [
+            {
+              custom_id: ctx.transactionId,
+              invoice_id: ctx.reference,
+              amount: { currency_code: ctx.currency, value: ctx.amount.toFixed(2) },
+            },
+          ],
+          application_context: {
+            return_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?paypal=return`,
+            cancel_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?paypal=cancel`,
+          },
+        }),
+      });
+      if (!orderRes.ok) return { kind: "unconfigured", message: "PayPal could not create the order." };
+      const order = (await orderRes.json()) as { links?: { rel: string; href: string }[] };
+      const approve = order.links?.find((l) => l.rel === "approve" || l.rel === "payer-action");
+      if (!approve) return { kind: "unconfigured", message: "PayPal did not return an approval link." };
+      return { kind: "redirect", url: approve.href };
+    },
+  },
+
+  link: {
+    key: "link",
+    required: ["secretKey"],
+    fields: [
+      { name: "publishableKey", label: "Publishable key" },
+      { name: "secretKey", label: "Secret key", type: "password" },
+      { name: "webhookSecret", label: "Webhook signing secret", type: "password" },
+    ],
+    async prepare(ctx) {
+      // Link is Stripe's one-click wallet; a Checkout Session with `link`
+      // enabled covers Link, cards and the local wallets Stripe offers.
+      const body = new URLSearchParams({
+        mode: "payment",
+        success_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?stripe=success`,
+        cancel_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?stripe=cancel`,
+        client_reference_id: ctx.transactionId,
+        "line_items[0][quantity]": "1",
+        "line_items[0][price_data][currency]": ctx.currency.toLowerCase(),
+        "line_items[0][price_data][unit_amount]": String(Math.round(ctx.amount * 100)),
+        "line_items[0][price_data][product_data][name]": `Balance top-up ${ctx.reference}`,
+        "payment_method_types[0]": "card",
+        "payment_method_types[1]": "link",
+      });
+
+      const res = await fetch("https://api.stripe.com/v1/checkout/sessions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${ctx.config.secretKey}`,
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+        body,
+      });
+      if (!res.ok) return { kind: "unconfigured", message: "Stripe rejected the configured credentials." };
+      const session = (await res.json()) as { url?: string };
+      if (!session.url) return { kind: "unconfigured", message: "Stripe did not return a checkout URL." };
+      return { kind: "redirect", url: session.url };
+    },
+  },
+
+  manual: {
+    key: "manual",
+    required: ["accountNumber", "accountName", "bankName"],
+    fields: [
+      { name: "bankName", label: "Bank name" },
+      { name: "accountNumber", label: "Account number" },
+      { name: "accountName", label: "Account holder" },
+      { name: "instructions", label: "Instructions shown to the payer" },
+    ],
+    async prepare(ctx) {
+      return {
+        kind: "manual",
+        instructions: ctx.config.instructions || "Transfer the exact amount and include the reference below.",
+        reference: ctx.reference,
+      };
+    },
+  },
+};
+
+export function parseConfig(raw: string): GatewayConfig {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    const out: GatewayConfig = {};
+    for (const [k, v] of Object.entries(parsed)) out[k] = v == null ? "" : String(v);
+    return out;
+  } catch {
+    return {};
+  }
+}
+
+export function parseCurrencies(raw: string): string[] {
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map(String) : [];
+  } catch {
+    return [];
+  }
+}
+
+/** A method is only offered once every credential its driver needs is filled. */
+export function isConfigured(driverKey: string, config: GatewayConfig): boolean {
+  const driver = drivers[driverKey];
+  if (!driver) return false;
+  return driver.required.every((field) => Boolean(config[field]?.trim()));
+}
+
+export async function getAvailableMethods() {
+  const rows = await db.paymentMethod.findMany({ where: { enabled: true }, orderBy: { position: "asc" } });
+  return rows.map((row) => {
+    const config = parseConfig(row.config);
+    return {
+      id: row.id,
+      code: row.code,
+      name: row.name,
+      driver: row.driver,
+      icon: row.icon,
+      description: row.description,
+      currencies: parseCurrencies(row.currencies),
+      minAmount: row.minAmount,
+      maxAmount: row.maxAmount,
+      feePercent: row.feePercent,
+      feeFixed: row.feeFixed,
+      bonusPercent: row.bonusPercent,
+      configured: isConfigured(row.driver, config),
+    };
+  });
+}
+
+export type AvailableMethod = Awaited<ReturnType<typeof getAvailableMethods>>[number];
+
+/** Gateway fees are added on top: the panel credits the requested amount. */
+export function computeTotals(amount: number, method: { feePercent: number; feeFixed: number; bonusPercent: number }) {
+  const fee = Math.max(0, (amount * method.feePercent) / 100 + method.feeFixed);
+  const bonus = Math.max(0, (amount * method.bonusPercent) / 100);
+  return { fee, bonus, payable: amount + fee, credited: amount + bonus };
+}
