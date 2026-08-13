@@ -60,6 +60,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/requests", label: t("request.title"), icon: "refresh", badge: openRequests || undefined },
         { href: "/admin/transactions", label: t("wallet.history"), icon: "creditCard" },
         { href: "/admin/users", label: t("admin.users"), icon: "users" },
+        { href: "/admin/tiers", label: t("tier.title"), icon: "trending" },
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
       ],
     },

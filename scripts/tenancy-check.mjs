@@ -50,6 +50,9 @@ const EDGES = [
   ["referralEarning", "referrerId", "user"],
   ["referralEarning", "referredId", "user"],
   ["user", "referredById", "user"],
+  ["user", "tierId", "userTier"],
+  ["tierPrice", "tierId", "userTier"],
+  ["tierPrice", "serviceId", "service"],
 ];
 
 async function checkForeignKeys() {
@@ -74,7 +77,7 @@ async function checkNoOrphans() {
     "setting", "counter", "user", "session", "activityLog", "media", "platform", "category",
     "provider", "service", "order", "orderRequest", "paymentMethod", "transaction", "ticket",
     "ticketMessage", "notification", "coupon", "couponRedemption", "referralEarning",
-    "announcement", "page",
+    "announcement", "page", "userTier", "tierPrice",
   ];
   let total = 0;
   for (const m of models) {

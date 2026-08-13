@@ -7,6 +7,7 @@ import {
   setUserRoleAction,
   type ActionResult,
 } from "@/app/actions/admin/operations";
+import { setUserTierAction } from "@/app/actions/admin/tiers";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
@@ -23,9 +24,22 @@ export type AdminUserRow = {
   banned: boolean;
   banReason: string;
   createdAt: string;
+  /** Empty when the customer follows the spend ladder rather than an override. */
+  tierId: string;
+  tierName: string;
 };
 
-export default function UserManager({ rows, labels }: { rows: AdminUserRow[]; labels: Record<string, string> }) {
+export type TierOption = { id: string; name: string };
+
+export default function UserManager({
+  rows,
+  tiers,
+  labels,
+}: {
+  rows: AdminUserRow[];
+  tiers: TierOption[];
+  labels: Record<string, string>;
+}) {
   const [adjusting, setAdjusting] = useState<AdminUserRow | null>(null);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
@@ -59,6 +73,7 @@ export default function UserManager({ rows, labels }: { rows: AdminUserRow[]; la
                   <th>{labels.user}</th>
                   <th className="w-32 text-right">{labels.balance}</th>
                   <th className="w-32 text-right">{labels.spent}</th>
+                  <th className="w-36">{labels.tier}</th>
                   <th className="w-36">{labels.role}</th>
                   <th className="w-28">{labels.status}</th>
                   <th className="w-32 text-right">{labels.actions}</th>
@@ -74,6 +89,27 @@ export default function UserManager({ rows, labels }: { rows: AdminUserRow[]; la
                     </td>
                     <td className="text-right font-semibold tabular-nums">{row.balance}</td>
                     <td className="muted text-right tabular-nums">{row.spent}</td>
+                    <td>
+                      <label htmlFor={`tier-${row.id}`} className="sr-only">
+                        {labels.tier}
+                      </label>
+                      <select
+                        id={`tier-${row.id}`}
+                        value={row.tierId}
+                        disabled={pending}
+                        onChange={(e) => run(() => setUserTierAction(row.id, e.target.value || null))}
+                        className="field py-1.5 text-xs"
+                      >
+                        <option value="">
+                          {row.tierName ? `${labels.auto} · ${row.tierName}` : labels.auto}
+                        </option>
+                        {tiers.map((tier) => (
+                          <option key={tier.id} value={tier.id}>
+                            {tier.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td>
                       <label htmlFor={`role-${row.id}`} className="sr-only">
                         {labels.role}

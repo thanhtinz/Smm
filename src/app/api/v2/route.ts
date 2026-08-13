@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { calculateCharge, isValidOrderLink } from "@/lib/orders";
+import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { getBaseCurrency } from "@/lib/currency";
 
 /**
@@ -26,11 +27,11 @@ export async function POST(request: Request) {
   const action = String(params.action ?? "");
   switch (action) {
     case "services":
-      return services();
+      return services(user);
     case "balance":
       return balance(user.id);
     case "add":
-      return add(user.id, params);
+      return add(user, params);
     case "status":
       return status(user.id, params);
     case "orders":
@@ -44,14 +45,20 @@ export async function GET() {
   return fail("Use POST");
 }
 
+/** Only what the priced actions need from the key's owner. */
+type ApiCaller = { id: string; tierId: string | null; spent: number };
+
 // ------------------------------------------------------------------ actions
 
-async function services() {
+async function services(user: ApiCaller) {
   const rows = await db.service.findMany({
     where: { enabled: true },
     orderBy: { publicId: "asc" },
     include: { category: { select: { name: true } } },
   });
+
+  // Resellers see their own tier's prices, the ones `add` will charge them.
+  const rates = await priceServices(await resolveTier(user), rows);
 
   return NextResponse.json(
     rows.map((s) => ({
@@ -60,7 +67,7 @@ async function services() {
       type: s.type === "default" ? "Default" : s.type,
       category: s.category.name,
       // Rates go out as strings: the standard clients parse them that way.
-      rate: s.rate.toFixed(4),
+      rate: (rates.get(s.id) ?? s.rate).toFixed(4),
       min: String(s.min),
       max: String(s.max),
       refill: s.refill,
@@ -78,7 +85,8 @@ async function balance(userId: string) {
   return NextResponse.json({ balance: user.balance.toFixed(base.decimals), currency: base.code });
 }
 
-async function add(userId: string, params: Record<string, unknown>) {
+async function add(user: ApiCaller, params: Record<string, unknown>) {
+  const userId = user.id;
   if (!(await getSetting("order.enabled"))) return fail("Ordering is disabled");
 
   const serviceId = Number(params.service);
@@ -103,7 +111,8 @@ async function add(userId: string, params: Record<string, unknown>) {
   }
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
-  const charge = calculateCharge(service.rate, totalQuantity);
+  const rate = await priceService(await resolveTier(user), service);
+  const charge = calculateCharge(rate, totalQuantity);
 
   const [orderPublicId, txPublicId] = await Promise.all([nextPublicId("order"), nextPublicId("transaction")]);
 

@@ -5,6 +5,7 @@ import { displayMoney } from "@/lib/currency";
 import { Icon, type IconName } from "@/components/icons";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
+import { resolveTier } from "@/lib/pricing";
 
 export default async function DashboardPage() {
   const ctx = await getAppContext();
@@ -23,6 +24,8 @@ export default async function DashboardPage() {
     db.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 4 }),
   ]);
 
+  const tier = await resolveTier(user);
+
   const quick: { href: string; label: string; icon: IconName }[] = [
     { href: "/dashboard/new-order", label: t("dash.newOrder"), icon: "cart" },
     { href: "/dashboard/wallet", label: t("dash.addFunds"), icon: "wallet" },
@@ -32,8 +35,23 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div>
-        <h2 className="text-2xl font-bold tracking-tight">
-          {t("dash.welcome")}, {user.username}
+        <h2 className="flex flex-wrap items-center gap-2.5 text-2xl font-bold tracking-tight">
+          <span>
+            {t("dash.welcome")}, {user.username}
+          </span>
+          {tier && (
+            <span
+              className="badge"
+              style={{
+                color: tier.color,
+                background: `color-mix(in srgb, ${tier.color} 16%, transparent)`,
+                borderColor: `color-mix(in srgb, ${tier.color} 35%, transparent)`,
+              }}
+            >
+              {tier.name}
+              {tier.discountPercent > 0 && ` -${tier.discountPercent}%`}
+            </span>
+          )}
         </h2>
       </div>
 

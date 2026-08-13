@@ -29,6 +29,8 @@ const TENANT_MODELS = new Set([
   "ReferralEarning",
   "Announcement",
   "Page",
+  "UserTier",
+  "TierPrice",
 ]);
 
 /**

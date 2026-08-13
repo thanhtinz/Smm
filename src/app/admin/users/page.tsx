@@ -32,6 +32,13 @@ export default async function AdminUsersPage({
     db.user.count({ where }),
   ]);
 
+  const tiers = await db.userTier.findMany({ orderBy: [{ position: "asc" }, { minSpent: "asc" }] });
+  // What the spend ladder would give a customer with no override, so the
+  // "automatic" option can name the tier it resolves to.
+  const autoTier = (spent: number) =>
+    [...tiers].filter((x) => x.minSpent > 0 && x.minSpent <= spent).sort((a, b) => b.minSpent - a.minSpent)[0] ??
+    tiers.find((x) => x.isDefault);
+
   const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
     day: "2-digit",
     month: "2-digit",
@@ -62,6 +69,7 @@ export default async function AdminUsersPage({
       </form>
 
       <UserManager
+        tiers={tiers.map((x) => ({ id: x.id, name: x.name }))}
         rows={users.map((u) => ({
           id: u.id,
           publicId: u.publicId,
@@ -73,6 +81,8 @@ export default async function AdminUsersPage({
           banned: u.banned,
           banReason: u.banReason,
           createdAt: fmtDate.format(u.createdAt),
+          tierId: u.tierId ?? "",
+          tierName: autoTier(u.spent)?.name ?? "",
         }))}
         labels={{
           empty: t("common.none"),
@@ -80,6 +90,8 @@ export default async function AdminUsersPage({
           balance: t("admin.balance"),
           spent: t("admin.spent"),
           role: t("admin.role"),
+          tier: t("tier.tier"),
+          auto: t("tier.auto"),
           status: t("common.status"),
           actions: t("common.actions"),
           active: t("admin.active"),
