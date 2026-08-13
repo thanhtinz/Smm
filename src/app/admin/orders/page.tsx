@@ -67,8 +67,19 @@ export default async function AdminOrdersPage({
     status: t("common.status"),
     date: t("common.date"),
     confirmRefund: t("admin.confirmRefund"),
+    edit: t("admin.edit"),
+    save: t("common.save"),
+    link: t("order.link"),
+    startCount: t("order.startCount"),
+    remains: t("order.remains"),
+    providerOrderId: t("order.providerOrderId"),
+    note: t("admin.note"),
+    source: t("order.source"),
+    fromChild: t("order.fromChild"),
   };
   for (const s of ORDER_STATUSES) labels[`status.${s}`] = t(`status.${s}`);
+  // The drawer shows the charge, and conversion belongs on the server.
+  for (const o of orders) labels[`money.${o.id}`] = displayMoney(o.charge, currency, locale);
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -116,6 +127,11 @@ export default async function AdminOrdersPage({
           charge: o.charge,
           status: o.status,
           createdAt: fmtDate.format(o.createdAt),
+          startCount: o.startCount,
+          remains: o.remains,
+          providerOrderId: o.providerOrderId,
+          note: o.note,
+          fromChild: Boolean(o.sourceOrderId),
         }))}
         money={Object.fromEntries(orders.map((o) => [o.id, displayMoney(o.charge, currency, locale)]))}
         labels={labels}
