@@ -9,6 +9,7 @@ import { nextPublicId } from "@/lib/ids";
 import { findReferrerByCode } from "@/lib/affiliate";
 import { verifyCaptcha } from "@/lib/captcha";
 import { sendVerificationEmail, verificationRequired } from "@/lib/verification";
+import { startPendingLogin, twoFactorActive } from "@/lib/two-factor";
 
 export type FormState = {
   error?: string;
@@ -63,6 +64,14 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   // someone who already knows the credentials.
   if (!user.emailVerified && (await verificationRequired())) {
     return { unverified: user.email, values: { identifier: raw.identifier } };
+  }
+
+  // A staff account with a second factor gets no session yet — only a ticket
+  // that is worth nothing without the code.
+  if (twoFactorActive(user)) {
+    await startPendingLogin(user.id);
+    await logActivity(user.id, "login.2fa.pending");
+    redirect("/two-factor");
   }
 
   await createSession(user.id);
