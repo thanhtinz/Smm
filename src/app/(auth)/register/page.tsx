@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import RegisterForm from "@/components/auth/register-form";
 import { getAppContext } from "@/lib/context";
+import { captchaFor } from "@/lib/captcha";
 import { getSetting } from "@/lib/settings";
 import { Icon } from "@/components/icons";
 
@@ -25,6 +26,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
 
   return (
     <RegisterForm
+      captcha={await captchaFor("register")}
       referralCode={(ref ?? "").trim().toUpperCase()}
       termsRequired={Boolean(termsRequired)}
       labels={{

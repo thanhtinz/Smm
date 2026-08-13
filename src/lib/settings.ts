@@ -78,6 +78,16 @@ export const settingDefinitions = {
   "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
   "auth.requireEmailVerification": { group: "auth", type: "boolean", value: false },
   "auth.signupBonus": { group: "auth", type: "number", value: 0 },
+  "auth.captchaProvider": {
+    group: "auth",
+    type: "select",
+    value: "off",
+    options: ["off", "turnstile", "hcaptcha", "recaptcha"],
+  },
+  "auth.captchaSiteKey": { group: "auth", type: "text", value: "" },
+  "auth.captchaSecret": { group: "auth", type: "password", value: "" },
+  "auth.captchaOnLogin": { group: "auth", type: "boolean", value: true },
+  "auth.captchaOnRegister": { group: "auth", type: "boolean", value: true },
   "auth.termsRequired": { group: "auth", type: "boolean", value: true },
 
   // --- API ----------------------------------------------------------------
