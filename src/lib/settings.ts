@@ -46,6 +46,17 @@ export const settingDefinitions = {
   "wallet.minDeposit": { group: "wallet", type: "number", value: 20000 },
   "wallet.maxDeposit": { group: "wallet", type: "number", value: 500000000 },
   "wallet.autoApprove": { group: "wallet", type: "boolean", value: true },
+  "wallet.quickAmounts": {
+    group: "wallet",
+    type: "json",
+    value: {
+      VND: [50000, 100000, 200000, 500000, 1000000],
+      USD: [5, 10, 25, 50, 100],
+      EUR: [5, 10, 25, 50, 100],
+      TRY: [100, 250, 500, 1000],
+      INR: [500, 1000, 2500, 5000],
+    } as Record<string, number[]>,
+  },
 
   // --- Registration -------------------------------------------------------
   "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
