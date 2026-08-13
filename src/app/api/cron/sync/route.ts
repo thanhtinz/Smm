@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
-import { dispatchPendingOrders, syncOrderStatuses } from "@/lib/providers";
+import { runSyncCycle } from "@/lib/chain-sync";
 
 /**
- * Scheduler entry point: dispatches queued orders and refreshes statuses.
+ * Scheduler entry point: dispatches queued orders, refreshes statuses from
+ * outside providers, and carries both down the wholesale chain — for every
+ * panel, since a cron request has no host to resolve one from.
+ *
  * Protected by CRON_SECRET so it cannot be triggered by a stranger. Without
  * the variable set the route stays closed rather than open.
  */
@@ -13,12 +16,12 @@ export async function POST(request: Request) {
   const provided = (request.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "").trim();
   if (provided !== secret) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const dispatched = await dispatchPendingOrders();
-  const synced = await syncOrderStatuses();
+  const result = await runSyncCycle();
 
   return NextResponse.json({
-    dispatched: dispatched.sent,
-    updated: synced.updated,
-    failures: [...dispatched.failures, ...synced.failures],
+    dispatched: result.sent,
+    updated: result.synced,
+    chain: result.chain,
+    failures: result.failures,
   });
 }

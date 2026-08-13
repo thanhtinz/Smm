@@ -229,15 +229,20 @@ export async function syncOrderStatuses(limit = 100) {
 }
 
 /**
- * Applies a status change and returns money in one transaction. The guard on
- * `refunded` means a repeated sync cannot pay the customer twice.
+ * Applies a status change and returns money in one transaction.
+ *
+ * Idempotent through the existing refund row: a repeated sync, or a status
+ * that arrives twice, cannot pay the customer twice. `reference` is the
+ * order's public id, which repeats across panels but not within one, and
+ * Transaction is panel-scoped — so the lookup is unambiguous.
  */
-async function settleRefund(
+export async function settleRefund(
   orderId: string,
   userId: string,
   amount: number,
   orderPublicId: number,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  note?: string,
 ) {
   const txPublicId = await nextPublicId("transaction");
 
@@ -264,7 +269,7 @@ async function settleRefund(
         amount,
         status: "completed",
         reference: String(orderPublicId),
-        note: `Provider refund for order #${orderPublicId}`,
+        note: note ?? `Provider refund for order #${orderPublicId}`,
         balanceAfter,
       },
     });
