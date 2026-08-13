@@ -92,6 +92,7 @@ export default function PreferenceMenu({
   theme,
   mode,
   showTheme = true,
+  showPickers = true,
 }: {
   languages: { code: string; nativeName: string; name: string }[];
   currencies: { code: string; name: string; symbol: string }[];
@@ -100,34 +101,44 @@ export default function PreferenceMenu({
   currency: string;
   theme: string;
   mode: "dark" | "light";
+  /** Off where the panel also offers a theme picker in the account page. */
   showTheme?: boolean;
+  /**
+   * Off for a signed-in header: language, currency and theme are chosen in
+   * the account page there, and only the light/dark switch stays here.
+   */
+  showPickers?: boolean;
 }) {
   const [, start] = useTransition();
 
   return (
     <div className="flex items-center gap-1.5">
-      <Popover
-        icon="language"
-        label="Language"
-        active={locale}
-        options={languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name }))}
-        onPick={(v) => setLocale(v)}
-      />
-      <Popover
-        icon="wallet"
-        label="Currency"
-        active={currency}
-        options={currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}`, hint: c.name }))}
-        onPick={(v) => setCurrency(v)}
-      />
-      {showTheme && (
-        <Popover
-          icon="palette"
-          label="Theme"
-          active={theme}
-          options={themes.map((t) => ({ value: t.slug, label: t.name, hint: t.description }))}
-          onPick={(v) => setTheme(v)}
-        />
+      {showPickers && (
+        <>
+          <Popover
+            icon="language"
+            label="Language"
+            active={locale}
+            options={languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name }))}
+            onPick={(v) => setLocale(v)}
+          />
+          <Popover
+            icon="wallet"
+            label="Currency"
+            active={currency}
+            options={currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}`, hint: c.name }))}
+            onPick={(v) => setCurrency(v)}
+          />
+          {showTheme && (
+            <Popover
+              icon="palette"
+              label="Theme"
+              active={theme}
+              options={themes.map((t) => ({ value: t.slug, label: t.name, hint: t.description }))}
+              onPick={(v) => setTheme(v)}
+            />
+          )}
+        </>
       )}
       <button
         type="button"

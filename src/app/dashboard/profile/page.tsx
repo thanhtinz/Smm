@@ -6,6 +6,7 @@ import { getSetting } from "@/lib/settings";
 import { otpauthUrl } from "@/lib/totp";
 import { STAFF_ROLES, twoFactorRequired, unusedRecoveryCount } from "@/lib/two-factor";
 import ProfileForms from "@/components/account/profile-forms";
+import PreferencesPanel from "@/components/account/preferences-panel";
 import TwoFactorPanel from "@/components/account/two-factor-panel";
 
 export const metadata: Metadata = { title: "Profile" };
@@ -57,6 +58,25 @@ export default async function ProfilePage() {
           password: t("auth.password"),
           confirm: t("auth.confirm"),
           changed: t("profile.passwordChanged"),
+        }}
+      />
+
+      <PreferencesPanel
+        languages={ctx.languages}
+        currencies={ctx.currencies}
+        themes={ctx.themes}
+        locale={ctx.locale}
+        currency={ctx.currency.code}
+        theme={ctx.theme}
+        allowLocale={Boolean(await getSetting("locale.allowUserLocale"))}
+        allowCurrency={Boolean(await getSetting("currency.allowUserCurrency"))}
+        allowTheme={Boolean(await getSetting("appearance.allowUserTheme"))}
+        labels={{
+          title: t("profile.preferences"),
+          language: t("common.language"),
+          currency: t("common.currency"),
+          theme: t("common.theme"),
+          fixed: t("profile.preferencesFixed"),
         }}
       />
 
