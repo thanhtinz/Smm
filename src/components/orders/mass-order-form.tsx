@@ -51,7 +51,7 @@ export default function MassOrderForm({
   const fmt = (base: number) => formatCurrency(base, currency);
 
   return (
-    <form action={action} className="grid gap-5 lg:grid-cols-[1.45fr_1fr]">
+    <form action={action} className="grid gap-5 lg:grid-cols-2">
       <div className="card card-pad min-w-0 space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">

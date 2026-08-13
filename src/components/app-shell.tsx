@@ -81,10 +81,10 @@ export default function AppShell({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="badge badge-muted hidden sm:inline-flex">
+            <Link href="/dashboard/wallet" className="badge badge-muted">
               <Icon name="wallet" size={13} />
               {displayMoney(user.balance, ctx.currency, ctx.locale)}
-            </span>
+            </Link>
             <div className="hidden md:block">
               <PreferenceMenu
                 languages={ctx.languages}

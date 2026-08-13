@@ -37,14 +37,14 @@ export default async function DashboardPage() {
         </h2>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label={t("common.balance")} value={displayMoney(user.balance, currency, locale)} icon="wallet" />
         <StatCard label={t("dash.spent")} value={displayMoney(user.spent, currency, locale)} icon="trending" tone="accent" />
         <StatCard label={t("dash.activeOrders")} value={String(activeCount)} icon="clock" tone="warning" />
         <StatCard label={t("dash.completed")} value={String(completedCount)} icon="checkCircle" tone="success" />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
         {quick.map((q) => (
           <Link
             key={q.href}

@@ -149,7 +149,7 @@ export default function NewOrderForm({
   }
 
   return (
-    <form action={action} className="grid gap-5 lg:grid-cols-[1.45fr_1fr]" noValidate>
+    <form action={action} className="grid gap-5 lg:grid-cols-2" noValidate>
       <div className="card card-pad min-w-0 space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">
