@@ -36,6 +36,8 @@ export type PanelRow = {
   users: number;
   orders: number;
   services: number;
+  /** What this child has paid this panel, formatted. */
+  earned: string;
   domains: DomainRow[];
 };
 
@@ -109,6 +111,7 @@ export default function PanelManager({
                   <th className="w-36">{labels.rent}</th>
                   <th className="w-20 text-right">{labels.users}</th>
                   <th className="w-20 text-right">{labels.orders}</th>
+                  <th className="w-32 text-right">{labels.earned}</th>
                   <th className="w-24">{labels.status}</th>
                   <th className="w-px" />
                 </tr>
@@ -144,6 +147,7 @@ export default function PanelManager({
                       </td>
                       <td className="text-right tabular-nums">{row.users}</td>
                       <td className="text-right tabular-nums">{row.orders}</td>
+                      <td className="text-right font-semibold tabular-nums">{row.earned}</td>
                       <td>
                         <span className={`badge ${row.status === "active" ? "badge-success" : "badge-warning"}`}>
                           {labels[`status.${row.status}`] ?? row.status}

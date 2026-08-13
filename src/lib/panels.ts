@@ -58,6 +58,7 @@ export async function createChildPanel(parent: Panel, draft: ChildDraft): Promis
       depth: parent.depth + 1,
       path: "",
       ownerUserId: draft.ownerUserId,
+      webhookToken: randomBytes(16).toString("hex"),
     },
   });
   await db.panel.update({
@@ -140,6 +141,62 @@ export async function createChildPanel(parent: Panel, draft: ChildDraft): Promis
   return db.panel.findUniqueOrThrow({ where: { id: panel.id } });
 }
 
+/**
+ * What a child panel has paid this panel: wholesale orders bought by its owner
+ * on behalf of the child, and rent.
+ *
+ * Wholesale is identified by the orders this panel holds that were caused by
+ * an order in that child — the sourceOrderId link — rather than by everything
+ * the owner ever bought, which would also count their own retail orders.
+ */
+async function earningsFrom(child: { id: string; slug: string; ownerUserId: string }) {
+  if (!child.ownerUserId) return { wholesale: 0, rent: 0 };
+
+  // Read as the child, since the panel filter refuses a query that names a
+  // different panel than the one in context.
+  const childOrderIds = await runAsPanel(child.id, async () =>
+    db.order.findMany({ select: { id: true } }),
+  );
+
+  const wholesaleOrders = await db.order.findMany({
+    where: { userId: child.ownerUserId, sourceOrderId: { in: childOrderIds.map((o) => o.id) } },
+    select: { publicId: true, charge: true },
+  });
+
+  // Net of refunds. A cancelled order that was paid back is not revenue, and
+  // an operator would price against the gross figure if we showed it.
+  const [refunds, rent] = await Promise.all([
+    db.transaction.aggregate({
+      where: {
+        userId: child.ownerUserId,
+        type: "refund",
+        reference: { in: wholesaleOrders.map((o) => String(o.publicId)) },
+      },
+      _sum: { amount: true },
+    }),
+    db.transaction.aggregate({
+      where: { userId: child.ownerUserId, type: "rent", reference: { startsWith: `${child.slug}@` } },
+      _sum: { amount: true },
+    }),
+  ]);
+
+  const gross = wholesaleOrders.reduce((n, o) => n + o.charge, 0);
+  return {
+    wholesale: Math.max(0, gross - (refunds._sum.amount ?? 0)),
+    rent: Math.abs(rent._sum.amount ?? 0),
+  };
+}
+
+/** Mints the webhook token for a panel that predates the column. */
+export async function ensureWebhookToken(panelId: string): Promise<string> {
+  const panel = await db.panel.findUniqueOrThrow({ where: { id: panelId }, select: { webhookToken: true } });
+  if (panel.webhookToken) return panel.webhookToken;
+
+  const token = randomBytes(16).toString("hex");
+  await db.panel.update({ where: { id: panelId }, data: { webhookToken: token } });
+  return token;
+}
+
 /** Every panel at or below `panel`, itself included. */
 export async function subtreeOf(panel: Panel) {
   return db.panel.findMany({
@@ -166,6 +223,10 @@ export async function childrenOf(panel: Panel) {
         orders: await db.order.count(),
         services: await db.service.count(),
       }))),
+      // What this child has actually been worth: the wholesale it bought here
+      // plus the rent it paid. Both are transactions on this panel against the
+      // owner's account, so they are counted here rather than inside the child.
+      ...(await earningsFrom(child)),
     })),
   );
 }

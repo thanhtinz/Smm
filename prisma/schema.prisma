@@ -636,6 +636,11 @@ model Panel {
   /// What this panel is charged per period. Null follows the parent's
   /// `panel.rentPrice` setting, so raising the standard price moves every
   /// child that never negotiated its own.
+  /// Addresses this panel's payment webhooks. A gateway is configured with one
+  /// fixed callback URL, which may not be on this panel's own hostname, so the
+  /// URL carries the panel rather than relying on the Host header.
+  webhookToken String @default("")
+
   rentPrice    Float?
   nextDueAt    DateTime?
   lastBilledAt DateTime?

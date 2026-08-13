@@ -4,6 +4,9 @@ import { getAppContext } from "@/lib/context";
 import { drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
 import { VIETQR_BANKS } from "@/lib/payments/vietqr";
 import PaymentMethodManager from "@/components/admin/payment-method-manager";
+import CopyField from "@/components/ui/copy-field";
+import { panelBaseUrl, requirePanel } from "@/lib/tenancy";
+import { ensureWebhookToken } from "@/lib/panels";
 
 export const metadata: Metadata = { title: "Payment methods" };
 
@@ -13,8 +16,25 @@ export default async function AdminPaymentMethodsPage() {
 
   const methods = await db.paymentMethod.findMany({ orderBy: { position: "asc" } });
 
+  // The callback a gateway should be pointed at. It carries the panel in the
+  // path, because a gateway posts from its own servers with no hostname of
+  // ours to resolve.
+  const panel = await requirePanel();
+  const token = await ensureWebhookToken(panel.id);
+  const webhookUrl = `${await panelBaseUrl()}/api/webhooks/${token}/seapay`;
+
   return (
     <div className="mx-auto max-w-5xl space-y-5">
+      <div className="card card-pad">
+        <CopyField
+          label={t("admin.webhookUrl")}
+          value={webhookUrl}
+          copyLabel={t("wallet.copy")}
+          copiedLabel={t("wallet.copied")}
+          mono
+        />
+      </div>
+
       <PaymentMethodManager
         currencyCodes={ctx.currencies.map((c) => c.code)}
         rows={methods.map((m) => {

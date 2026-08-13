@@ -85,6 +85,7 @@ export default async function AdminPanelsPage() {
           overdue: Boolean(c.nextDueAt && c.nextDueAt < today),
           users: c.users,
           orders: c.orders,
+          earned: displayMoney(c.wholesale + c.rent, currency, locale),
           services: c.services,
           domains: c.domains.map((d) => ({
             id: d.id,
@@ -114,6 +115,7 @@ export default async function AdminPanelsPage() {
           nextDue: t("panel.nextDue"),
           users: t("admin.users"),
           orders: t("dash.orders"),
+          earned: t("panel.earned"),
           suspend: t("panel.suspend"),
           resume: t("panel.resume"),
           resetAdmin: t("panel.resetAdmin"),
