@@ -230,7 +230,7 @@ async function main() {
             providerRate: Math.round(rate * 0.62),
             min,
             max,
-            refill: /refill/i.test(name),
+            refill: /refill/i.test(name) && !/no refill/i.test(name),
             cancel: true,
             averageTime: ["1 hour", "3 hours", "12 hours", "30 minutes"][si % 4],
             position: si,
