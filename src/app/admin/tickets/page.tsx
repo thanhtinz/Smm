@@ -1,0 +1,104 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { getAppContext } from "@/lib/context";
+import StatusBadge from "@/components/ui/status-badge";
+import { Icon } from "@/components/icons";
+
+export const metadata: Metadata = { title: "Support" };
+
+const STATUSES = ["open", "answered", "pending", "closed"];
+
+export default async function AdminTicketsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string }>;
+}) {
+  const params = await searchParams;
+  const ctx = await getAppContext();
+  const { t, locale } = ctx;
+
+  const status = STATUSES.includes(params.status ?? "") ? params.status : undefined;
+  const [tickets, counts] = await Promise.all([
+    db.ticket.findMany({
+      where: status ? { status } : {},
+      orderBy: { updatedAt: "desc" },
+      take: 100,
+      include: {
+        user: { select: { username: true } },
+        _count: { select: { messages: true } },
+      },
+    }),
+    db.ticket.groupBy({ by: ["status"], _count: true }),
+  ]);
+
+  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  return (
+    <div className="mx-auto max-w-5xl space-y-5">
+      <h2 className="text-2xl font-bold tracking-tight">{t("dash.tickets")}</h2>
+
+      <div className="scroll-x -mx-1 px-1">
+        <div className="flex gap-2 pb-1">
+          <Tab href="/admin/tickets" active={!status} label={t("common.all")} count={counts.reduce((n, c) => n + c._count, 0)} />
+          {STATUSES.map((s) => (
+            <Tab
+              key={s}
+              href={`/admin/tickets?status=${s}`}
+              active={status === s}
+              label={t(`support.status.${s}`)}
+              count={counts.find((c) => c.status === s)?._count ?? 0}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        {tickets.length === 0 ? (
+          <p className="muted px-5 py-14 text-center text-sm">{t("common.none")}</p>
+        ) : (
+          <ul className="divide-y divide-[var(--border)]">
+            {tickets.map((ticket) => (
+              <li key={ticket.id}>
+                <Link href={`/admin/tickets/${ticket.id}`} className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--surface2)]">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{ticket.subject}</p>
+                    <p className="muted mt-0.5 text-xs">
+                      #{ticket.publicId} · {ticket.user.username} · {t(`support.category.${ticket.category}`)} ·{" "}
+                      {fmtDate.format(ticket.updatedAt)}
+                    </p>
+                  </div>
+                  <span className="muted text-xs tabular-nums">{ticket._count.messages}</span>
+                  <StatusBadge status={ticket.status} label={t(`support.status.${ticket.status}`)} />
+                  <Icon name="chevronRight" size={16} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Tab({ href, active, label, count }: { href: string; active: boolean; label: string; count: number }) {
+  return (
+    <Link
+      href={href}
+      aria-current={active ? "page" : undefined}
+      className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+        active
+          ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] text-[var(--primary)]"
+          : "muted border-[var(--border)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
+      }`}
+    >
+      {label}
+      <span className="tabular-nums opacity-70">{count}</span>
+    </Link>
+  );
+}
