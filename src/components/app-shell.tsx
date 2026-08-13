@@ -85,21 +85,9 @@ export default function AppShell({
               <Icon name="wallet" size={13} />
               {displayMoney(user.balance, ctx.currency, ctx.locale)}
             </Link>
-            <div className="hidden md:block">
-              <PreferenceMenu
-                languages={ctx.languages}
-                currencies={ctx.currencies}
-                themes={ctx.themes}
-                locale={ctx.locale}
-                currency={ctx.currency.code}
-                theme={ctx.theme}
-                mode={ctx.mode}
-              />
-            </div>
-            <UserMenu
-              username={user.username}
-              email={user.email}
-              role={user.role}
+            {/* Signed in, the pickers live in the account page — only the
+                light/dark switch is worth a place in the header. */}
+            <PreferenceMenu
               languages={ctx.languages}
               currencies={ctx.currencies}
               themes={ctx.themes}
@@ -107,7 +95,9 @@ export default function AppShell({
               currency={ctx.currency.code}
               theme={ctx.theme}
               mode={ctx.mode}
+              showPickers={false}
             />
+            <UserMenu username={user.username} email={user.email} role={user.role} />
           </div>
         </header>
 

@@ -3,20 +3,12 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
-import PreferenceMenu from "@/components/preference-menu";
 import { logoutAction } from "@/app/actions/auth";
 
 export default function UserMenu(props: {
   username: string;
   email: string;
   role: string;
-  languages: { code: string; nativeName: string; name: string }[];
-  currencies: { code: string; name: string; symbol: string }[];
-  themes: { slug: string; name: string; description: string }[];
-  locale: string;
-  currency: string;
-  theme: string;
-  mode: "dark" | "light";
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,18 +59,6 @@ export default function UserMenu(props: {
             {props.role === "admin" && (
               <MenuLink href="/admin" icon="shield" label="Admin area" onNavigate={() => setOpen(false)} />
             )}
-          </div>
-
-          <div className="border-t border-[var(--border)] px-2 py-2 md:hidden">
-            <PreferenceMenu
-              languages={props.languages}
-              currencies={props.currencies}
-              themes={props.themes}
-              locale={props.locale}
-              currency={props.currency}
-              theme={props.theme}
-              mode={props.mode}
-            />
           </div>
 
           <form action={logoutAction} className="border-t border-[var(--border)] pt-1">
