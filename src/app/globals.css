@@ -42,6 +42,13 @@
   border-color: var(--border);
 }
 
+/* Focus is never removed — it is restyled to match the active skin. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
 html {
   color-scheme: dark;
 }
@@ -144,6 +151,20 @@ body {
 .btn-lg {
   padding: 0.8rem 1.5rem;
   font-size: 0.95rem;
+}
+
+/* Touch targets: every control clears the 44px minimum on coarse pointers,
+   while staying visually compact on mouse-driven screens. */
+@media (pointer: coarse) {
+  .btn,
+  .field,
+  select.field {
+    min-height: 44px;
+  }
+  .btn-sm {
+    min-height: 44px;
+    padding-inline: 1rem;
+  }
 }
 
 /* ---------------------------------------------------------------- inputs */
@@ -275,6 +296,82 @@ select.field {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
 }
+/* Motion is meaning-carrying only, and is dropped entirely when the visitor
+   has asked their OS for reduced motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .card:hover,
+  .btn:active {
+    transform: none !important;
+  }
+}
+
+/* --------------------------------------------------------------- forms */
+.form-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+  font-size: 0.78rem;
+  color: var(--danger);
+}
+.form-hint {
+  margin-top: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.field[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+.field[aria-invalid="true"]:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent);
+}
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: calc(var(--radius) * 0.6);
+  font-size: 0.83rem;
+  line-height: 1.45;
+  border: 1px solid transparent;
+}
+.alert-danger {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  border-color: color-mix(in srgb, var(--danger) 34%, transparent);
+  color: var(--danger);
+}
+.alert-success {
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+  border-color: color-mix(in srgb, var(--success) 34%, transparent);
+  color: var(--success);
+}
+.alert-info {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: var(--accent);
+}
+
+/* Screen-reader-only text for icon-only controls that need a visible-free label */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;

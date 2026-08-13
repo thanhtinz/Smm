@@ -92,6 +92,9 @@ export const en = {
   "dash.spent": "Total spent",
   "dash.activeOrders": "Active orders",
   "dash.completed": "Completed",
+  "dash.notifications": "Notifications",
+  "nav.account": "Account",
+  "nav.profile": "Profile",
 
   "order.service": "Service",
   "order.link": "Link",
@@ -213,6 +216,9 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "dash.spent": "Tổng chi tiêu",
   "dash.activeOrders": "Đơn đang chạy",
   "dash.completed": "Đã hoàn tất",
+  "dash.notifications": "Thông báo",
+  "nav.account": "Tài khoản",
+  "nav.profile": "Hồ sơ",
 
   "order.service": "Dịch vụ",
   "order.link": "Đường dẫn",
