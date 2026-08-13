@@ -8,6 +8,7 @@ import Combobox from "@/components/ui/combobox";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
+import { SUBSCRIPTION_DELAYS } from "@/lib/orders";
 
 export type ServiceOption = {
   id: string;
@@ -58,6 +59,16 @@ export type OrderLabels = Record<
   | "dripfeed"
   | "comments"
   | "commentsHint"
+  | "username"
+  | "usernameHint"
+  | "posts"
+  | "postsHint"
+  | "perPost"
+  | "delay"
+  | "delayHint"
+  | "expiry"
+  | "expiryHint"
+  | "minutes"
   | "runs"
   | "interval"
   | "intervalHint"
@@ -126,12 +137,27 @@ export default function NewOrderForm({
   const [runs, setRuns] = useState("");
   const [interval, setInterval] = useState("");
 
-  const qty = custom ? commentLines : Number(quantity);
+  // A subscription watches a profile and delivers on each new post, so what is
+  // charged is the ceiling it could reach: posts x the most per post.
+  const subscription = service?.type === "subscription";
+  const [username, setUsername] = useState("");
+  const [posts, setPosts] = useState("");
+  const [minPerPost, setMinPerPost] = useState("");
+  const [maxPerPost, setMaxPerPost] = useState("");
+  const [delay, setDelay] = useState("0");
+  const [expiry, setExpiry] = useState("");
+
+  const qty = subscription
+    ? Number(posts) * Number(maxPerPost)
+    : custom
+      ? commentLines
+      : Number(quantity);
   const runsNum = Number(runs);
   const units = dripfeed && runsNum > 1 ? qty * runsNum : qty;
   const charge = service && Number.isFinite(units) && units > 0 ? Math.round((service.rate * units) / 1000) : 0;
   const affordable = charge <= balance;
-  const outOfRange = service && qty > 0 && (qty < service.min || qty > service.max);
+  const outOfRange =
+    service && !subscription && qty > 0 && (qty < service.min || qty > service.max);
   const fmt = (base: number) => formatCurrency(base, currency);
 
   if (state.success) {
@@ -242,17 +268,121 @@ export default function NewOrderForm({
           />
         </Field>
 
-        <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>
-          <TextInput
-            name="link"
-            type="url"
-            inputMode="url"
-            placeholder="https://instagram.com/yourprofile"
-            error={state.fieldErrors?.link}
-          />
-        </Field>
+        {subscription ? (
+          <>
+            <Field
+              name="username"
+              label={labels.username}
+              error={state.fieldErrors?.username}
+              hint={labels.usernameHint}
+              required
+            >
+              <TextInput
+                name="username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="yourprofile"
+                error={state.fieldErrors?.username}
+                hint={labels.usernameHint}
+              />
+            </Field>
 
-        {custom ? (
+            <Field
+              name="posts"
+              label={labels.posts}
+              error={state.fieldErrors?.posts}
+              hint={labels.postsHint}
+              required
+            >
+              <TextInput
+                name="posts"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={posts}
+                onChange={(e) => setPosts(e.target.value)}
+                placeholder="10"
+                error={state.fieldErrors?.posts}
+                hint={labels.postsHint}
+              />
+            </Field>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                name="minPerPost"
+                label={`${labels.min} · ${labels.perPost}`}
+                error={state.fieldErrors?.min}
+                required
+              >
+                <TextInput
+                  name="minPerPost"
+                  type="number"
+                  inputMode="numeric"
+                  value={minPerPost}
+                  onChange={(e) => setMinPerPost(e.target.value)}
+                  placeholder={String(service?.min ?? 100)}
+                  error={state.fieldErrors?.min}
+                />
+              </Field>
+              <Field
+                name="maxPerPost"
+                label={`${labels.max} · ${labels.perPost}`}
+                error={state.fieldErrors?.max}
+                required
+              >
+                <TextInput
+                  name="maxPerPost"
+                  type="number"
+                  inputMode="numeric"
+                  value={maxPerPost}
+                  onChange={(e) => setMaxPerPost(e.target.value)}
+                  placeholder={String(service?.max ?? 1000)}
+                  error={state.fieldErrors?.max}
+                />
+              </Field>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field name="delay" label={labels.delay} error={state.fieldErrors?.delay} hint={labels.delayHint}>
+                <select
+                  id="delay"
+                  name="delay"
+                  className="field"
+                  value={delay}
+                  onChange={(e) => setDelay(e.target.value)}
+                >
+                  {SUBSCRIPTION_DELAYS.map((d) => (
+                    <option key={d} value={d}>
+                      {d} {labels.minutes}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field name="expiry" label={labels.expiry} error={state.fieldErrors?.expiry} hint={labels.expiryHint}>
+                <TextInput
+                  name="expiry"
+                  type="date"
+                  value={expiry}
+                  onChange={(e) => setExpiry(e.target.value)}
+                  error={state.fieldErrors?.expiry}
+                  hint={labels.expiryHint}
+                />
+              </Field>
+            </div>
+          </>
+        ) : (
+          <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>
+            <TextInput
+              name="link"
+              type="url"
+              inputMode="url"
+              placeholder="https://instagram.com/yourprofile"
+              error={state.fieldErrors?.link}
+            />
+          </Field>
+        )}
+
+        {subscription ? null : custom ? (
           <Field
             name="comments"
             label={labels.comments}
@@ -308,7 +438,7 @@ export default function NewOrderForm({
 
         {/* Progressive disclosure: drip-feed appears only for services that
             support it, and its inputs stay collapsed until it is switched on. */}
-        {service?.dripfeed && (
+        {service?.dripfeed && !subscription && (
           <div className="surface-2 rounded-xl p-4">
             <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
               <input
@@ -378,7 +508,7 @@ export default function NewOrderForm({
               <div className="mt-3 flex flex-wrap gap-1.5">
                 <Flag on={service.refill} label={labels.refillLabel} />
                 <Flag on={service.cancel} label={labels.cancelLabel} />
-                <Flag on={service.dripfeed} label={labels.dripfeed} />
+                {!subscription && <Flag on={service.dripfeed} label={labels.dripfeed} />}
               </div>
 
               <div className="divider my-4" />
@@ -386,7 +516,14 @@ export default function NewOrderForm({
               <dl className="space-y-2.5 text-sm">
                 <Row label={labels.rate} value={fmt(service.rate)} />
                 {service.averageTime && <Row label={labels.averageTime} value={service.averageTime} />}
-                <Row label={labels.quantity} value={qty > 0 ? qty.toLocaleString() : "—"} />
+                {subscription ? (
+                  <>
+                    <Row label={labels.posts} value={Number(posts) > 0 ? Number(posts).toLocaleString() : "—"} />
+                    <Row label={labels.total} value={qty > 0 ? qty.toLocaleString() : "—"} />
+                  </>
+                ) : (
+                  <Row label={labels.quantity} value={qty > 0 ? qty.toLocaleString() : "—"} />
+                )}
                 {dripfeed && runsNum > 1 && (
                   <>
                     <Row label={labels.runs} value={runsNum.toLocaleString()} />

@@ -3,7 +3,7 @@ import { db } from "./db";
 import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
 import { nextPublicId } from "./ids";
-import { calculateCharge } from "./orders";
+import { calculateCharge, subscriptionFields, type Subscription } from "./orders";
 import { priceService, resolveTier } from "./pricing";
 
 /**
@@ -134,6 +134,7 @@ export async function writeUpstream(
     quantity: number;
     runs: number | null;
     interval: number | null;
+    subscription?: Subscription | null;
   },
 ): Promise<string[]> {
   const created: string[] = [];
@@ -163,6 +164,7 @@ export async function writeUpstream(
           sourceOrderId: downstream,
           runs: base.runs,
           interval: base.interval,
+          ...subscriptionFields(base.subscription ?? null),
         },
       });
 

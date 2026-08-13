@@ -108,6 +108,7 @@ export default async function AdminServicesPage() {
           type: t("service.type"),
           typeDefault: t("service.typeDefault"),
           typeCustomComments: t("service.typeCustomComments"),
+          typeSubscription: t("service.typeSubscription"),
           rate: t("admin.rate"),
           tierPrices: t("tier.prices"),
           tierPricesHint: t("tier.pricesHint"),

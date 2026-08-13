@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
-import { calculateCharge, commentLines, isValidOrderLink } from "@/lib/orders";
+import {
+  calculateCharge,
+  commentLines,
+  isValidOrderLink,
+  parseSubscription,
+  subscriptionFields,
+  type Subscription,
+} from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { getBaseCurrency } from "@/lib/currency";
@@ -56,6 +63,13 @@ export async function GET() {
   return fail("Use POST");
 }
 
+/** The names the standard uses for service types in the `services` response. */
+const API_TYPE_NAMES: Record<string, string> = {
+  default: "Default",
+  custom_comments: "Custom Comments",
+  subscription: "Subscriptions",
+};
+
 /** Only what the priced actions need from the key's owner. */
 type ApiCaller = { id: string; tierId: string | null; spent: number };
 
@@ -75,7 +89,7 @@ async function services(user: ApiCaller) {
     rows.map((s) => ({
       service: s.publicId,
       name: s.name,
-      type: s.type === "default" ? "Default" : s.type,
+      type: API_TYPE_NAMES[s.type] ?? "Default",
       category: s.category.name,
       // Rates go out as strings: the standard clients parse them that way.
       rate: (rates.get(s.id) ?? s.rate).toFixed(4),
@@ -101,22 +115,53 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   if (!(await getSetting("order.enabled"))) return fail("Ordering is disabled");
 
   const serviceId = Number(params.service);
-  const link = String(params.link ?? "").trim();
-  // The standard sends `comments` instead of `quantity` for comment services,
-  // and the count of lines is the quantity.
-  const comments = commentLines(String(params.comments ?? ""));
-  const quantity = comments.length > 0 ? comments.length : Number(params.quantity);
-
   if (!Number.isInteger(serviceId)) return fail("Incorrect service ID");
-  if (!link || !isValidOrderLink(link)) return fail("Incorrect link");
-  if (!Number.isInteger(quantity) || quantity <= 0) return fail("Incorrect quantity");
 
   const service = await db.service.findFirst({ where: { publicId: serviceId, enabled: true } });
   if (!service) return fail("Incorrect service ID");
-  if (service.type === "custom_comments" && comments.length === 0) return fail("Incorrect comments");
-  if (quantity < service.min || quantity > service.max) return fail("Incorrect quantity");
 
-  const dripfeed = params.runs !== undefined || params.interval !== undefined;
+  // A subscription is addressed by username over a run of future posts, so it
+  // shares none of the link-and-quantity checks below.
+  let subscription: Subscription | null = null;
+  let quantity: number;
+  let link: string;
+  let comments: string[] = [];
+
+  if (service.type === "subscription") {
+    const parsed = parseSubscription(
+      {
+        username: String(params.username ?? ""),
+        posts: String(params.posts ?? ""),
+        min: String(params.min ?? ""),
+        max: String(params.max ?? ""),
+        delay: String(params.delay ?? "0"),
+        expiry: String(params.expiry ?? ""),
+      },
+      service,
+    );
+    // The standard answers with the name of the offending field, not a
+    // sentence, so the first error is reported the way callers expect.
+    if ("fieldErrors" in parsed) {
+      const field = Object.keys(parsed.fieldErrors)[0];
+      return fail(`Incorrect ${field}`);
+    }
+    subscription = parsed.sub;
+    quantity = parsed.quantity;
+    link = parsed.sub.username;
+  } else {
+    link = String(params.link ?? "").trim();
+    // The standard sends `comments` instead of `quantity` for comment services,
+    // and the count of lines is the quantity.
+    comments = commentLines(String(params.comments ?? ""));
+    quantity = comments.length > 0 ? comments.length : Number(params.quantity);
+
+    if (!link || !isValidOrderLink(link)) return fail("Incorrect link");
+    if (!Number.isInteger(quantity) || quantity <= 0) return fail("Incorrect quantity");
+    if (service.type === "custom_comments" && comments.length === 0) return fail("Incorrect comments");
+    if (quantity < service.min || quantity > service.max) return fail("Incorrect quantity");
+  }
+
+  const dripfeed = !subscription && (params.runs !== undefined || params.interval !== undefined);
   const runs = Number(params.runs ?? 0);
   const interval = Number(params.interval ?? 0);
   if (dripfeed) {
@@ -155,6 +200,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
+          ...subscriptionFields(subscription),
         },
       });
 
@@ -180,6 +226,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
         quantity: totalQuantity,
         runs: dripfeed ? runs : null,
         interval: dripfeed ? interval : null,
+        subscription,
       });
 
       return created;

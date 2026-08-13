@@ -5,7 +5,14 @@ import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
-import { calculateCharge, commentLines, isValidOrderLink } from "@/lib/orders";
+import {
+  calculateCharge,
+  commentLines,
+  isValidOrderLink,
+  parseSubscription,
+  subscriptionFields,
+  type Subscription,
+} from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 
@@ -24,52 +31,79 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   }
 
   const serviceId = String(formData.get("serviceId") ?? "");
-  const link = String(formData.get("link") ?? "").trim();
-  const quantityRaw = String(formData.get("quantity") ?? "").trim();
+  if (!serviceId) return { fieldErrors: { serviceId: "Choose a service" } };
 
-  // A comment service is bought by the comment, so the lines the customer
-  // wrote are the quantity. Parsed before validation, since everything below
-  // then treats both kinds the same.
-  const comments = commentLines(String(formData.get("comments") ?? ""));
+  // Read first: the service type decides what the rest of the form means.
+  const service = await db.service.findFirst({ where: { id: serviceId, enabled: true } });
+  if (!service) return { fieldErrors: { serviceId: "That service is no longer available" } };
 
-  const fieldErrors: Record<string, string> = {};
-  if (!serviceId) fieldErrors.serviceId = "Choose a service";
-  if (!link) fieldErrors.link = "Enter the link for this order";
-  else if (!isValidOrderLink(link)) fieldErrors.link = "Enter a full link starting with http:// or https://";
+  // A subscription watches a profile instead of pointing at one post, so it
+  // takes a username and a run of future posts rather than a link and a count.
+  let subscription: Subscription | null = null;
+  let quantity: number;
+  let link: string;
+  let comments: string[] = [];
 
-  const quantity = comments.length > 0 ? comments.length : Number(quantityRaw);
-  if (comments.length === 0) {
-    if (!quantityRaw) fieldErrors.quantity = "Enter a quantity";
-    else if (!Number.isInteger(quantity) || quantity <= 0) fieldErrors.quantity = "Quantity must be a whole number";
+  if (service.type === "subscription") {
+    const parsed = parseSubscription(
+      {
+        username: String(formData.get("username") ?? ""),
+        posts: String(formData.get("posts") ?? ""),
+        min: String(formData.get("minPerPost") ?? ""),
+        max: String(formData.get("maxPerPost") ?? ""),
+        delay: String(formData.get("delay") ?? "0"),
+        expiry: String(formData.get("expiry") ?? ""),
+      },
+      service,
+    );
+    if ("fieldErrors" in parsed) return parsed;
+    subscription = parsed.sub;
+    quantity = parsed.quantity;
+    link = parsed.sub.username;
+  } else {
+    link = String(formData.get("link") ?? "").trim();
+    const quantityRaw = String(formData.get("quantity") ?? "").trim();
+
+    // A comment service is bought by the comment, so the lines the customer
+    // wrote are the quantity. Parsed before validation, since everything below
+    // then treats both kinds the same.
+    comments = commentLines(String(formData.get("comments") ?? ""));
+
+    const fieldErrors: Record<string, string> = {};
+    if (!link) fieldErrors.link = "Enter the link for this order";
+    else if (!isValidOrderLink(link)) fieldErrors.link = "Enter a full link starting with http:// or https://";
+
+    quantity = comments.length > 0 ? comments.length : Number(quantityRaw);
+    if (comments.length === 0) {
+      if (!quantityRaw) fieldErrors.quantity = "Enter a quantity";
+      else if (!Number.isInteger(quantity) || quantity <= 0) fieldErrors.quantity = "Quantity must be a whole number";
+    }
+    if (Object.keys(fieldErrors).length) return { fieldErrors };
+
+    if (service.type === "custom_comments" && comments.length === 0) {
+      return { fieldErrors: { comments: "Write at least one comment" } };
+    }
+    if (quantity < service.min || quantity > service.max) {
+      return {
+        fieldErrors: {
+          quantity: `Quantity must be between ${service.min.toLocaleString()} and ${service.max.toLocaleString()}`,
+        },
+      };
+    }
   }
 
   // Drip-feed splits one order into `runs` deliveries spaced `interval`
-  // minutes apart, so the charge is quantity × runs.
-  const dripfeed = formData.get("dripfeed") === "on";
+  // minutes apart, so the charge is quantity × runs. A subscription already
+  // spreads itself over future posts, so the two do not combine.
+  const dripfeed = formData.get("dripfeed") === "on" && !subscription;
   const runs = dripfeed ? Number(formData.get("runs") ?? 0) : 0;
   const interval = dripfeed ? Number(formData.get("interval") ?? 0) : 0;
   if (dripfeed) {
+    const fieldErrors: Record<string, string> = {};
     if (!Number.isInteger(runs) || runs < 2) fieldErrors.runs = "Runs must be 2 or more";
     if (!Number.isInteger(interval) || interval < 1) fieldErrors.interval = "Interval must be at least 1 minute";
-  }
-
-  if (Object.keys(fieldErrors).length) return { fieldErrors };
-
-  const service = await db.service.findFirst({ where: { id: serviceId, enabled: true } });
-  if (!service) return { fieldErrors: { serviceId: "That service is no longer available" } };
-  if (service.type === "custom_comments" && comments.length === 0) {
-    return { fieldErrors: { comments: "Write at least one comment" } };
-  }
-  if (dripfeed && !service.dripfeed) {
-    return { fieldErrors: { dripfeed: "This service does not support drip-feed" } };
-  }
-
-  if (quantity < service.min || quantity > service.max) {
-    return {
-      fieldErrors: {
-        quantity: `Quantity must be between ${service.min.toLocaleString()} and ${service.max.toLocaleString()}`,
-      },
-    };
+    if (!service.dripfeed) fieldErrors.dripfeed = "This service does not support drip-feed";
+    if (Object.keys(fieldErrors).length) return { fieldErrors };
   }
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
@@ -114,6 +148,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
+          ...subscriptionFields(subscription),
         },
       });
 
@@ -144,6 +179,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
         quantity: totalQuantity,
         runs: dripfeed ? runs : null,
         interval: dripfeed ? interval : null,
+        subscription,
       });
 
       return order;
@@ -233,6 +269,10 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
     // nowhere to put them, so it cannot be ordered here.
     if (service.type === "custom_comments") {
       results.push({ line, raw, ok: false, message: `Service ${idPart} takes comments — order it one at a time` });
+      return;
+    }
+    if (service.type === "subscription") {
+      results.push({ line, raw, ok: false, message: `Service ${idPart} is a subscription — order it one at a time` });
       return;
     }
     const quantity = Number(qtyPart);

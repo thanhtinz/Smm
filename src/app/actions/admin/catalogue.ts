@@ -9,7 +9,7 @@ import { requirePanel, runAsPanel } from "@/lib/tenancy";
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
 /** What the order form asks for: a quantity, or the comments to post. */
-const SERVICE_TYPES = new Set(["default", "custom_comments"]);
+const SERVICE_TYPES = new Set(["default", "custom_comments", "subscription"]);
 
 function slugify(input: string) {
   return input

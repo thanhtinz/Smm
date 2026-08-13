@@ -107,6 +107,12 @@ export async function requestProviderCancel(
   return { ok: true as const, data: String((row as { cancel?: unknown })?.cancel ?? "") };
 }
 
+/** The dd/mm/yyyy an expiry is sent as. */
+function formatExpiry(date: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
+
 export function placeProviderOrder(
   provider: { apiUrl: string; apiKey: string },
   order: {
@@ -116,8 +122,29 @@ export function placeProviderOrder(
     comments?: string;
     runs?: number | null;
     interval?: number | null;
+    posts?: number | null;
+    minPerPost?: number | null;
+    maxPerPost?: number | null;
+    delay?: number | null;
+    expiry?: Date | null;
   }
 ) {
+  // A subscription is addressed by username and described by its per-post
+  // range, so it sends none of the link-and-quantity fields.
+  if (order.posts) {
+    const params: Record<string, string | number> = {
+      action: "add",
+      service: order.service,
+      username: order.link,
+      posts: order.posts,
+      min: order.minPerPost ?? 0,
+      max: order.maxPerPost ?? 0,
+      delay: order.delay ?? 0,
+    };
+    if (order.expiry) params.expiry = formatExpiry(order.expiry);
+    return call<{ order: number | string }>(provider, params);
+  }
+
   const params: Record<string, string | number> = {
     action: "add",
     service: order.service,
@@ -185,6 +212,11 @@ export async function dispatchPendingOrders(limit = 25) {
       comments: order.comments,
       runs: order.runs,
       interval: order.interval,
+      posts: order.posts,
+      minPerPost: order.minPerPost,
+      maxPerPost: order.maxPerPost,
+      delay: order.delay,
+      expiry: order.expiry,
     });
 
     if (!result.ok) {
