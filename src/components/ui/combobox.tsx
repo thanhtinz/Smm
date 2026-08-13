@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icon } from "@/components/icons";
 
 export type ComboOption = {
@@ -46,9 +47,51 @@ export default function Combobox({
   const [query, setQuery] = useState("");
   const [cursor, setCursor] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLUListElement>(null);
   const listId = useId();
+  const [mounted, setMounted] = useState(false);
+  const [box, setBox] = useState<{
+    left: number;
+    width: number;
+    maxHeight: number;
+    top?: number;
+    bottom?: number;
+  }>({ left: 0, width: 0, maxHeight: 320 });
+
+  useEffect(() => setMounted(true), []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    const measure = () => {
+      const el = triggerRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const GUTTER = 12;
+      // Leave room for the fixed bottom bar on small screens.
+      const reserved = window.innerWidth < 1024 ? 76 : GUTTER;
+      const below = window.innerHeight - r.bottom - reserved;
+      const above = r.top - GUTTER;
+      const openUp = below < 220 && above > below;
+      // When flipping upward, anchor by `bottom` so the panel hugs the trigger
+      // regardless of how tall its contents turn out to be.
+      setBox({
+        left: r.left,
+        width: r.width,
+        maxHeight: Math.max(180, Math.min(360, (openUp ? above : below) - 6)),
+        ...(openUp ? { bottom: window.innerHeight - r.top + 6 } : { top: r.bottom + 6 }),
+      });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("scroll", measure, true);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("scroll", measure, true);
+    };
+  }, [open]);
 
   const selected = options.find((o) => o.value === value);
 
@@ -67,7 +110,10 @@ export default function Combobox({
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
-      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (rootRef.current?.contains(target)) return;
+      if (panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
@@ -111,6 +157,7 @@ export default function Combobox({
       <input type="hidden" name={name} value={value} />
 
       <button
+        ref={triggerRef}
         type="button"
         id={name}
         disabled={disabled}
@@ -128,8 +175,15 @@ export default function Combobox({
         <Icon name="chevronDown" size={15} />
       </button>
 
-      {open && !disabled && (
-        <div className="card absolute z-50 mt-1.5 w-full overflow-hidden shadow-2xl">
+      {open &&
+        !disabled &&
+        mounted &&
+        createPortal(
+          <div
+            className="fixed z-[100] overflow-hidden rounded-[calc(var(--radius)*0.7)] border border-[var(--border)] bg-[var(--surface)] shadow-2xl"
+            style={{ top: box.top, bottom: box.bottom, left: box.left, width: box.width }}
+            ref={panelRef}
+          >
           <div className="relative border-b border-[var(--border)]">
             <span className="muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">
               <Icon name="search" size={15} />
@@ -152,7 +206,13 @@ export default function Combobox({
           {filtered.length === 0 ? (
             <p className="muted px-3 py-6 text-center text-sm">{emptyLabel}</p>
           ) : (
-            <ul id={listId} ref={listRef} role="listbox" className="max-h-72 overflow-y-auto py-1">
+            <ul
+              id={listId}
+              ref={listRef}
+              role="listbox"
+              className="overflow-y-auto py-1"
+              style={{ maxHeight: box.maxHeight - 46 }}
+            >
               {filtered.map((o, i) => (
                 <li
                   key={o.value}
@@ -171,9 +231,10 @@ export default function Combobox({
                 </li>
               ))}
             </ul>
-          )}
-        </div>
-      )}
+            )}
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
