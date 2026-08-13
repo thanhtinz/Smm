@@ -440,3 +440,56 @@ model Page {
   position  Int     @default(0)
   updatedAt DateTime @updatedAt
 }
+
+// ---------------------------------------------------------------------------
+// Panels — the root panel plus every child panel resold beneath it.
+// ---------------------------------------------------------------------------
+
+/// One storefront. The root panel is the one with no parent; every other row
+/// was created by the panel above it and buys its services from that panel.
+///
+/// `path` is the materialised ancestor chain (root id first, own id last,
+/// slash-separated). It makes "is A an ancestor of B" a string test instead of
+/// a recursive query, which SQLite cannot express cheaply, and it is what the
+/// order-routing code will use to refuse cycles.
+model Panel {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  name     String
+  parentId String?
+  parent   Panel?  @relation("PanelTree", fields: [parentId], references: [id])
+  children Panel[] @relation("PanelTree")
+  depth    Int     @default(0)
+  path     String  @default("")
+
+  /// The owner's account on the PARENT panel — the balance that pays rent and
+  /// wholesale. Deliberately not a relation: the owner of the root panel has
+  /// no parent-side account, and a child's owner lives in a different tenant.
+  ownerUserId String @default("")
+
+  status    String   @default("active") // active | suspended | expired
+  statusNote String  @default("")
+  domains   PanelDomain[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([path])
+}
+
+/// Hostnames that serve a panel. One panel can have several (the working
+/// hostname it was created with, plus custom domains added later), so this is
+/// a table rather than a column.
+model PanelDomain {
+  id        String  @id @default(cuid())
+  panelId   String
+  panel     Panel   @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  host      String  @unique // lowercase, no port
+  verified  Boolean @default(false)
+  isPrimary Boolean @default(false)
+  /// Random token the owner publishes as a TXT record to prove ownership.
+  verifyToken String @default("")
+  createdAt DateTime @default(now())
+
+  @@index([panelId])
+}
