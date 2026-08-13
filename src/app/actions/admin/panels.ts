@@ -125,6 +125,37 @@ export async function setPanelStatusAction(id: string, status: "active" | "suspe
   return { ok: true };
 }
 
+/**
+ * Sets what one child pays, or clears the override so it follows this panel's
+ * standard price again.
+ */
+export async function setPanelRentAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const parent = await currentPanel();
+
+  const panelId = String(form.get("panelId") ?? "");
+  const child = await db.panel.findUnique({ where: { id: panelId } });
+  if (!child || !child.path.startsWith(`${parent.path}/`)) return { error: "Panel not found" };
+
+  const raw = String(form.get("rentPrice") ?? "").trim();
+  let rentPrice: number | null = null;
+  if (raw !== "") {
+    const value = Number(raw);
+    if (!Number.isFinite(value) || value < 0) return { fieldErrors: { rentPrice: "Enter a price" } };
+    rentPrice = value;
+  }
+
+  // A due date can be moved to give someone extra time, or pulled forward.
+  const dueRaw = String(form.get("nextDueAt") ?? "").trim();
+  const nextDueAt = dueRaw ? new Date(`${dueRaw}T00:00:00Z`) : child.nextDueAt;
+  if (dueRaw && Number.isNaN(nextDueAt?.getTime())) return { fieldErrors: { nextDueAt: "Enter a date" } };
+
+  await db.panel.update({ where: { id: panelId }, data: { rentPrice, nextDueAt } });
+  await logActivity(admin.id, "admin.panel.rent", `${child.slug} ${rentPrice ?? "standard"}`);
+  revalidatePath("/admin/panels");
+  return { ok: true };
+}
+
 export async function addPanelDomainAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const parent = await currentPanel();

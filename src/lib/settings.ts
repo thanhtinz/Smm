@@ -89,6 +89,9 @@ export const settingDefinitions = {
   "panel.childrenEnabled": { group: "panel", type: "boolean", value: false },
   "panel.maxDepth": { group: "panel", type: "number", value: 3 },
   "panel.maxChildren": { group: "panel", type: "number", value: 0 },
+  "panel.rentPrice": { group: "panel", type: "number", value: 0 },
+  "panel.rentPeriodDays": { group: "panel", type: "number", value: 30 },
+  "panel.graceDays": { group: "panel", type: "number", value: 3 },
   "panel.cloudflareToken": { group: "panel", type: "password", value: "" },
   "panel.cloudflareZoneId": { group: "panel", type: "text", value: "" },
 

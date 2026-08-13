@@ -6,6 +6,7 @@ import {
   createChildPanelAction,
   deletePanelDomainAction,
   resetChildAdminAction,
+  setPanelRentAction,
   setPanelStatusAction,
   verifyPanelDomainAction,
   type ActionResult,
@@ -26,6 +27,12 @@ export type PanelRow = {
   status: string;
   statusNote: string;
   ownerName: string;
+  /** Empty when the child follows this panel's standard price. */
+  rentPrice: string;
+  rentLabel: string;
+  nextDueAt: string;
+  dueLabel: string;
+  overdue: boolean;
   users: number;
   orders: number;
   services: number;
@@ -50,6 +57,7 @@ export default function PanelManager({
   const [creating, setCreating] = useState(false);
   const [domains, setDomains] = useState<PanelRow | null>(null);
   const [reset, setReset] = useState<PanelRow | null>(null);
+  const [rent, setRent] = useState<PanelRow | null>(null);
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
 
@@ -98,6 +106,7 @@ export default function PanelManager({
                   <th>{labels.panel}</th>
                   <th>{labels.domain}</th>
                   <th className="w-32">{labels.owner}</th>
+                  <th className="w-36">{labels.rent}</th>
                   <th className="w-20 text-right">{labels.users}</th>
                   <th className="w-20 text-right">{labels.orders}</th>
                   <th className="w-24">{labels.status}</th>
@@ -125,6 +134,14 @@ export default function PanelManager({
                         )}
                       </td>
                       <td className="muted text-xs">{row.ownerName}</td>
+                      <td>
+                        <span className="block text-sm tabular-nums">{row.rentLabel}</span>
+                        {row.dueLabel && (
+                          <span className={`block text-xs ${row.overdue ? "text-[var(--danger)]" : "muted"}`}>
+                            {row.dueLabel}
+                          </span>
+                        )}
+                      </td>
                       <td className="text-right tabular-nums">{row.users}</td>
                       <td className="text-right tabular-nums">{row.orders}</td>
                       <td>
@@ -141,6 +158,14 @@ export default function PanelManager({
                             title={labels.domains}
                           >
                             <Icon name="globe" size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setRent(row)}
+                            className="btn btn-ghost btn-sm"
+                            title={labels.rent}
+                          >
+                            <Icon name="creditCard" size={15} />
                           </button>
                           <button
                             type="button"
@@ -174,6 +199,7 @@ export default function PanelManager({
 
       {creating && <CreateDrawer owners={owners} labels={labels} onClose={() => setCreating(false)} />}
       {domains && <DomainDrawer panel={domains} labels={labels} onClose={() => setDomains(null)} />}
+      {rent && <RentDrawer panel={rent} labels={labels} onClose={() => setRent(null)} />}
       {reset && <ResetDrawer panel={reset} labels={labels} onClose={() => setReset(null)} />}
     </>
   );
@@ -335,6 +361,58 @@ function DomainDrawer({
           </SubmitButton>
         </form>
       </div>
+    </EntityDrawer>
+  );
+}
+
+function RentDrawer({
+  panel,
+  labels,
+  onClose,
+}: {
+  panel: PanelRow;
+  labels: Record<string, string>;
+  onClose: () => void;
+}) {
+  const [state, action] = useActionState<ActionResult, FormData>(setPanelRentAction, {});
+
+  return (
+    <EntityDrawer open title={`${labels.rent} · ${panel.name}`} onClose={onClose}>
+      <form action={action} className="space-y-4">
+        {state.error && (
+          <div className="alert alert-danger" role="alert">
+            <Icon name="alert" size={16} />
+            <span>{state.error}</span>
+          </div>
+        )}
+        {state.ok && (
+          <div className="alert alert-success" role="status">
+            <Icon name="checkCircle" size={16} />
+            <span>{labels.saved}</span>
+          </div>
+        )}
+
+        <input type="hidden" name="panelId" value={panel.id} />
+        <Field name="rentPrice" label={labels.rentPrice} error={state.fieldErrors?.rentPrice} hint={labels.rentHint}>
+          <TextInput
+            name="rentPrice"
+            type="number"
+            step="any"
+            min="0"
+            defaultValue={panel.rentPrice}
+            hint={labels.rentHint}
+            error={state.fieldErrors?.rentPrice}
+          />
+        </Field>
+        <Field name="nextDueAt" label={labels.nextDue} error={state.fieldErrors?.nextDueAt}>
+          <TextInput name="nextDueAt" type="date" defaultValue={panel.nextDueAt} error={state.fieldErrors?.nextDueAt} />
+        </Field>
+
+        <SubmitButton className="btn btn-primary w-full">
+          <Icon name="check" size={16} />
+          {labels.save}
+        </SubmitButton>
+      </form>
     </EntityDrawer>
   );
 }

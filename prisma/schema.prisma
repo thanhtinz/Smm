@@ -628,8 +628,18 @@ model Panel {
   /// no parent-side account, and a child's owner lives in a different tenant.
   ownerUserId String @default("")
 
-  status         String             @default("active") // active | suspended | expired
-  statusNote     String             @default("")
+  /// active — trading. suspended — switched off by hand. expired — rent went
+  /// unpaid past its grace period. Only `expired` comes back on its own.
+  status     String @default("active")
+  statusNote String @default("")
+
+  /// What this panel is charged per period. Null follows the parent's
+  /// `panel.rentPrice` setting, so raising the standard price moves every
+  /// child that never negotiated its own.
+  rentPrice    Float?
+  nextDueAt    DateTime?
+  lastBilledAt DateTime?
+
   domains        PanelDomain[]
   settings       Setting[]          @relation("PanelSettings")
   counters       Counter[]          @relation("PanelCounters")

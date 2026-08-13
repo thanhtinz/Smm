@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
+import { displayMoney } from "@/lib/currency";
 import { requirePanel } from "@/lib/tenancy";
 import { childrenOf, effectiveMaxDepth } from "@/lib/panels";
 import PanelManager from "@/components/admin/panel-manager";
@@ -10,7 +11,7 @@ import { Icon } from "@/components/icons";
 export const metadata: Metadata = { title: "Child panels" };
 
 export default async function AdminPanelsPage() {
-  const { t } = await getAppContext();
+  const { t, currency, locale } = await getAppContext();
   const panel = await requirePanel();
 
   const [enabled, maxDepth, maxChildren] = await Promise.all([
@@ -29,6 +30,19 @@ export default async function AdminPanelsPage() {
   }
 
   const children = await childrenOf(panel);
+
+  // The standard price this panel charges; a child with its own price shows
+  // that instead.
+  const [standardRent, periodDays] = await Promise.all([
+    getSetting("panel.rentPrice"),
+    getSetting("panel.rentPeriodDays"),
+  ]);
+  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+  const today = new Date();
   const owners = await db.user.findMany({
     where: { banned: false },
     orderBy: { username: "asc" },
@@ -60,6 +74,15 @@ export default async function AdminPanelsPage() {
           status: c.status,
           statusNote: c.statusNote,
           ownerName: ownerName.get(c.ownerUserId) ?? "—",
+          rentPrice: c.rentPrice === null ? "" : String(c.rentPrice),
+          rentLabel: (() => {
+            const price = c.rentPrice ?? Number(standardRent) ?? 0;
+            if (!price) return t("panel.rentFree");
+            return `${displayMoney(price, currency, locale)} / ${Number(periodDays)}${t("panel.days")}`;
+          })(),
+          nextDueAt: c.nextDueAt ? c.nextDueAt.toISOString().slice(0, 10) : "",
+          dueLabel: c.nextDueAt ? `${t("panel.nextDue")}: ${fmtDate.format(c.nextDueAt)}` : "",
+          overdue: Boolean(c.nextDueAt && c.nextDueAt < today),
           users: c.users,
           orders: c.orders,
           services: c.services,
@@ -85,6 +108,10 @@ export default async function AdminPanelsPage() {
           verified: t("panel.verified"),
           unverified: t("panel.unverified"),
           owner: t("panel.owner"),
+          rent: t("panel.rent"),
+          rentPrice: t("panel.rentPrice"),
+          rentHint: t("panel.rentHint"),
+          nextDue: t("panel.nextDue"),
           users: t("admin.users"),
           orders: t("dash.orders"),
           suspend: t("panel.suspend"),
@@ -98,6 +125,7 @@ export default async function AdminPanelsPage() {
           status: t("common.status"),
           "status.active": t("panel.status.active"),
           "status.suspended": t("panel.status.suspended"),
+          "status.expired": t("panel.status.expired"),
           remove: t("admin.delete"),
           copy: t("wallet.copy"),
           copied: t("wallet.copied"),
