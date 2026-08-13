@@ -80,6 +80,14 @@ Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screens
 | --------------- | -------------- |
 | ![](docs/screenshots/22-admin-platform-drawer.png) | ![](docs/screenshots/24-admin-service-drawer.png) |
 
+| Payment methods | Currencies | Settings |
+| --------------- | ---------- | -------- |
+| ![](docs/screenshots/29-admin-payments.png) | ![](docs/screenshots/31-admin-currencies.png) | ![](docs/screenshots/34-admin-settings.png) |
+
+| Languages | Translation editor |
+| --------- | ------------------ |
+| ![](docs/screenshots/32-admin-languages.png) | ![](docs/screenshots/33-admin-translations.png) |
+
 ### Wallet and payments
 
 | Add funds | SePay transfer | Transactions |
@@ -116,5 +124,5 @@ Features land one at a time, each verified with a screenshot before the next beg
 - [x] 4 — User dashboard and ordering
 - [x] 5 — Wallet and payment gateways
 - [ ] 6 — Support tickets and notifications
-- [ ] 7 — Admin area (catalogue done; operations and configuration screens next)
+- [x] 7 — Admin area (catalogue and configuration; operations screens next)
 - [ ] 8 — Public API v2
