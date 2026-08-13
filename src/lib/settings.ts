@@ -60,6 +60,11 @@ export const settingDefinitions = {
     } as Record<string, number[]>,
   },
 
+  // --- Affiliate ----------------------------------------------------------
+  "affiliate.enabled": { group: "affiliate", type: "boolean", value: true },
+  "affiliate.commissionPercent": { group: "affiliate", type: "number", value: 5 },
+  "affiliate.minWithdraw": { group: "affiliate", type: "number", value: 50000 },
+
   // --- Registration -------------------------------------------------------
   "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
   "auth.requireEmailVerification": { group: "auth", type: "boolean", value: false },

@@ -26,6 +26,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       items: [
         { href: "/dashboard/wallet", label: t("dash.addFunds"), icon: "wallet" },
         { href: "/dashboard/transactions", label: t("wallet.history"), icon: "creditCard" },
+        { href: "/dashboard/affiliate", label: t("affiliate.title"), icon: "gift" },
       ],
     },
     {

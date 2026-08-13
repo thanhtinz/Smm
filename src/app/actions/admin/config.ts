@@ -376,3 +376,65 @@ export async function setDefaultThemeAction(id: string): Promise<ActionResult> {
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// ------------------------------------------------------------------ coupons
+
+export async function saveCouponAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  const id = String(form.get("id") ?? "");
+  const code = String(form.get("code") ?? "")
+    .trim()
+    .toUpperCase()
+    .replace(/\s+/g, "");
+  if (code.length < 3) return { fieldErrors: { code: "Use at least three characters" } };
+
+  const clash = await db.coupon.findFirst({ where: { code, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
+  if (clash) return { fieldErrors: { code: "That code already exists" } };
+
+  const type = String(form.get("type") ?? "percent") === "fixed" ? "fixed" : "percent";
+  const value = num(form, "value", -1);
+  if (value <= 0) return { fieldErrors: { value: "Enter a value above zero" } };
+  if (type === "percent" && value > 100) return { fieldErrors: { value: "A percentage cannot exceed 100" } };
+
+  const expiresRaw = String(form.get("expiresAt") ?? "").trim();
+  const expiresAt = expiresRaw ? new Date(expiresRaw) : null;
+  if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+    return { fieldErrors: { expiresAt: "That is not a valid date" } };
+  }
+
+  const data = {
+    code,
+    type,
+    value,
+    minAmount: num(form, "minAmount"),
+    maxUses: Math.max(0, num(form, "maxUses")),
+    maxPerUser: Math.max(0, num(form, "maxPerUser")),
+    firstDepositOnly: bool(form, "firstDepositOnly"),
+    enabled: bool(form, "enabled"),
+    expiresAt,
+  };
+
+  if (id) await db.coupon.update({ where: { id }, data });
+  else await db.coupon.create({ data });
+
+  await logActivity(admin.id, "admin.coupon.save", code);
+  revalidatePath("/admin/coupons");
+  return { ok: true };
+}
+
+export async function deleteCouponAction(id: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const used = await db.couponRedemption.count({ where: { couponId: id } });
+  if (used > 0) {
+    // Redemptions are part of the deposit record, so a used coupon is
+    // disabled rather than deleted.
+    await db.coupon.update({ where: { id }, data: { enabled: false } });
+    revalidatePath("/admin/coupons");
+    return { error: `This coupon has been used ${used} time${used === 1 ? "" : "s"}, so it was disabled instead of deleted.` };
+  }
+  await db.coupon.delete({ where: { id } });
+  await logActivity(admin.id, "admin.coupon.delete", id);
+  revalidatePath("/admin/coupons");
+  return { ok: true };
+}

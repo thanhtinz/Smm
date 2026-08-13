@@ -6,7 +6,8 @@ import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = { title: "Create account" };
 
-export default async function RegisterPage() {
+export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
+  const { ref } = await searchParams;
   const { t } = await getAppContext();
   const [open, termsRequired] = await Promise.all([
     getSetting("auth.registrationOpen"),
@@ -24,6 +25,7 @@ export default async function RegisterPage() {
 
   return (
     <RegisterForm
+      referralCode={(ref ?? "").trim().toUpperCase()}
       termsRequired={Boolean(termsRequired)}
       labels={{
         title: t("auth.signup.title"),
@@ -36,6 +38,7 @@ export default async function RegisterPage() {
         submit: t("nav.signup"),
         hasaccount: t("auth.hasaccount"),
         signin: t("nav.signin"),
+        referred: t("auth.referred"),
       }}
     />
   );

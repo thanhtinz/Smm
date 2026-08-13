@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { payReferralCommission } from "@/lib/affiliate";
 
 /**
  * Marks a pending deposit completed and moves the money.
@@ -36,6 +37,11 @@ export async function creditDeposit(transactionId: string, reference?: string): 
     });
 
     return "credited";
+  }).then(async (outcome) => {
+    // Commission is paid outside the balance transaction: it targets a
+    // different account, and its own unique constraint makes it idempotent.
+    if (outcome === "credited") await payReferralCommission(transactionId);
+    return outcome;
   });
 }
 

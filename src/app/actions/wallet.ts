@@ -7,6 +7,7 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { getCurrencies, getBaseCurrency } from "@/lib/currency";
 import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
+import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
 
 export type DepositState = {
   error?: string;
@@ -59,7 +60,20 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   }
 
   const totals = computeTotals(amount, method);
-  const creditedBase = totals.credited / (currency.rate || 1);
+
+  // A coupon adds on top of the method's own bonus, and is validated against
+  // the base-currency value so one code behaves the same in every currency.
+  const couponCode = String(formData.get("coupon") ?? "").trim();
+  let couponBonusBase = 0;
+  let couponId = "";
+  if (couponCode) {
+    const check = await evaluateCoupon(couponCode, user.id, amountInBase);
+    if (!check.ok) return { fieldErrors: { coupon: check.error } };
+    couponBonusBase = check.bonus;
+    couponId = check.couponId;
+  }
+
+  const creditedBase = totals.credited / (currency.rate || 1) + couponBonusBase;
 
   const publicId = await nextPublicId("transaction");
   const transaction = await db.transaction.create({
@@ -74,9 +88,11 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
       fee: totals.fee,
       status: "pending",
       note: method.name,
-      meta: JSON.stringify({ requested: amount, bonus: totals.bonus }),
+      meta: JSON.stringify({ requested: amount, bonus: totals.bonus, couponCode, couponBonusBase }),
     },
   });
+
+  if (couponId) await redeemCoupon(couponId, user.id, transaction.id, couponBonusBase);
 
   await logActivity(user.id, "deposit.create", `#${publicId} ${totals.payable} ${currency.code} via ${method.code}`);
   redirect(`/dashboard/wallet/${transaction.id}`);

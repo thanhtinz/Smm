@@ -42,6 +42,8 @@ export default async function WalletPage() {
           unavailable: t("wallet.unavailable"),
           presets: t("wallet.presets"),
           noMethods: t("wallet.noMethods"),
+          coupon: t("wallet.coupon"),
+          couponHint: t("wallet.couponHint"),
         }}
       />
     </div>

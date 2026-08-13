@@ -10,9 +10,21 @@ import SubmitButton from "@/components/ui/submit-button";
 export default function RegisterForm({
   labels,
   termsRequired,
+  referralCode,
 }: {
+  referralCode?: string;
   labels: Record<
-    "title" | "sub" | "username" | "email" | "password" | "confirm" | "terms" | "submit" | "hasaccount" | "signin",
+    | "title"
+    | "sub"
+    | "username"
+    | "email"
+    | "password"
+    | "confirm"
+    | "terms"
+    | "submit"
+    | "hasaccount"
+    | "signin"
+    | "referred",
     string
   >;
   termsRequired: boolean;
@@ -31,7 +43,15 @@ export default function RegisterForm({
         </div>
       )}
 
+      {referralCode && (
+        <div className="alert alert-info mt-6" role="status">
+          <Icon name="gift" size={16} />
+          <span>{labels.referred.replace("{code}", referralCode)}</span>
+        </div>
+      )}
+
       <form action={action} className="mt-6 space-y-4" noValidate>
+        {referralCode && <input type="hidden" name="ref" value={referralCode} />}
         <Field
           name="username"
           label={labels.username}

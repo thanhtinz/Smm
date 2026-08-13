@@ -112,6 +112,15 @@ model User {
   notifications Notification[]
   activityLogs  ActivityLog[]
   orderRequests OrderRequest[]
+  redemptions   CouponRedemption[]
+  referralsEarned ReferralEarning[] @relation("ReferralEarned")
+  referralSource  ReferralEarning[] @relation("ReferralSource")
+  referrals     User[]  @relation("Referral")
+  referrer      User?   @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referredById  String?
+  /// Generated on first visit to the affiliate page, so adding this column
+  /// needed no backfill and no reset of existing accounts.
+  referralCode  String? @unique
 }
 
 model Session {
@@ -363,6 +372,53 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId])
+}
+
+/// Deposit coupons. Redemptions are recorded separately so per-user limits
+/// and reporting do not depend on a counter that can drift.
+model Coupon {
+  id        String  @id @default(cuid())
+  code      String  @unique
+  type      String  @default("percent") // percent | fixed
+  value     Float   @default(0)
+  minAmount Float   @default(0) // in base currency
+  maxUses   Int     @default(0) // 0 = unlimited
+  maxPerUser Int    @default(1) // 0 = unlimited
+  firstDepositOnly Boolean @default(false)
+  expiresAt DateTime?
+  enabled   Boolean @default(true)
+  createdAt DateTime @default(now())
+  redemptions CouponRedemption[]
+}
+
+model CouponRedemption {
+  id            String  @id @default(cuid())
+  couponId      String
+  coupon        Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId String  @unique
+  bonus         Float   @default(0)
+  createdAt     DateTime @default(now())
+
+  @@index([couponId])
+  @@index([userId])
+}
+
+/// Commission owed to a referrer for one of their referral's deposits.
+model ReferralEarning {
+  id            String  @id @default(cuid())
+  referrerId    String
+  referrer      User    @relation("ReferralEarned", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredId    String
+  referred      User    @relation("ReferralSource", fields: [referredId], references: [id], onDelete: Cascade)
+  transactionId String  @unique
+  amount        Float
+  ratePercent   Float
+  status        String  @default("earned") // earned | withdrawn
+  createdAt     DateTime @default(now())
+
+  @@index([referrerId])
 }
 
 model Announcement {
