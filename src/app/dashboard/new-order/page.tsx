@@ -66,7 +66,7 @@ export default async function NewOrderPage() {
         {{
           single: (
             <NewOrderForm
-              platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, color: p.color }))}
+              platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
               categories={categories.map((c) => ({ id: c.id, name: c.name, platformId: c.platformId }))}
               services={serviceOptions}
               balance={user.balance}

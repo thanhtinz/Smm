@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
+import PlatformMark from "@/components/platform-mark";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { displayMoney } from "@/lib/currency";
@@ -90,12 +91,7 @@ export default async function LandingPage() {
                     className="surface-2 flex items-center gap-3 rounded-xl px-3.5 py-3"
                     style={{ opacity: 1 - i * 0.11 }}
                   >
-                    <span
-                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-                      style={{ background: `${p.color}22`, color: p.color }}
-                    >
-                      <Icon name={p.icon as IconName} size={18} />
-                    </span>
+                    <PlatformMark platform={p} box={36} />
                     <span className="flex-1 text-sm font-medium">{p.name}</span>
                     <span className="muted font-mono text-xs">{(3200 - i * 430).toLocaleString()} orders</span>
                   </div>
@@ -151,9 +147,7 @@ export default async function LandingPage() {
               href={`/services?platform=${p.slug}`}
               className="card flex items-center gap-2.5 px-4 py-3 text-sm font-medium transition-transform hover:-translate-y-0.5"
             >
-              <span style={{ color: p.color }}>
-                <Icon name={p.icon as IconName} size={18} />
-              </span>
+              <PlatformMark platform={p} size={18} />
               {p.name}
             </Link>
           ))}

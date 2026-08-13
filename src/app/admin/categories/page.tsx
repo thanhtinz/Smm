@@ -28,7 +28,7 @@ export default async function AdminCategoriesPage() {
           position: c.position,
           serviceCount: c._count.services,
         }))}
-        platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, color: p.color }))}
+        platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
         labels={{
           title: t("admin.categories"),
           new: t("admin.new"),

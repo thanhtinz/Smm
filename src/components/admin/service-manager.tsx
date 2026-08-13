@@ -5,7 +5,8 @@ import { deleteServiceAction, saveServiceAction, toggleServiceAction, type Actio
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
+import PlatformMark from "@/components/platform-mark";
 
 export type ServiceRow = {
   id: string;
@@ -29,7 +30,7 @@ export type ServiceRow = {
 };
 
 export type CategoryOption = { id: string; name: string; platformId: string | null };
-export type PlatformOption = { id: string; name: string; icon: string; color: string };
+export type PlatformOption = { id: string; name: string; icon: string; image: string; color: string };
 export type ProviderOption = { id: string; name: string };
 
 export default function ServiceManager({
@@ -192,11 +193,7 @@ export default function ServiceManager({
                       <td className="muted font-mono text-xs">{row.publicId}</td>
                       <td>
                         <span className="flex items-center gap-2 font-medium">
-                          {platform && (
-                            <span style={{ color: platform.color }}>
-                              <Icon name={platform.icon as IconName} size={15} />
-                            </span>
-                          )}
+                          {platform && <PlatformMark platform={platform} size={15} />}
                           <span className="truncate">{row.name}</span>
                         </span>
                         <span className="muted mt-0.5 block text-xs">{category?.name}</span>

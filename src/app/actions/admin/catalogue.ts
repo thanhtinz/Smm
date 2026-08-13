@@ -53,6 +53,7 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
     name,
     slug,
     icon: String(form.get("icon") ?? "globe"),
+    image: String(form.get("image") ?? "").trim(),
     color: String(form.get("color") ?? "#6366f1"),
     visible: bool(form, "visible"),
     position: num(form, "position"),

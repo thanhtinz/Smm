@@ -1,0 +1,63 @@
+"use server";
+
+import { db } from "@/lib/db";
+import { requireAdmin, logActivity } from "@/lib/auth";
+
+/**
+ * SVG is deliberately excluded: it can carry script, and these files are
+ * served back from our own origin.
+ */
+const ALLOWED = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const MAX_BYTES = 512 * 1024;
+
+export type UploadResult = { url?: string; error?: string };
+
+/** Reads the intrinsic size straight from the file header. */
+function readDimensions(mime: string, bytes: Uint8Array): { width: number; height: number } {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  try {
+    if (mime === "image/png" && bytes.length > 24) {
+      return { width: view.getUint32(16), height: view.getUint32(20) };
+    }
+    if (mime === "image/gif" && bytes.length > 10) {
+      return { width: view.getUint16(6, true), height: view.getUint16(8, true) };
+    }
+    if (mime === "image/jpeg") {
+      let i = 2;
+      while (i < bytes.length - 9) {
+        if (bytes[i] !== 0xff) {
+          i += 1;
+          continue;
+        }
+        const marker = bytes[i + 1];
+        // SOF0..SOF15, skipping the non-frame markers in that range.
+        if (marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc) {
+          return { height: view.getUint16(i + 5), width: view.getUint16(i + 7) };
+        }
+        i += 2 + view.getUint16(i + 2);
+      }
+    }
+  } catch {
+    // A header we cannot parse is not a reason to reject the upload.
+  }
+  return { width: 0, height: 0 };
+}
+
+export async function uploadImageAction(formData: FormData): Promise<UploadResult> {
+  const admin = await requireAdmin();
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload" };
+  if (!ALLOWED.has(file.type)) return { error: "Use a PNG, JPEG, WebP, GIF or AVIF image" };
+  if (file.size > MAX_BYTES) return { error: `The image must be under ${Math.round(MAX_BYTES / 1024)} KB` };
+
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const { width, height } = readDimensions(file.type, bytes);
+
+  const media = await db.media.create({
+    data: { mime: file.type, size: file.size, width, height, data: Buffer.from(bytes) },
+  });
+
+  await logActivity(admin.id, "admin.media.upload", `${file.type} ${file.size}B`);
+  return { url: `/api/media/${media.id}` };
+}

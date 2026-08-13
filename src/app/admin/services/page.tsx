@@ -40,7 +40,7 @@ export default async function AdminServicesPage() {
           position: s.position,
         }))}
         categories={categories.map((c) => ({ id: c.id, name: c.name, platformId: c.platformId }))}
-        platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, color: p.color }))}
+        platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
         providers={providers.map((p) => ({ id: p.id, name: p.name }))}
         currency={{
           symbol: ctx.currency.symbol,
