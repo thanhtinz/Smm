@@ -1,12 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState, useTransition } from "react";
-import {
-  deleteTierAction,
-  saveTierAction,
-  setTierPriceAction,
-  type ActionResult,
-} from "@/app/actions/admin/tiers";
+import { useActionState, useState, useTransition } from "react";
+import { deleteTierAction, saveTierAction, type ActionResult } from "@/app/actions/admin/tiers";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
@@ -23,16 +18,6 @@ export type TierRow = {
   position: number;
   members: number;
   manualPrices: number;
-};
-
-export type TierServiceRow = {
-  id: string;
-  publicId: number;
-  name: string;
-  category: string;
-  rate: number;
-  /** Hand-set price for the selected tier, empty when the percentage applies. */
-  manual: string;
 };
 
 /** Enough to format base-currency amounts without shipping a function prop. */
@@ -57,14 +42,10 @@ function formatter(money: MoneyFormat) {
 
 export default function TierManager({
   rows,
-  services,
-  priceTierId,
   money,
   labels,
 }: {
   rows: TierRow[];
-  services: TierServiceRow[];
-  priceTierId: string;
   money: MoneyFormat;
   labels: Record<string, string>;
 }) {
@@ -169,141 +150,8 @@ export default function TierManager({
         )}
       </div>
 
-      {rows.length > 0 && (
-        <PriceTable rows={rows} services={services} priceTierId={priceTierId} money={money} labels={labels} />
-      )}
-
       {(creating || editing) && <TierDrawer row={editing} labels={labels} onClose={close} />}
     </>
-  );
-}
-
-/**
- * Per-service prices for one tier. The percentage handles the whole catalogue;
- * this is for the services where it gives the wrong number.
- */
-function PriceTable({
-  rows,
-  services,
-  priceTierId,
-  money,
-  labels,
-}: {
-  rows: TierRow[];
-  services: TierServiceRow[];
-  priceTierId: string;
-  money: MoneyFormat;
-  labels: Record<string, string>;
-}) {
-  const fmt = formatter(money);
-  const [query, setQuery] = useState("");
-  const tier = rows.find((r) => r.id === priceTierId) ?? rows[0];
-
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return services;
-    return services.filter(
-      (s) => s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q) || String(s.publicId) === q,
-    );
-  }, [services, query]);
-
-  return (
-    <div className="card overflow-hidden">
-      <div className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] p-4 sm:px-5">
-        <h3 className="font-semibold">{labels.prices}</h3>
-        <form className="ml-auto flex flex-wrap items-center gap-2">
-          <select
-            name="tier"
-            className="field w-auto"
-            defaultValue={tier?.id}
-            onChange={(e) => {
-              const url = new URL(window.location.href);
-              url.searchParams.set("tier", e.target.value);
-              window.location.href = url.toString();
-            }}
-          >
-            {rows.map((r) => (
-              <option key={r.id} value={r.id}>
-                {r.name}
-              </option>
-            ))}
-          </select>
-          <input
-            className="field w-auto"
-            placeholder={labels.search}
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-          />
-        </form>
-      </div>
-
-      <div className="scroll-x">
-        <table className="table">
-          <thead>
-            <tr>
-              <th className="w-20">ID</th>
-              <th>{labels.service}</th>
-              <th className="w-36 text-right">{labels.listRate}</th>
-              <th className="w-36 text-right">{labels.afterDiscount}</th>
-              <th className="w-52">{labels.manualPrice}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((s) => (
-              <PriceRow key={s.id} service={s} tier={tier} fmt={fmt} labels={labels} />
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function PriceRow({
-  service,
-  tier,
-  fmt,
-  labels,
-}: {
-  service: TierServiceRow;
-  tier: TierRow;
-  fmt: (n: number) => string;
-  labels: Record<string, string>;
-}) {
-  const [state, action] = useActionState<ActionResult, FormData>(setTierPriceAction, {});
-  const discounted = service.rate * (1 - Math.min(100, tier.discountPercent) / 100);
-
-  return (
-    <tr>
-      <td className="muted font-mono text-xs">{service.publicId}</td>
-      <td>
-        <span className="font-medium">{service.name}</span>
-        <span className="muted block text-xs">{service.category}</span>
-      </td>
-      <td className="muted text-right tabular-nums">{fmt(service.rate)}</td>
-      <td className={`text-right tabular-nums ${service.manual ? "muted line-through" : "font-semibold"}`}>
-        {fmt(discounted)}
-      </td>
-      <td>
-        <form action={action} className="flex items-center gap-1.5">
-          <input type="hidden" name="tierId" value={tier.id} />
-          <input type="hidden" name="serviceId" value={service.id} />
-          <input
-            name="rate"
-            type="number"
-            step="any"
-            min="0"
-            defaultValue={service.manual}
-            placeholder={labels.usePercent}
-            className={`field ${state.fieldErrors?.rate ? "field-error" : ""}`}
-            aria-label={`${labels.manualPrice} — ${service.name}`}
-          />
-          <SubmitButton className="btn btn-ghost btn-sm">
-            <Icon name="check" size={15} />
-          </SubmitButton>
-        </form>
-      </td>
-    </tr>
   );
 }
 
