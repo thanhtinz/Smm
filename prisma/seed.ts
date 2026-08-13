@@ -5,19 +5,27 @@ import { bundledDictionaries } from "../src/lib/dictionaries";
 
 const db = new PrismaClient();
 
+/** Filled in before anything else is seeded; every row below belongs to it. */
+let PANEL = "";
+
 const SEQ_START: Record<string, number> = { user: 1000, service: 1000, order: 100000, transaction: 100000, ticket: 1000 };
 
 async function nextId(entity: string): Promise<number> {
   const start = SEQ_START[entity] ?? 1000;
-  const existing = await db.counter.findUnique({ where: { name: entity } });
+  const existing = await db.counter.findUnique({ where: { panelId_name: { panelId: PANEL, name: entity } } });
   if (!existing) {
-    await db.counter.create({ data: { name: entity, value: start + 1 } });
+    await db.counter.create({ data: { panelId: PANEL, name: entity, value: start + 1 } });
     return start + 1;
   }
-  return (await db.counter.update({ where: { name: entity }, data: { value: { increment: 1 } } })).value;
+  return (
+    await db.counter.update({
+      where: { panelId_name: { panelId: PANEL, name: entity } },
+      data: { value: { increment: 1 } },
+    })
+  ).value;
 }
 
-async function seedRootPanel() {
+async function seedRootPanel(): Promise<string> {
   const existing = await db.panel.findFirst({ where: { parentId: null }, orderBy: { createdAt: "asc" } });
   const panel =
     existing ?? (await db.panel.create({ data: { slug: "root", name: "Root panel", depth: 0, path: "" } }));
@@ -39,6 +47,8 @@ async function seedRootPanel() {
       update: { panelId: panel.id, verified: true },
     });
   }
+
+  return panel.id;
 }
 
 /** Short, honest blurb rendered in the order summary. */
@@ -55,6 +65,10 @@ function describe(name: string): string {
 }
 
 async function main() {
+  // Every request resolves to a panel by host, and every row below belongs to
+  // one, so the root panel comes first.
+  PANEL = await seedRootPanel();
+
   // --- Languages ----------------------------------------------------------
   const languages = [
     { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", isDefault: true, position: 0 },
@@ -109,8 +123,9 @@ async function main() {
   const adminPass = await bcrypt.hash("Admin@123", 10);
   const userPass = await bcrypt.hash("Demo@123", 10);
   await db.user.upsert({
-    where: { username: "admin" },
+    where: { panelId_username: { panelId: PANEL, username: "admin" } },
     create: {
+      panelId: PANEL,
       publicId: await nextId("user"),
       username: "admin",
       email: "admin@novapanel.io",
@@ -123,8 +138,9 @@ async function main() {
     update: {},
   });
   await db.user.upsert({
-    where: { username: "demo" },
+    where: { panelId_username: { panelId: PANEL, username: "demo" } },
     create: {
+      panelId: PANEL,
       publicId: await nextId("user"),
       username: "demo",
       email: "demo@novapanel.io",
@@ -149,7 +165,11 @@ async function main() {
     { slug: "spotify", name: "Spotify", icon: "spotify", color: "#1db954", position: 6 },
   ];
   for (const p of platforms) {
-    await db.platform.upsert({ where: { slug: p.slug }, create: p, update: { name: p.name, icon: p.icon } });
+    await db.platform.upsert({
+      where: { panelId_slug: { panelId: PANEL, slug: p.slug } },
+      create: { ...p, panelId: PANEL },
+      update: { name: p.name, icon: p.icon },
+    });
   }
 
   const catalogue: Record<string, { category: string; services: [string, number, number, number][] }[]> = {
@@ -246,20 +266,21 @@ async function main() {
   };
 
   for (const [slug, groups] of Object.entries(catalogue)) {
-    const platform = await db.platform.findUnique({ where: { slug } });
+    const platform = await db.platform.findFirst({ where: { panelId: PANEL, slug } });
     if (!platform) continue;
     for (const [gi, group] of groups.entries()) {
-      const existing = await db.category.findFirst({ where: { name: group.category } });
+      const existing = await db.category.findFirst({ where: { panelId: PANEL, name: group.category } });
       const category =
         existing ??
         (await db.category.create({
-          data: { name: group.category, platformId: platform.id, position: gi },
+          data: { panelId: PANEL, name: group.category, platformId: platform.id, position: gi },
         }));
       for (const [si, [name, rate, min, max]] of group.services.entries()) {
-        const found = await db.service.findFirst({ where: { name } });
+        const found = await db.service.findFirst({ where: { panelId: PANEL, name } });
         if (found) continue;
         await db.service.create({
           data: {
+            panelId: PANEL,
             publicId: await nextId("service"),
             categoryId: category.id,
             name,
@@ -347,7 +368,11 @@ async function main() {
     },
   ];
   for (const m of methods) {
-    await db.paymentMethod.upsert({ where: { code: m.code }, create: m, update: { name: m.name, driver: m.driver } });
+    await db.paymentMethod.upsert({
+      where: { panelId_code: { panelId: PANEL, code: m.code } },
+      create: { ...m, panelId: PANEL },
+      update: { name: m.name, driver: m.driver },
+    });
   }
 
   // --- Static pages -------------------------------------------------------
@@ -357,13 +382,12 @@ async function main() {
     { slug: "refund", title: "Refund policy", body: "<p>Edit this page from Admin → Pages.</p>", position: 2 },
   ];
   for (const p of pages) {
-    await db.page.upsert({ where: { slug: p.slug }, create: p, update: {} });
+    await db.page.upsert({
+      where: { panelId_slug: { panelId: PANEL, slug: p.slug } },
+      create: { ...p, panelId: PANEL },
+      update: {},
+    });
   }
-
-  // --- Root panel ---------------------------------------------------------
-  // Every request resolves to a panel by host, so the root panel and the hosts
-  // it answers on have to exist before anything can be served.
-  await seedRootPanel();
 
   console.log("Seed complete.");
 }

@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { currentPanelId } from "./tenancy";
 
 const START: Record<string, number> = {
   user: 1000,
@@ -15,13 +16,15 @@ const START: Record<string, number> = {
  */
 export async function nextPublicId(entity: keyof typeof START | string): Promise<number> {
   const start = START[entity] ?? 1000;
-  const existing = await db.counter.findUnique({ where: { name: entity } });
+  // Counters are per panel, so every panel numbers its own orders from #100001.
+  const panelId = await currentPanelId();
+  const existing = await db.counter.findUnique({ where: { panelId_name: { panelId, name: entity } } });
   if (!existing) {
     await db.counter.create({ data: { name: entity, value: start + 1 } });
     return start + 1;
   }
   const updated = await db.counter.update({
-    where: { name: entity },
+    where: { panelId_name: { panelId, name: entity } },
     data: { value: { increment: 1 } },
   });
   return updated.value;

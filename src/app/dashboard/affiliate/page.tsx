@@ -4,6 +4,7 @@ import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
 import { displayMoney } from "@/lib/currency";
 import { ensureReferralCode } from "@/lib/affiliate";
+import { panelBaseUrl } from "@/lib/tenancy";
 import CopyField from "@/components/ui/copy-field";
 import StatCard from "@/components/ui/stat-card";
 import WithdrawButton from "@/components/affiliate/withdraw-button";
@@ -32,7 +33,7 @@ export default async function AffiliatePage() {
   }
 
   const code = await ensureReferralCode(user.id);
-  const link = `${process.env.APP_URL ?? "http://localhost:3000"}/register?ref=${code}`;
+  const link = `${await panelBaseUrl()}/register?ref=${code}`;
 
   const [referrals, earnings] = await Promise.all([
     db.user.count({ where: { referredById: user.id } }),

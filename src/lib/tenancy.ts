@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import type { Panel } from "@prisma/client";
-import { db } from "./db";
+import { basePrisma } from "./db-base";
 import { PANEL_HOST_HEADER, normaliseHost } from "./panel-host";
 
 export { PANEL_HOST_HEADER, normaliseHost };
@@ -13,8 +13,8 @@ export { PANEL_HOST_HEADER, normaliseHost };
  *
  * Ambient panel context normally comes from the request host, which is only
  * readable while a request is in flight. Cron runs, payment webhooks and the
- * internal wholesale hop all act on behalf of a panel that is not the one
- * being served, so they wrap their work in `runAsPanel` and every lookup
+ * wholesale hop between panels all act on behalf of a panel that is not the
+ * one being served, so they wrap their work in `runAsPanel` and every query
  * underneath sees that panel instead.
  */
 const override = new AsyncLocalStorage<{ panelId: string }>();
@@ -27,22 +27,22 @@ export function panelOverride(): string | null {
   return override.getStore()?.panelId ?? null;
 }
 
-const findPanel = cache(async (id: string) => db.panel.findUnique({ where: { id } }));
+const findPanel = cache(async (id: string) => basePrisma.panel.findUnique({ where: { id } }));
 
 const findPanelByHost = cache(async (host: string) => {
-  const domain = await db.panelDomain.findUnique({ where: { host }, include: { panel: true } });
+  const domain = await basePrisma.panelDomain.findUnique({ where: { host }, include: { panel: true } });
   return domain?.panel ?? null;
 });
 
 export const getRootPanel = cache(async () =>
-  db.panel.findFirst({ where: { parentId: null }, orderBy: { createdAt: "asc" } }),
+  basePrisma.panel.findFirst({ where: { parentId: null }, orderBy: { createdAt: "asc" } }),
 );
 
 /**
  * The panel this request belongs to, or null when the host is not one we
  * serve. There is deliberately no fallback to the root panel: an unrecognised
- * host silently writing into the root tenant is the quietest way to lose data
- * across panels.
+ * host silently reading and writing the root tenant's rows is the quietest
+ * way to lose data across panels.
  */
 export async function getCurrentPanel(): Promise<Panel | null> {
   const forced = panelOverride();
@@ -59,6 +59,23 @@ export async function getCurrentPanel(): Promise<Panel | null> {
   }
   if (!host) return null;
   return findPanelByHost(host);
+}
+
+/**
+ * The panel every tenant-scoped query is filtered by. Fails closed: a caller
+ * with no host and no override is a bug, and guessing a panel for it would
+ * write one tenant's rows into another.
+ */
+export async function currentPanelId(): Promise<string> {
+  const forced = panelOverride();
+  if (forced) return forced;
+  const panel = await getCurrentPanel();
+  if (!panel) {
+    throw new Error(
+      "No panel in context. Requests resolve one from the host; background work must use runAsPanel().",
+    );
+  }
+  return panel.id;
 }
 
 export async function requirePanel(): Promise<Panel> {
@@ -78,30 +95,25 @@ export async function guardPanel(): Promise<Panel> {
 }
 
 /**
- * Creates the root panel if it is missing and attaches the hosts it answers
- * on. Safe to call repeatedly — used by the seed and by first boot.
+ * The public origin of the panel being served.
+ *
+ * Every panel lives on its own hostname, so a link built from a single APP_URL
+ * env var would send a child panel's customers to the parent's domain. APP_URL
+ * only decides the scheme and the port, which are the same for all of them.
  */
-export async function ensureRootPanel(hosts: string[] = []): Promise<Panel> {
-  const existing = await db.panel.findFirst({ where: { parentId: null }, orderBy: { createdAt: "asc" } });
-  const panel =
-    existing ??
-    (await db.panel.create({
-      data: { slug: "root", name: "Root panel", depth: 0, path: "" },
-    }));
+export async function panelBaseUrl(): Promise<string> {
+  const fallback = process.env.APP_URL ?? "http://localhost:3000";
+  const panel = await getCurrentPanel();
+  if (!panel) return fallback;
 
-  if (!panel.path) {
-    await db.panel.update({ where: { id: panel.id }, data: { path: panel.id } });
-    panel.path = panel.id;
-  }
+  const domain =
+    (await basePrisma.panelDomain.findFirst({
+      where: { panelId: panel.id, verified: true },
+      orderBy: [{ isPrimary: "desc" }, { createdAt: "asc" }],
+    })) ?? null;
+  if (!domain) return fallback;
 
-  const wanted = [...new Set(hosts.map(normaliseHost).filter(Boolean))];
-  for (const [index, host] of wanted.entries()) {
-    await db.panelDomain.upsert({
-      where: { host },
-      create: { panelId: panel.id, host, verified: true, isPrimary: index === 0 },
-      update: { panelId: panel.id, verified: true },
-    });
-  }
-
-  return panel;
+  const template = new URL(fallback);
+  template.hostname = domain.host;
+  return template.origin;
 }

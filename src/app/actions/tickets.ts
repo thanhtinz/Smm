@@ -46,7 +46,9 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
       subject,
       category,
       status: "open",
-      messages: { create: { authorId: user.id, fromStaff: false, body } },
+      // Nested writes bypass the panel filter in src/lib/db.ts — it only sees
+      // the outer ticket.create — so the first message carries its own panelId.
+      messages: { create: { panelId: user.panelId, authorId: user.id, fromStaff: false, body } },
     },
   });
 
