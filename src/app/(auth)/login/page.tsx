@@ -27,6 +27,8 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         submit: t("nav.signin"),
         noaccount: t("auth.noaccount"),
         signup: t("nav.signup"),
+        unverified: t("auth.verify.blocked"),
+        resend: t("auth.verify.resend"),
       }}
     />
   );

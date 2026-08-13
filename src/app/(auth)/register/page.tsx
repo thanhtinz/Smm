@@ -44,6 +44,8 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         hasaccount: t("auth.hasaccount"),
         signin: t("nav.signin"),
         referred: t("auth.referred"),
+        checkInbox: t("auth.verify.checkInbox"),
+        sentTo: t("auth.verify.sentTo"),
       }}
     />
   );
