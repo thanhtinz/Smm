@@ -142,6 +142,21 @@ return HTTP 200 with an `error` key.
 
 ![](docs/screenshots/43-api-docs.png)
 
+## Provider integration
+
+Upstream panels speak the same standard this panel exposes at `/api/v2`, so a
+provider can be any compatible panel — including another instance of this one.
+
+- Import a provider's catalogue with a markup; imported services land disabled
+  so nothing goes on sale before review
+- Queued orders are pushed upstream and the returned id is stored against them
+- Statuses are pulled back in one request per provider, not per order
+- An upstream cancellation refunds the customer; a partial delivery refunds
+  only the undelivered share
+- `POST /api/cron/sync` runs both passes for a scheduler, gated by `CRON_SECRET`
+
+![](docs/screenshots/50-admin-providers.png)
+
 ## Build order
 
 Features land one at a time, each verified with a screenshot before the next begins.
@@ -154,3 +169,4 @@ Features land one at a time, each verified with a screenshot before the next beg
 - [x] 6 — Support tickets and notifications
 - [x] 7 — Admin area
 - [x] 8 — Public API v2
+- [x] 9 — Provider integration
