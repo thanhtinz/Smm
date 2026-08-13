@@ -8,6 +8,7 @@ import { nextPublicId } from "@/lib/ids";
 import { getCurrencies, getBaseCurrency } from "@/lib/currency";
 import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
+import { panelBaseUrl } from "@/lib/tenancy";
 
 export type DepositState = {
   error?: string;
@@ -130,7 +131,7 @@ export async function prepareDeposit(transactionId: string) {
       reference,
       transactionId: txn.id,
       config,
-      appUrl: process.env.APP_URL ?? "http://localhost:3000",
+      appUrl: await panelBaseUrl(),
     });
   } catch {
     return { kind: "unconfigured" as const, message: "The payment provider could not be reached. Try again shortly." };

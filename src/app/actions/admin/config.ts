@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAdmin, logActivity } from "@/lib/auth";
+import { requireAdmin, requireRootAdmin, logActivity } from "@/lib/auth";
+import { getCurrentPanel } from "@/lib/tenancy";
 import { invalidateSettings, setSetting, settingDefinitions } from "@/lib/settings";
 import { invalidateCurrencies } from "@/lib/currency";
 import { invalidateDictionaries } from "@/lib/i18n";
@@ -119,7 +120,7 @@ export async function savePaymentMethodAction(_prev: ActionResult, form: FormDat
 // --------------------------------------------------------------- currencies
 
 export async function saveCurrencyAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const code = String(form.get("code") ?? "").trim().toUpperCase();
@@ -152,7 +153,7 @@ export async function saveCurrencyAction(_prev: ActionResult, form: FormData): P
 }
 
 export async function deleteCurrencyAction(id: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const currency = await db.currency.findUnique({ where: { id } });
   if (!currency) return { error: "Currency not found" };
   if (currency.isBase) return { error: "The base currency cannot be deleted. Set another as base first." };
@@ -166,7 +167,7 @@ export async function deleteCurrencyAction(id: string): Promise<ActionResult> {
 
 /** Moving the base rebases every other rate so relative values are preserved. */
 export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const target = await db.currency.findUnique({ where: { id } });
   if (!target) return { error: "Currency not found" };
   if (target.rate <= 0) return { error: "That currency has no usable rate." };
@@ -194,7 +195,7 @@ export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
 // ---------------------------------------------------------------- languages
 
 export async function saveLanguageAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const code = String(form.get("code") ?? "").trim().toLowerCase();
@@ -224,7 +225,7 @@ export async function saveLanguageAction(_prev: ActionResult, form: FormData): P
 }
 
 export async function deleteLanguageAction(id: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const language = await db.language.findUnique({ where: { id } });
   if (!language) return { error: "Language not found" };
 
@@ -240,7 +241,7 @@ export async function deleteLanguageAction(id: string): Promise<ActionResult> {
 
 /** Saves only the keys that differ from what is already stored. */
 export async function saveTranslationsAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
 
   const languageId = String(form.get("languageId") ?? "");
   const language = await db.language.findUnique({ where: { id: languageId } });
@@ -293,7 +294,7 @@ const COLOR_TOKENS = [
 ] as const;
 
 export async function saveThemeAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
@@ -342,7 +343,7 @@ export async function saveThemeAction(_prev: ActionResult, form: FormData): Prom
 }
 
 export async function deleteThemeAction(id: string): Promise<ActionResult> {
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const theme = await db.theme.findUnique({ where: { id } });
   if (!theme) return { error: "Theme not found" };
   if (theme.isDefault) return { error: "The default theme cannot be deleted. Make another one default first." };
@@ -365,11 +366,18 @@ export async function setDefaultThemeAction(id: string): Promise<ActionResult> {
   const theme = await db.theme.findUnique({ where: { id } });
   if (!theme) return { error: "Theme not found" };
 
-  await db.$transaction([
-    db.theme.updateMany({ data: { isDefault: false } }),
-    db.theme.update({ where: { id }, data: { isDefault: true, enabled: true } }),
-  ]);
+  // Which theme this panel opens on is its own setting. The isDefault flag on
+  // the shared Theme row decides what a panel with no setting falls back to,
+  // so only the root panel moves it.
   await setSetting("appearance.defaultTheme", theme.slug);
+
+  const panel = await getCurrentPanel();
+  if (panel && panel.parentId === null) {
+    await db.$transaction([
+      db.theme.updateMany({ data: { isDefault: false } }),
+      db.theme.update({ where: { id }, data: { isDefault: true, enabled: true } }),
+    ]);
+  }
 
   await logActivity(admin.id, "admin.theme.default", theme.slug);
   invalidateSettings();

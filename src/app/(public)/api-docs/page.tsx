@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
+import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
+import { panelBaseUrl } from "@/lib/tenancy";
 import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = { title: "API" };
@@ -16,7 +18,15 @@ export default async function ApiDocsPage() {
   const ctx = await getAppContext();
   const { t } = ctx;
   const enabled = await getSetting("api.enabled");
-  const endpoint = `${process.env.APP_URL ?? "http://localhost:3000"}/api/v2`;
+  const endpoint = `${await panelBaseUrl()}/api/v2`;
+
+  // The sample response shows a service this panel actually sells; a
+  // hand-written one would advertise a catalogue a child panel does not have.
+  const sample = await db.service.findFirst({
+    where: { enabled: true },
+    include: { category: { select: { name: true } } },
+    orderBy: [{ position: "asc" }, { publicId: "asc" }],
+  });
 
   const actions: Action[] = [
     {
@@ -25,16 +35,16 @@ export default async function ApiDocsPage() {
       params: [],
       response: [
         {
-          service: 1001,
-          name: "Instagram Followers - Real Mix",
+          service: sample?.publicId ?? 1001,
+          name: sample?.name ?? "Service name",
           type: "Default",
-          category: "Instagram Followers",
-          rate: "21000.0000",
-          min: "100",
-          max: "100000",
-          refill: true,
-          cancel: true,
-          dripfeed: true,
+          category: sample?.category.name ?? "Category",
+          rate: (sample?.rate ?? 0).toFixed(4),
+          min: String(sample?.min ?? 100),
+          max: String(sample?.max ?? 100000),
+          refill: sample?.refill ?? false,
+          cancel: sample?.cancel ?? false,
+          dripfeed: sample?.dripfeed ?? false,
         },
       ],
     },

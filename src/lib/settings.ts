@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { currentPanelId } from "./tenancy";
 
 /**
  * Every runtime-configurable value of the panel. Defaults live here, the
@@ -96,12 +97,19 @@ export const settingDefinitions = {
 export type SettingKey = keyof typeof settingDefinitions;
 type SettingValue<K extends SettingKey> = (typeof settingDefinitions)[K]["value"];
 
-let cache: Map<string, unknown> | null = null;
-let cachedAt = 0;
+/**
+ * Keyed by panel: settings are the one piece of reference data every panel
+ * holds its own copy of, and a process-wide cache would hand one panel's
+ * branding to another.
+ */
+const cache = new Map<string, { at: number; map: Map<string, unknown> }>();
 const TTL = 5_000;
 
 async function load(): Promise<Map<string, unknown>> {
-  if (cache && Date.now() - cachedAt < TTL) return cache;
+  const panelId = await currentPanelId();
+  const hit = cache.get(panelId);
+  if (hit && Date.now() - hit.at < TTL) return hit.map;
+
   const rows = await db.setting.findMany();
   const map = new Map<string, unknown>();
   for (const row of rows) {
@@ -111,14 +119,14 @@ async function load(): Promise<Map<string, unknown>> {
       map.set(row.key, row.value);
     }
   }
-  cache = map;
-  cachedAt = Date.now();
+  cache.set(panelId, { at: Date.now(), map });
   return map;
 }
 
-export function invalidateSettings() {
-  cache = null;
-  cachedAt = 0;
+/** Drops one panel's entry, or all of them when there is no panel in context. */
+export function invalidateSettings(panelId?: string) {
+  if (panelId) cache.delete(panelId);
+  else cache.clear();
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<SettingValue<K>> {
@@ -138,12 +146,13 @@ export async function getSettings(): Promise<Record<SettingKey, unknown>> {
 
 export async function setSetting(key: string, value: unknown) {
   const group = (settingDefinitions as Record<string, { group: string }>)[key]?.group ?? "general";
+  const panelId = await currentPanelId();
   await db.setting.upsert({
-    where: { key },
+    where: { panelId_key: { panelId, key } },
     create: { key, value: JSON.stringify(value), group },
     update: { value: JSON.stringify(value), group },
   });
-  invalidateSettings();
+  invalidateSettings(panelId);
 }
 
 export async function setSettings(entries: Record<string, unknown>) {

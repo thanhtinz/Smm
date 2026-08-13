@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
+import { panelBaseUrl } from "@/lib/tenancy";
 import { regenerateApiKeyAction } from "@/app/actions/api-key";
 import CopyField from "@/components/ui/copy-field";
 import { Icon } from "@/components/icons";
@@ -14,7 +15,7 @@ export default async function ApiPage() {
   const { t } = ctx;
 
   const enabled = await getSetting("api.enabled");
-  const endpoint = `${process.env.APP_URL ?? "http://localhost:3000"}/api/v2`;
+  const endpoint = `${await panelBaseUrl()}/api/v2`;
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

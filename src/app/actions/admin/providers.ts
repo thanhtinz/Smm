@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
+import { currentPanelId } from "@/lib/tenancy";
 import { dispatchPendingOrders, fetchProviderBalance, fetchProviderServices, syncOrderStatuses } from "@/lib/providers";
 import type { ActionResult } from "./catalogue";
 
@@ -93,9 +94,10 @@ export async function importProviderServicesAction(id: string, markupPercent: nu
 
   // Everything imported from one provider lands under a single platform and
   // per-provider-category buckets, which an operator can then reorganise.
+  const platformSlug = `provider-${provider.id.slice(0, 8)}`;
   const platform = await db.platform.upsert({
-    where: { slug: `provider-${provider.id.slice(0, 8)}` },
-    create: { slug: `provider-${provider.id.slice(0, 8)}`, name: provider.name, icon: "server", visible: false, position: 99 },
+    where: { panelId_slug: { panelId: await currentPanelId(), slug: platformSlug } },
+    create: { slug: platformSlug, name: provider.name, icon: "server", visible: false, position: 99 },
     update: {},
   });
 

@@ -8,35 +8,58 @@ datasource db {
 }
 
 // ---------------------------------------------------------------------------
+// Tenancy
+//
+// Every table below carries `panelId String @default("")`. The default is not
+// a real value — no Panel has an empty id, so the foreign key rejects any row
+// that reaches the database still carrying it. What it buys is that panelId is
+// optional in the generated create types, so the ~30 create callsites stay as
+// they are and the Prisma extension in src/lib/db.ts is the only place that
+// fills it in. If the extension is ever bypassed the insert fails loudly
+// instead of landing in the wrong panel.
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
 // Settings — every configurable value lives here so the admin UI owns config.
 // ---------------------------------------------------------------------------
 
 model Setting {
-  key       String   @id
+  id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelSettings", fields: [panelId], references: [id], onDelete: Cascade)
+  key       String
   value     String // JSON-encoded
   group     String   @default("general")
   updatedAt DateTime @updatedAt
+
+  @@unique([panelId, key])
+  @@index([panelId])
 }
 
 /// Sequence source for the short human-facing ids (order #, user #...).
 /// SQLite only autoincrements primary keys, so the counters live here.
 model Counter {
-  name  String @id
-  value Int    @default(0)
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelCounters", fields: [panelId], references: [id], onDelete: Cascade)
+  name    String
+  value   Int    @default(0)
+
+  @@unique([panelId, name])
 }
 
 model Language {
-  id        String   @id @default(cuid())
-  code      String   @unique // vi, en, tr...
-  name      String
+  id         String        @id @default(cuid())
+  code       String        @unique // vi, en, tr...
+  name       String
   nativeName String
-  flag      String   @default("") // inline svg id
-  enabled   Boolean  @default(true)
-  isDefault Boolean  @default(false)
-  direction String   @default("ltr")
-  position  Int      @default(0)
-  strings   Translation[]
-  createdAt DateTime @default(now())
+  flag       String        @default("") // inline svg id
+  enabled    Boolean       @default(true)
+  isDefault  Boolean       @default(false)
+  direction  String        @default("ltr")
+  position   Int           @default(0)
+  strings    Translation[]
+  createdAt  DateTime      @default(now())
 }
 
 model Translation {
@@ -52,16 +75,16 @@ model Translation {
 }
 
 model Currency {
-  id           String  @id @default(cuid())
-  code         String  @unique // VND, USD, EUR
+  id           String   @id @default(cuid())
+  code         String   @unique // VND, USD, EUR
   name         String
   symbol       String
-  symbolBefore Boolean @default(true)
-  decimals     Int     @default(2)
-  rate         Float   @default(1) // value of 1 base currency in this currency
-  enabled      Boolean @default(true)
-  isBase       Boolean @default(false)
-  position     Int     @default(0)
+  symbolBefore Boolean  @default(true)
+  decimals     Int      @default(2)
+  rate         Float    @default(1) // value of 1 base currency in this currency
+  enabled      Boolean  @default(true)
+  isBase       Boolean  @default(false)
+  position     Int      @default(0)
   updatedAt    DateTime @updatedAt
 }
 
@@ -82,49 +105,59 @@ model Theme {
 // ---------------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(cuid())
-  publicId  Int      @unique
-  username  String   @unique
-  email     String   @unique
-  password  String
-  fullName  String   @default("")
-  role      String   @default("user") // user | support | admin
-  balance   Float    @default(0)
-  spent     Float    @default(0)
-  currency  String   @default("VND")
-  locale    String   @default("vi")
-  theme     String   @default("aurora")
-  colorMode String   @default("dark") // dark | light | system
-  timezone  String   @default("Asia/Ho_Chi_Minh")
-  apiKey    String   @unique @default(cuid())
-  emailVerified Boolean @default(false)
-  banned    Boolean  @default(false)
-  banReason String   @default("")
-  lastLoginAt DateTime?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id            String    @id @default(cuid())
+  panelId       String    @default("")
+  panel         Panel     @relation("PanelUsers", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId      Int
+  username      String
+  email         String
+  password      String
+  fullName      String    @default("")
+  role          String    @default("user") // user | support | admin
+  balance       Float     @default(0)
+  spent         Float     @default(0)
+  currency      String    @default("VND")
+  locale        String    @default("vi")
+  theme         String    @default("aurora")
+  colorMode     String    @default("dark") // dark | light | system
+  timezone      String    @default("Asia/Ho_Chi_Minh")
+  apiKey        String    @unique @default(cuid())
+  emailVerified Boolean   @default(false)
+  banned        Boolean   @default(false)
+  banReason     String    @default("")
+  lastLoginAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  sessions      Session[]
-  orders        Order[]
-  transactions  Transaction[]
-  tickets       Ticket[]
-  ticketMessages TicketMessage[]
-  notifications Notification[]
-  activityLogs  ActivityLog[]
-  orderRequests OrderRequest[]
-  redemptions   CouponRedemption[]
-  referralsEarned ReferralEarning[] @relation("ReferralEarned")
-  referralSource  ReferralEarning[] @relation("ReferralSource")
-  referrals     User[]  @relation("Referral")
-  referrer      User?   @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
-  referredById  String?
+  sessions        Session[]
+  orders          Order[]
+  transactions    Transaction[]
+  tickets         Ticket[]
+  ticketMessages  TicketMessage[]
+  notifications   Notification[]
+  activityLogs    ActivityLog[]
+  orderRequests   OrderRequest[]
+  redemptions     CouponRedemption[]
+  referralsEarned ReferralEarning[]  @relation("ReferralEarned")
+  referralSource  ReferralEarning[]  @relation("ReferralSource")
+  referrals       User[]             @relation("Referral")
+  referrer        User?              @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referredById    String?
   /// Generated on first visit to the affiliate page, so adding this column
   /// needed no backfill and no reset of existing accounts.
-  referralCode  String? @unique
+  referralCode    String?
+
+  @@unique([panelId, publicId])
+  @@unique([panelId, username])
+  @@unique([panelId, email])
+  @@unique([panelId, referralCode])
+  @@index([panelId])
 }
 
 model Session {
   id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelSessions", fields: [panelId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   token     String   @unique
@@ -134,10 +167,13 @@ model Session {
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([panelId])
 }
 
 model ActivityLog {
   id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelActivityLogs", fields: [panelId], references: [id], onDelete: Cascade)
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   action    String
@@ -147,6 +183,7 @@ model ActivityLog {
 
   @@index([userId])
   @@index([action])
+  @@index([panelId])
 }
 
 // ---------------------------------------------------------------------------
@@ -157,77 +194,97 @@ model ActivityLog {
 /// so the panel works on hosts with a read-only filesystem.
 model Media {
   id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelMedia", fields: [panelId], references: [id], onDelete: Cascade)
   mime      String
   size      Int
   width     Int      @default(0)
   height    Int      @default(0)
   data      Bytes
   createdAt DateTime @default(now())
+
+  @@index([panelId])
 }
 
 model Platform {
-  id       String  @id @default(cuid())
-  slug     String  @unique
-  name     String
-  icon     String  @default("globe") // svg icon key, used when image is empty
-  image    String  @default("") // /api/media/<id> or an external URL
-  color    String  @default("#6366f1")
-  visible  Boolean @default(true)
-  position Int     @default(0)
+  id         String     @id @default(cuid())
+  panelId    String     @default("")
+  panel      Panel      @relation("PanelPlatforms", fields: [panelId], references: [id], onDelete: Cascade)
+  slug       String
+  name       String
+  icon       String     @default("globe") // svg icon key, used when image is empty
+  image      String     @default("") // /api/media/<id> or an external URL
+  color      String     @default("#6366f1")
+  visible    Boolean    @default(true)
+  position   Int        @default(0)
   categories Category[]
+
+  @@unique([panelId, slug])
+  @@index([panelId])
 }
 
 model Category {
-  id          String  @id @default(cuid())
+  id          String    @id @default(cuid())
+  panelId     String    @default("")
+  panel       Panel     @relation("PanelCategories", fields: [panelId], references: [id], onDelete: Cascade)
   platformId  String?
   platform    Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
   name        String
-  description String  @default("")
-  visible     Boolean @default(true)
-  position    Int     @default(0)
+  description String    @default("")
+  visible     Boolean   @default(true)
+  position    Int       @default(0)
   services    Service[]
 
   @@index([platformId])
+  @@index([panelId])
 }
 
 model Provider {
-  id        String  @id @default(cuid())
-  name      String
-  apiUrl    String
-  apiKey    String
-  enabled   Boolean @default(true)
-  balance   Float   @default(0)
-  currency  String  @default("USD")
+  id         String    @id @default(cuid())
+  panelId    String    @default("")
+  panel      Panel     @relation("PanelProviders", fields: [panelId], references: [id], onDelete: Cascade)
+  name       String
+  apiUrl     String
+  apiKey     String
+  enabled    Boolean   @default(true)
+  balance    Float     @default(0)
+  currency   String    @default("USD")
   lastSyncAt DateTime?
-  services  Service[]
-  createdAt DateTime @default(now())
+  services   Service[]
+  createdAt  DateTime  @default(now())
+
+  @@index([panelId])
 }
 
 model Service {
-  id          String  @id @default(cuid())
-  publicId    Int     @unique
-  categoryId  String
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  providerId  String?
-  provider    Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  providerServiceId String @default("")
-  name        String
-  description String  @default("")
-  type        String  @default("default") // default | custom_comments | drip_feed | subscription
-  rate        Float // price per 1000, in base currency
-  providerRate Float  @default(0)
-  min         Int     @default(10)
-  max         Int     @default(100000)
-  refill      Boolean @default(false)
-  cancel      Boolean @default(false)
-  dripfeed    Boolean @default(false)
-  averageTime String  @default("")
-  enabled     Boolean @default(true)
-  position    Int     @default(0)
-  orders      Order[]
-  createdAt   DateTime @default(now())
+  id                String    @id @default(cuid())
+  panelId           String    @default("")
+  panel             Panel     @relation("PanelServices", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId          Int
+  categoryId        String
+  category          Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  providerId        String?
+  provider          Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  providerServiceId String    @default("")
+  name              String
+  description       String    @default("")
+  type              String    @default("default") // default | custom_comments | drip_feed | subscription
+  rate              Float // price per 1000, in base currency
+  providerRate      Float     @default(0)
+  min               Int       @default(10)
+  max               Int       @default(100000)
+  refill            Boolean   @default(false)
+  cancel            Boolean   @default(false)
+  dripfeed          Boolean   @default(false)
+  averageTime       String    @default("")
+  enabled           Boolean   @default(true)
+  position          Int       @default(0)
+  orders            Order[]
+  createdAt         DateTime  @default(now())
 
+  @@unique([panelId, publicId])
   @@index([categoryId])
+  @@index([panelId])
 }
 
 // ---------------------------------------------------------------------------
@@ -235,50 +292,58 @@ model Service {
 // ---------------------------------------------------------------------------
 
 model Order {
-  id          String  @id @default(cuid())
-  publicId    Int     @unique
-  userId      String
-  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  serviceId   String
-  service     Service @relation(fields: [serviceId], references: [id])
-  link        String
-  quantity    Int
-  charge      Float // in base currency
-  startCount  Int     @default(0)
-  remains     Int     @default(0)
-  status      String  @default("pending") // pending processing inprogress completed partial canceled refunded
-  providerOrderId String @default("")
-  note        String  @default("")
-  runs        Int?
-  interval    Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  requests    OrderRequest[]
+  id              String         @id @default(cuid())
+  panelId         String         @default("")
+  panel           Panel          @relation("PanelOrders", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId        Int
+  userId          String
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId       String
+  service         Service        @relation(fields: [serviceId], references: [id])
+  link            String
+  quantity        Int
+  charge          Float // in base currency
+  startCount      Int            @default(0)
+  remains         Int            @default(0)
+  status          String         @default("pending") // pending processing inprogress completed partial canceled refunded
+  providerOrderId String         @default("")
+  note            String         @default("")
+  runs            Int?
+  interval        Int?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  requests        OrderRequest[]
 
+  @@unique([panelId, publicId])
   @@index([userId])
   @@index([status])
+  @@index([panelId])
 }
 
 /// Customer-raised refill and cancel requests. Both follow the same
 /// lifecycle, so they share a table with a discriminator rather than two
 /// near-identical ones.
 model OrderRequest {
-  id        String  @id @default(cuid())
-  publicId  Int     @unique
-  orderId   String
-  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type      String // refill | cancel
-  status    String  @default("pending") // pending | approved | rejected | completed
-  note      String  @default("")
-  providerRequestId String @default("")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                String   @id @default(cuid())
+  panelId           String   @default("")
+  panel             Panel    @relation("PanelOrderRequests", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId          Int
+  orderId           String
+  order             Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String // refill | cancel
+  status            String   @default("pending") // pending | approved | rejected | completed
+  note              String   @default("")
+  providerRequestId String   @default("")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
+  @@unique([panelId, publicId])
   @@index([userId])
   @@index([orderId])
   @@index([status])
+  @@index([panelId])
 }
 
 // ---------------------------------------------------------------------------
@@ -286,46 +351,55 @@ model OrderRequest {
 // ---------------------------------------------------------------------------
 
 model PaymentMethod {
-  id          String  @id @default(cuid())
-  code        String  @unique // seapay | paypal | link | manual_bank | crypto
-  name        String
-  driver      String // implementation key
-  enabled     Boolean @default(false)
-  icon        String  @default("wallet")
-  description String  @default("")
-  config      String  @default("{}") // JSON credentials, edited in admin
-  currencies  String  @default("[]") // JSON array of accepted currency codes
-  minAmount   Float   @default(0)
-  maxAmount   Float   @default(0)
-  feePercent  Float   @default(0)
-  feeFixed    Float   @default(0)
-  bonusPercent Float  @default(0)
-  position    Int     @default(0)
+  id           String        @id @default(cuid())
+  panelId      String        @default("")
+  panel        Panel         @relation("PanelPaymentMethods", fields: [panelId], references: [id], onDelete: Cascade)
+  code         String // seapay | paypal | link | manual_bank | crypto
+  name         String
+  driver       String // implementation key
+  enabled      Boolean       @default(false)
+  icon         String        @default("wallet")
+  description  String        @default("")
+  config       String        @default("{}") // JSON credentials, edited in admin
+  currencies   String        @default("[]") // JSON array of accepted currency codes
+  minAmount    Float         @default(0)
+  maxAmount    Float         @default(0)
+  feePercent   Float         @default(0)
+  feeFixed     Float         @default(0)
+  bonusPercent Float         @default(0)
+  position     Int           @default(0)
   transactions Transaction[]
+
+  @@unique([panelId, code])
+  @@index([panelId])
 }
 
 model Transaction {
-  id        String  @id @default(cuid())
-  publicId  Int     @unique
-  userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  methodId  String?
-  method    PaymentMethod? @relation(fields: [methodId], references: [id], onDelete: SetNull)
-  type      String  @default("deposit") // deposit | order | refund | admin_credit | admin_debit | bonus
-  amount    Float // base currency, signed
-  paidAmount Float  @default(0) // amount in payment currency
-  currency  String  @default("VND")
-  fee       Float   @default(0)
-  status    String  @default("pending") // pending | completed | failed | canceled
-  reference String  @default("") // gateway transaction id
-  note      String  @default("")
-  meta      String  @default("{}")
-  balanceAfter Float @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String         @id @default(cuid())
+  panelId      String         @default("")
+  panel        Panel          @relation("PanelTransactions", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId     Int
+  userId       String
+  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  methodId     String?
+  method       PaymentMethod? @relation(fields: [methodId], references: [id], onDelete: SetNull)
+  type         String         @default("deposit") // deposit | order | refund | admin_credit | admin_debit | bonus
+  amount       Float // base currency, signed
+  paidAmount   Float          @default(0) // amount in payment currency
+  currency     String         @default("VND")
+  fee          Float          @default(0)
+  status       String         @default("pending") // pending | completed | failed | canceled
+  reference    String         @default("") // gateway transaction id
+  note         String         @default("")
+  meta         String         @default("{}")
+  balanceAfter Float          @default(0)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 
+  @@unique([panelId, publicId])
   @@index([userId])
   @@index([status])
+  @@index([panelId])
 }
 
 // ---------------------------------------------------------------------------
@@ -333,112 +407,142 @@ model Transaction {
 // ---------------------------------------------------------------------------
 
 model Ticket {
-  id        String  @id @default(cuid())
-  publicId  Int     @unique
+  id        String          @id @default(cuid())
+  panelId   String          @default("")
+  panel     Panel           @relation("PanelTickets", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId  Int
   userId    String
-  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   subject   String
-  category  String  @default("general")
-  status    String  @default("open") // open | answered | pending | closed
+  category  String          @default("general")
+  status    String          @default("open") // open | answered | pending | closed
   messages  TicketMessage[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
 
+  @@unique([panelId, publicId])
   @@index([userId])
+  @@index([panelId])
 }
 
 model TicketMessage {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelTicketMessages", fields: [panelId], references: [id], onDelete: Cascade)
   ticketId  String
-  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   authorId  String?
-  author    User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  fromStaff Boolean @default(false)
+  author    User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  fromStaff Boolean  @default(false)
   body      String
   createdAt DateTime @default(now())
 
   @@index([ticketId])
+  @@index([panelId])
 }
 
 model Notification {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelNotifications", fields: [panelId], references: [id], onDelete: Cascade)
   userId    String?
-  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   title     String
   body      String
-  level     String  @default("info") // info | success | warning | danger
-  read      Boolean @default(false)
-  href      String  @default("")
+  level     String   @default("info") // info | success | warning | danger
+  read      Boolean  @default(false)
+  href      String   @default("")
   createdAt DateTime @default(now())
 
   @@index([userId])
+  @@index([panelId])
 }
 
 /// Deposit coupons. Redemptions are recorded separately so per-user limits
 /// and reporting do not depend on a counter that can drift.
 model Coupon {
-  id        String  @id @default(cuid())
-  code      String  @unique
-  type      String  @default("percent") // percent | fixed
-  value     Float   @default(0)
-  minAmount Float   @default(0) // in base currency
-  maxUses   Int     @default(0) // 0 = unlimited
-  maxPerUser Int    @default(1) // 0 = unlimited
-  firstDepositOnly Boolean @default(false)
-  expiresAt DateTime?
-  enabled   Boolean @default(true)
-  createdAt DateTime @default(now())
-  redemptions CouponRedemption[]
+  id               String             @id @default(cuid())
+  panelId          String             @default("")
+  panel            Panel              @relation("PanelCoupons", fields: [panelId], references: [id], onDelete: Cascade)
+  code             String
+  type             String             @default("percent") // percent | fixed
+  value            Float              @default(0)
+  minAmount        Float              @default(0) // in base currency
+  maxUses          Int                @default(0) // 0 = unlimited
+  maxPerUser       Int                @default(1) // 0 = unlimited
+  firstDepositOnly Boolean            @default(false)
+  expiresAt        DateTime?
+  enabled          Boolean            @default(true)
+  createdAt        DateTime           @default(now())
+  redemptions      CouponRedemption[]
+
+  @@unique([panelId, code])
+  @@index([panelId])
 }
 
 model CouponRedemption {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
+  panelId       String   @default("")
+  panel         Panel    @relation("PanelCouponRedemptions", fields: [panelId], references: [id], onDelete: Cascade)
   couponId      String
-  coupon        Coupon  @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  coupon        Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
   userId        String
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transactionId String  @unique
-  bonus         Float   @default(0)
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactionId String   @unique
+  bonus         Float    @default(0)
   createdAt     DateTime @default(now())
 
   @@index([couponId])
   @@index([userId])
+  @@index([panelId])
 }
 
 /// Commission owed to a referrer for one of their referral's deposits.
 model ReferralEarning {
-  id            String  @id @default(cuid())
+  id            String   @id @default(cuid())
+  panelId       String   @default("")
+  panel         Panel    @relation("PanelReferralEarnings", fields: [panelId], references: [id], onDelete: Cascade)
   referrerId    String
-  referrer      User    @relation("ReferralEarned", fields: [referrerId], references: [id], onDelete: Cascade)
+  referrer      User     @relation("ReferralEarned", fields: [referrerId], references: [id], onDelete: Cascade)
   referredId    String
-  referred      User    @relation("ReferralSource", fields: [referredId], references: [id], onDelete: Cascade)
-  transactionId String  @unique
+  referred      User     @relation("ReferralSource", fields: [referredId], references: [id], onDelete: Cascade)
+  transactionId String   @unique
   amount        Float
   ratePercent   Float
-  status        String  @default("earned") // earned | withdrawn
+  status        String   @default("earned") // earned | withdrawn
   createdAt     DateTime @default(now())
 
   @@index([referrerId])
+  @@index([panelId])
 }
 
 model Announcement {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelAnnouncements", fields: [panelId], references: [id], onDelete: Cascade)
   title     String
   body      String
-  level     String  @default("info")
-  enabled   Boolean @default(true)
+  level     String   @default("info")
+  enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  @@index([panelId])
 }
 
 model Page {
-  id        String  @id @default(cuid())
-  slug      String  @unique
-  title     String
-  body      String
-  published Boolean @default(true)
-  showInFooter Boolean @default(true)
-  position  Int     @default(0)
-  updatedAt DateTime @updatedAt
+  id           String   @id @default(cuid())
+  panelId      String   @default("")
+  panel        Panel    @relation("PanelPages", fields: [panelId], references: [id], onDelete: Cascade)
+  slug         String
+  title        String
+  body         String
+  published    Boolean  @default(true)
+  showInFooter Boolean  @default(true)
+  position     Int      @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@unique([panelId, slug])
+  @@index([panelId])
 }
 
 // ---------------------------------------------------------------------------
@@ -467,11 +571,33 @@ model Panel {
   /// no parent-side account, and a child's owner lives in a different tenant.
   ownerUserId String @default("")
 
-  status    String   @default("active") // active | suspended | expired
-  statusNote String  @default("")
-  domains   PanelDomain[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status         String             @default("active") // active | suspended | expired
+  statusNote     String             @default("")
+  domains        PanelDomain[]
+  settings       Setting[]          @relation("PanelSettings")
+  counters       Counter[]          @relation("PanelCounters")
+  users          User[]             @relation("PanelUsers")
+  sessions       Session[]          @relation("PanelSessions")
+  activityLogs   ActivityLog[]      @relation("PanelActivityLogs")
+  media          Media[]            @relation("PanelMedia")
+  platforms      Platform[]         @relation("PanelPlatforms")
+  categories     Category[]         @relation("PanelCategories")
+  providers      Provider[]         @relation("PanelProviders")
+  services       Service[]          @relation("PanelServices")
+  orders         Order[]            @relation("PanelOrders")
+  orderRequests  OrderRequest[]     @relation("PanelOrderRequests")
+  paymentMethods PaymentMethod[]    @relation("PanelPaymentMethods")
+  transactions   Transaction[]      @relation("PanelTransactions")
+  tickets        Ticket[]           @relation("PanelTickets")
+  ticketMessages TicketMessage[]    @relation("PanelTicketMessages")
+  notifications  Notification[]     @relation("PanelNotifications")
+  coupons        Coupon[]           @relation("PanelCoupons")
+  redemptions    CouponRedemption[] @relation("PanelCouponRedemptions")
+  earnings       ReferralEarning[]  @relation("PanelReferralEarnings")
+  announcements  Announcement[]     @relation("PanelAnnouncements")
+  pages          Page[]             @relation("PanelPages")
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 
   @@index([parentId])
   @@index([path])
@@ -481,15 +607,15 @@ model Panel {
 /// hostname it was created with, plus custom domains added later), so this is
 /// a table rather than a column.
 model PanelDomain {
-  id        String  @id @default(cuid())
-  panelId   String
-  panel     Panel   @relation(fields: [panelId], references: [id], onDelete: Cascade)
-  host      String  @unique // lowercase, no port
-  verified  Boolean @default(false)
-  isPrimary Boolean @default(false)
+  id          String   @id @default(cuid())
+  panelId     String
+  panel       Panel    @relation(fields: [panelId], references: [id], onDelete: Cascade)
+  host        String   @unique // lowercase, no port
+  verified    Boolean  @default(false)
+  isPrimary   Boolean  @default(false)
   /// Random token the owner publishes as a TXT record to prove ownership.
-  verifyToken String @default("")
-  createdAt DateTime @default(now())
+  verifyToken String   @default("")
+  createdAt   DateTime @default(now())
 
   @@index([panelId])
 }

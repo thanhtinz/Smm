@@ -3,7 +3,7 @@ import Logo from "@/components/logo";
 import PreferenceMenu from "@/components/preference-menu";
 import { Icon, type IconName } from "@/components/icons";
 import { getAppContext } from "@/lib/context";
-import { guardPanel } from "@/lib/panel";
+import { guardPanel } from "@/lib/tenancy";
 import { redirect } from "next/navigation";
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {

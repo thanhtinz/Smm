@@ -12,7 +12,7 @@ import { parseConfig } from "@/lib/payments";
  * stored on the payment method in the admin area.
  */
 export async function POST(request: Request) {
-  const method = await db.paymentMethod.findUnique({ where: { code: "seapay" } });
+  const method = await db.paymentMethod.findFirst({ where: { code: "seapay" } });
   if (!method || !method.enabled) {
     return NextResponse.json({ success: false, message: "Method disabled" }, { status: 404 });
   }
