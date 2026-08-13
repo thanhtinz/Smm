@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { creditDeposit } from "@/lib/payments/credit";
-import { ORDER_STATUSES } from "@/lib/orders";
+import { ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
 import type { ActionResult } from "./catalogue";
 
 export type { ActionResult };
@@ -84,6 +84,55 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
 }
 
 // -------------------------------------------------------------------- users
+
+/**
+ * Corrects the facts of an order without touching the money.
+ *
+ * An operator needs this when a customer pasted the wrong link, or when the
+ * provider's start count and remains came back wrong and the numbers the
+ * customer sees are misleading. The charge is deliberately not editable —
+ * moving money has its own audited paths.
+ *
+ * Changes stay on this panel. An order already sent upstream cannot have its
+ * link changed at the provider, so propagating the edit would only make the
+ * chain disagree with reality.
+ */
+export async function updateOrderAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  const id = String(form.get("id") ?? "");
+  const order = await db.order.findUnique({ where: { id } });
+  if (!order) return { error: "Order not found" };
+
+  const link = String(form.get("link") ?? "").trim();
+  if (!isValidOrderLink(link)) return { fieldErrors: { link: "Enter a valid http or https link" } };
+
+  const startCount = Number(String(form.get("startCount") ?? "").trim());
+  if (!Number.isInteger(startCount) || startCount < 0) {
+    return { fieldErrors: { startCount: "Enter a whole number, zero or more" } };
+  }
+
+  const remains = Number(String(form.get("remains") ?? "").trim());
+  if (!Number.isInteger(remains) || remains < 0) {
+    return { fieldErrors: { remains: "Enter a whole number, zero or more" } };
+  }
+  if (remains > order.quantity) {
+    return { fieldErrors: { remains: `Cannot exceed the ordered quantity of ${order.quantity.toLocaleString()}` } };
+  }
+
+  const changes: string[] = [];
+  if (link !== order.link) changes.push(`link ${order.link} -> ${link}`);
+  if (startCount !== order.startCount) changes.push(`start ${order.startCount} -> ${startCount}`);
+  if (remains !== order.remains) changes.push(`remains ${order.remains} -> ${remains}`);
+  if (changes.length === 0) return { ok: true };
+
+  await db.order.update({ where: { id }, data: { link, startCount, remains } });
+  await logActivity(admin.id, "admin.order.update", `#${order.publicId} ${changes.join(", ")}`);
+
+  revalidatePath("/admin/orders");
+  revalidatePath("/dashboard/orders");
+  return { ok: true };
+}
 
 export async function adjustBalanceAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();

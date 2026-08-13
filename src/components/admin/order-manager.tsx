@@ -1,7 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { setOrderStatusAction } from "@/app/actions/admin/operations";
+import { useActionState, useEffect, useState, useTransition } from "react";
+import { setOrderStatusAction, updateOrderAction, type ActionResult } from "@/app/actions/admin/operations";
+import { Field, TextInput } from "@/components/ui/field";
+import SubmitButton from "@/components/ui/submit-button";
+import EntityDrawer from "@/components/admin/entity-drawer";
 import { Icon } from "@/components/icons";
 
 export type AdminOrderRow = {
@@ -14,6 +17,12 @@ export type AdminOrderRow = {
   charge: number;
   status: string;
   createdAt: string;
+  startCount: number;
+  remains: number;
+  providerOrderId: string;
+  note: string;
+  /** Set when this order was bought on behalf of a panel below. */
+  fromChild: boolean;
 };
 
 const STATUSES = ["pending", "processing", "inprogress", "completed", "partial", "canceled", "refunded"];
@@ -31,6 +40,7 @@ export default function OrderManager({
   const [error, setError] = useState("");
   const [pending, start] = useTransition();
   const [busy, setBusy] = useState("");
+  const [editing, setEditing] = useState<AdminOrderRow | null>(null);
 
   const change = (row: AdminOrderRow, status: string) => {
     if (status === row.status) return;
@@ -69,6 +79,7 @@ export default function OrderManager({
                   <th className="w-28 text-right">{labels.charge}</th>
                   <th className="w-44">{labels.status}</th>
                   <th className="w-32">{labels.date}</th>
+                  <th className="w-px" />
                 </tr>
               </thead>
               <tbody>
@@ -108,6 +119,16 @@ export default function OrderManager({
                       </select>
                     </td>
                     <td className="muted text-xs">{row.createdAt}</td>
+                    <td>
+                      <button
+                        type="button"
+                        onClick={() => setEditing(row)}
+                        className="btn btn-ghost btn-sm"
+                        aria-label={`${labels.edit} #${row.publicId}`}
+                      >
+                        <Icon name="edit" size={15} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -115,6 +136,92 @@ export default function OrderManager({
           </div>
         )}
       </div>
+
+      {editing && <OrderDrawer row={editing} labels={labels} onClose={() => setEditing(null)} />}
     </>
+  );
+}
+
+/**
+ * Corrections an operator needs when reality and the record disagree: a
+ * mistyped link, or start and remains the provider reported wrongly. The
+ * charge is not here — moving money has its own audited paths.
+ */
+function OrderDrawer({
+  row,
+  labels,
+  onClose,
+}: {
+  row: AdminOrderRow;
+  labels: Record<string, string>;
+  onClose: () => void;
+}) {
+  const [state, action] = useActionState<ActionResult, FormData>(updateOrderAction, {});
+  useEffect(() => {
+    if (state.ok) onClose();
+  }, [state.ok, onClose]);
+
+  return (
+    <EntityDrawer open title={`#${row.publicId} · ${row.serviceName}`} onClose={onClose}>
+      <form action={action} className="space-y-4">
+        {state.error && (
+          <div className="alert alert-danger" role="alert">
+            <Icon name="alert" size={16} />
+            <span>{state.error}</span>
+          </div>
+        )}
+
+        <input type="hidden" name="id" value={row.id} />
+
+        <dl className="card card-pad space-y-2 text-sm">
+          <Row label={labels.user} value={row.username} />
+          <Row label={labels.quantity} value={row.quantity.toLocaleString()} />
+          <Row label={labels.charge} value={labels[`money.${row.id}`] ?? ""} />
+          {row.providerOrderId && <Row label={labels.providerOrderId} value={row.providerOrderId} mono />}
+          {row.fromChild && <Row label={labels.source} value={labels.fromChild} />}
+          {row.note && <Row label={labels.note} value={row.note} />}
+        </dl>
+
+        <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>
+          <TextInput name="link" defaultValue={row.link} error={state.fieldErrors?.link} />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="startCount" label={labels.startCount} error={state.fieldErrors?.startCount}>
+            <TextInput
+              name="startCount"
+              type="number"
+              min="0"
+              defaultValue={String(row.startCount)}
+              error={state.fieldErrors?.startCount}
+            />
+          </Field>
+          <Field name="remains" label={labels.remains} error={state.fieldErrors?.remains}>
+            <TextInput
+              name="remains"
+              type="number"
+              min="0"
+              max={row.quantity}
+              defaultValue={String(row.remains)}
+              error={state.fieldErrors?.remains}
+            />
+          </Field>
+        </div>
+
+        <SubmitButton className="btn btn-primary w-full">
+          <Icon name="check" size={16} />
+          {labels.save}
+        </SubmitButton>
+      </form>
+    </EntityDrawer>
+  );
+}
+
+function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <dt className="muted shrink-0 text-xs">{label}</dt>
+      <dd className={`min-w-0 truncate text-right ${mono ? "font-mono text-xs" : ""}`}>{value}</dd>
+    </div>
   );
 }
