@@ -4,7 +4,9 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { calculateCharge, isValidOrderLink } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
+import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { getBaseCurrency } from "@/lib/currency";
+import { logActivity } from "@/lib/auth";
 
 /**
  * Reseller API, shaped to the de-facto SMM panel standard so existing client
@@ -114,6 +116,12 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   const rate = await priceService(await resolveTier(user), service);
   const charge = calculateCharge(rate, totalQuantity);
 
+  const plan = await planUpstream(service, totalQuantity);
+  if ("error" in plan) {
+    await logActivity(userId, "order.chain.blocked", plan.detail);
+    return fail(plan.error);
+  }
+
   const [orderPublicId, txPublicId] = await Promise.all([nextPublicId("order"), nextPublicId("transaction")]);
 
   try {
@@ -151,12 +159,24 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
         },
       });
 
+      await writeUpstream(tx, plan.hops, {
+        downstreamOrderId: created.id,
+        link,
+        quantity: totalQuantity,
+        runs: dripfeed ? runs : null,
+        interval: dripfeed ? interval : null,
+      });
+
       return created;
     });
 
     return NextResponse.json({ order: order.publicId });
   } catch (e) {
     if (e instanceof Error && e.message === "FUNDS") return fail("Not enough funds on balance");
+    if (e instanceof Error && e.message === "UPSTREAM_FUNDS") {
+      await logActivity(userId, "order.chain.funds", service.name);
+      return fail(CHAIN_UNAVAILABLE);
+    }
     return fail("Order could not be created");
   }
 }

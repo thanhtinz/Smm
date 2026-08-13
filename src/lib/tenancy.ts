@@ -20,7 +20,12 @@ export { PANEL_HOST_HEADER, normaliseHost };
 const override = new AsyncLocalStorage<{ panelId: string }>();
 
 export function runAsPanel<T>(panelId: string, fn: () => Promise<T>): Promise<T> {
-  return override.run({ panelId }, fn);
+  // The await matters. Prisma promises are lazy — nothing runs until something
+  // calls .then on them — so `run(store, fn)` where fn merely *returns* a query
+  // would exit the store before the query ever starts, and the panel filter
+  // would resolve against whatever context the caller happened to be in.
+  // Awaiting here starts the query inside the store no matter how fn is written.
+  return override.run({ panelId }, async () => await fn());
 }
 
 export function panelOverride(): string | null {

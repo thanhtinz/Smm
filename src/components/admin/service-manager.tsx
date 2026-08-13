@@ -16,6 +16,10 @@ export type ServiceRow = {
   categoryId: string;
   providerId: string | null;
   providerServiceId: string;
+  /** Set on a child panel: the parent's service this one is bought from. */
+  sourceServiceId: string;
+  /** What the parent charges for it — the cost side of the margin. */
+  sourceCost: number;
   type: string;
   rate: number;
   providerRate: number;
@@ -32,12 +36,16 @@ export type ServiceRow = {
 export type CategoryOption = { id: string; name: string; platformId: string | null };
 export type PlatformOption = { id: string; name: string; icon: string; image: string; color: string };
 export type ProviderOption = { id: string; name: string };
+/** A service on the parent panel, with what this panel would pay for it. */
+export type SourceOption = { id: string; name: string; cost: string };
 
 export default function ServiceManager({
   rows,
   categories,
   platforms,
   providers,
+  sourceServices,
+  isChild,
   currency,
   labels,
 }: {
@@ -45,6 +53,8 @@ export default function ServiceManager({
   categories: CategoryOption[];
   platforms: PlatformOption[];
   providers: ProviderOption[];
+  sourceServices: SourceOption[];
+  isChild: boolean;
   currency: { symbol: string; symbolBefore: boolean; decimals: number; rate: number; locale: string };
   labels: Record<string, string>;
 }) {
@@ -187,7 +197,10 @@ export default function ServiceManager({
                 {visible.map((row) => {
                   const category = categoryById.get(row.categoryId);
                   const platform = category ? platformById.get(category.platformId ?? "") : undefined;
-                  const margin = row.providerRate > 0 ? ((row.rate - row.providerRate) / row.rate) * 100 : null;
+                  // A child panel's cost is what its parent charges; the root
+                  // panel's is what its outside provider charges.
+                  const cost = row.sourceCost > 0 ? row.sourceCost : row.providerRate;
+                  const margin = cost > 0 && row.rate > 0 ? ((row.rate - cost) / row.rate) * 100 : null;
                   return (
                     <tr key={row.id}>
                       <td className="muted font-mono text-xs">{row.publicId}</td>
@@ -258,6 +271,8 @@ export default function ServiceManager({
           categories={categories}
           platforms={platforms}
           providers={providers}
+          sourceServices={sourceServices}
+          isChild={isChild}
           labels={labels}
           onDone={close}
         />
@@ -271,6 +286,8 @@ function ServiceForm({
   categories,
   platforms,
   providers,
+  sourceServices,
+  isChild,
   labels,
   onDone,
 }: {
@@ -278,6 +295,8 @@ function ServiceForm({
   categories: CategoryOption[];
   platforms: PlatformOption[];
   providers: ProviderOption[];
+  sourceServices: SourceOption[];
+  isChild: boolean;
   labels: Record<string, string>;
   onDone: () => void;
 }) {
@@ -350,20 +369,45 @@ function ServiceForm({
         </Field>
       </div>
 
-      <Field name="providerId" label={labels.provider}>
-        <select id="providerId" name="providerId" className="field" defaultValue={row?.providerId ?? ""}>
-          <option value="">{labels.noProvider}</option>
-          {providers.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+      {isChild ? (
+        <Field
+          name="sourceServiceId"
+          label={labels.sourceService}
+          error={state.fieldErrors?.sourceServiceId}
+          hint={labels.sourceHint}
+        >
+          <select
+            id="sourceServiceId"
+            name="sourceServiceId"
+            className="field"
+            defaultValue={row?.sourceServiceId ?? ""}
+          >
+            <option value="">{labels.noSource}</option>
+            {sourceServices.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} — {s.cost}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : (
+        <>
+          <Field name="providerId" label={labels.provider}>
+            <select id="providerId" name="providerId" className="field" defaultValue={row?.providerId ?? ""}>
+              <option value="">{labels.noProvider}</option>
+              {providers.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </Field>
 
-      <Field name="providerServiceId" label={labels.providerServiceId}>
-        <TextInput name="providerServiceId" defaultValue={row?.providerServiceId} />
-      </Field>
+          <Field name="providerServiceId" label={labels.providerServiceId}>
+            <TextInput name="providerServiceId" defaultValue={row?.providerServiceId} />
+          </Field>
+        </>
+      )}
 
       <div>
         <span className="label">{labels.flags}</span>

@@ -28,7 +28,13 @@ const pass = (msg) => console.log(`  ok    ${msg}`);
 
 // --- 1. Foreign keys stay inside a panel -----------------------------------
 
-/** [model, foreign-key field, model the key points at] */
+/**
+ * [model, foreign-key field, model the key points at]
+ *
+ * Service.sourceServiceId and Order.sourceOrderId are deliberately absent:
+ * they are the wholesale link between a panel and its parent, so they are the
+ * only references that are *supposed* to cross a panel boundary.
+ */
 const EDGES = [
   ["session", "userId", "user"],
   ["activityLog", "userId", "user"],

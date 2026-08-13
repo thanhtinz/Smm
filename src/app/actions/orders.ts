@@ -7,6 +7,7 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { calculateCharge, isValidOrderLink } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
+import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 
 export type OrderState = {
   error?: string;
@@ -70,6 +71,15 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     return { fieldErrors: { quantity: `The minimum order value is ${minCharge.toLocaleString()}` } };
   }
 
+  // On a child panel the same order has to be bought from the panel above.
+  // Planned before the transaction opens: it reads other panels and allocates
+  // their ids, neither of which belongs inside one.
+  const plan = await planUpstream(service, totalQuantity);
+  if ("error" in plan) {
+    await logActivity(user.id, "order.chain.blocked", plan.detail);
+    return { error: plan.error };
+  }
+
   // The counter table lives on its own connection, so ids are allocated before
   // the transaction opens — writing to it mid-transaction risks SQLITE_BUSY.
   const [orderPublicId, txPublicId] = await Promise.all([nextPublicId("order"), nextPublicId("transaction")]);
@@ -116,10 +126,22 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
         },
       });
 
+      await writeUpstream(tx, plan.hops, {
+        downstreamOrderId: order.id,
+        link,
+        quantity: totalQuantity,
+        runs: dripfeed ? runs : null,
+        interval: dripfeed ? interval : null,
+      });
+
       return order;
     });
 
-    await logActivity(user.id, "order.create", `#${result.publicId} ${service.name} x${quantity}`);
+    await logActivity(
+      user.id,
+      "order.create",
+      `#${result.publicId} ${service.name} x${quantity}${plan.hops.length ? ` +${plan.hops.length} upstream` : ""}`,
+    );
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/orders");
 
@@ -127,6 +149,12 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   } catch (e) {
     if (e instanceof Error && e.message === "INSUFFICIENT_FUNDS") {
       return { error: "Your balance is not enough for this order. Top up and try again." };
+    }
+    if (e instanceof Error && e.message === "UPSTREAM_FUNDS") {
+      // The customer is not the one short of money, and should not be told
+      // which panel above is. Nothing was charged — the transaction rolled back.
+      await logActivity(user.id, "order.chain.funds", `${service.name} x${quantity}`);
+      return { error: CHAIN_UNAVAILABLE };
     }
     throw e;
   }
@@ -204,6 +232,22 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
 
   if (parsed.length === 0) return { results: results.sort((a, b) => a.line - b.line), placed: 0, totalCharge: 0 };
 
+  // One chain per line, planned before the transaction for the same reason as
+  // the single-order path. A line whose upstream cannot be planned is reported
+  // and dropped rather than failing the whole batch.
+  const plans = new Map<number, ChainHop[]>();
+  for (const p of [...parsed]) {
+    const plan = await planUpstream(p.service, p.quantity);
+    if ("error" in plan) {
+      await logActivity(user.id, "order.chain.blocked", `line ${p.line}: ${plan.detail}`);
+      results.push({ line: p.line, raw: p.raw, ok: false, message: plan.error });
+      parsed.splice(parsed.indexOf(p), 1);
+      continue;
+    }
+    plans.set(p.line, plan.hops);
+  }
+  if (parsed.length === 0) return { results: results.sort((a, b) => a.line - b.line), placed: 0, totalCharge: 0 };
+
   const totalCharge = parsed.reduce((n, p) => n + p.charge, 0);
   const ids = await Promise.all(
     parsed.flatMap(() => [nextPublicId("order"), nextPublicId("transaction")])
@@ -221,7 +265,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
       for (const [i, p] of parsed.entries()) {
         const orderPublicId = ids[i * 2];
         const txPublicId = ids[i * 2 + 1];
-        await tx.order.create({
+        const order = await tx.order.create({
           data: {
             publicId: orderPublicId,
             userId: user.id,
@@ -232,6 +276,13 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
             remains: p.quantity,
             status: "pending",
           },
+        });
+        await writeUpstream(tx, plans.get(p.line) ?? [], {
+          downstreamOrderId: order.id,
+          link: p.link,
+          quantity: p.quantity,
+          runs: null,
+          interval: null,
         });
         balance -= p.charge;
         await tx.transaction.create({
@@ -261,6 +312,15 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
     if (e instanceof Error && e.message === "INSUFFICIENT_FUNDS") {
       return {
         error: "Your balance is not enough for these orders. Nothing was placed.",
+        results: results.sort((a, b) => a.line - b.line),
+        placed: 0,
+        totalCharge,
+      };
+    }
+    if (e instanceof Error && e.message === "UPSTREAM_FUNDS") {
+      await logActivity(user.id, "order.chain.funds", `mass order, ${parsed.length} lines`);
+      return {
+        error: CHAIN_UNAVAILABLE,
         results: results.sort((a, b) => a.line - b.line),
         placed: 0,
         totalCharge,

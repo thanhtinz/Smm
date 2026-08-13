@@ -270,6 +270,9 @@ model Service {
   providerId        String?
   provider          Provider?   @relation(fields: [providerId], references: [id], onDelete: SetNull)
   providerServiceId String      @default("")
+  /// The parent panel's Service this one is bought from. A child panel has no
+  /// providers of its own — its only supplier is the panel above it.
+  sourceServiceId   String      @default("")
   name              String
   description       String      @default("")
   type              String      @default("default") // default | custom_comments | drip_feed | subscription
@@ -290,6 +293,7 @@ model Service {
   @@unique([panelId, publicId])
   @@index([categoryId])
   @@index([panelId])
+  @@index([sourceServiceId])
 }
 
 // ---------------------------------------------------------------------------
@@ -312,6 +316,9 @@ model Order {
   remains         Int            @default(0)
   status          String         @default("pending") // pending processing inprogress completed partial canceled refunded
   providerOrderId String         @default("")
+  /// The order one level down that caused this one. Following it walks the
+  /// chain back to the customer who actually placed it.
+  sourceOrderId   String         @default("")
   note            String         @default("")
   runs            Int?
   interval        Int?
@@ -323,6 +330,7 @@ model Order {
   @@index([userId])
   @@index([status])
   @@index([panelId])
+  @@index([sourceOrderId])
 }
 
 /// Customer-raised refill and cancel requests. Both follow the same

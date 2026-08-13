@@ -202,6 +202,10 @@ export const en = {
   "coupon.zeroUnlimited": "0 means unlimited",
   "coupon.expires": "Expires",
   "coupon.used": "Used",
+  "service.source": "Bought from",
+  "service.sourceHint": "The parent panel's service this one is fulfilled by",
+  "service.noSource": "Choose a service",
+
   "tier.title": "Customer tiers",
   "tier.new": "New tier",
   "tier.empty": "No tiers yet",
@@ -584,6 +588,10 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "coupon.zeroUnlimited": "0 là không giới hạn",
   "coupon.expires": "Hết hạn",
   "coupon.used": "Đã dùng",
+  "service.source": "Lấy từ dịch vụ",
+  "service.sourceHint": "Dịch vụ của panel cha sẽ thực hiện đơn này",
+  "service.noSource": "Chọn một dịch vụ",
+
   "tier.title": "Cấp bậc khách hàng",
   "tier.new": "Tạo cấp bậc",
   "tier.empty": "Chưa có cấp bậc nào",
