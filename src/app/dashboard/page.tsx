@@ -23,10 +23,10 @@ export default async function DashboardPage() {
     db.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 4 }),
   ]);
 
-  const quick: { href: string; label: string; icon: IconName; body: string }[] = [
-    { href: "/dashboard/new-order", label: t("dash.newOrder"), icon: "cart", body: t("landing.howto.3.body") },
-    { href: "/dashboard/wallet", label: t("dash.addFunds"), icon: "wallet", body: t("landing.howto.2.body") },
-    { href: "/dashboard/tickets", label: t("dash.tickets"), icon: "ticket", body: t("landing.feature.support.body") },
+  const quick: { href: string; label: string; icon: IconName }[] = [
+    { href: "/dashboard/new-order", label: t("dash.newOrder"), icon: "cart" },
+    { href: "/dashboard/wallet", label: t("dash.addFunds"), icon: "wallet" },
+    { href: "/dashboard/tickets", label: t("dash.tickets"), icon: "ticket" },
   ];
 
   return (
@@ -35,7 +35,6 @@ export default async function DashboardPage() {
         <h2 className="text-2xl font-bold tracking-tight">
           {t("dash.welcome")}, {user.username}
         </h2>
-        <p className="muted mt-1 text-sm">{ctx.settings["site.tagline"] as string}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -47,13 +46,14 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-3">
         {quick.map((q) => (
-          <Link key={q.href} href={q.href} className="card card-pad transition-transform hover:-translate-y-0.5">
-            <span className="flex items-center gap-2.5 font-semibold">
-              <Icon name={q.icon} size={18} />
-              {q.label}
-              <Icon name="arrowRight" size={15} />
-            </span>
-            <p className="muted mt-2 text-sm leading-relaxed">{q.body}</p>
+          <Link
+            key={q.href}
+            href={q.href}
+            className="card flex items-center gap-3 px-5 py-4 font-semibold transition-transform hover:-translate-y-0.5"
+          >
+            <Icon name={q.icon} size={18} />
+            <span className="flex-1">{q.label}</span>
+            <Icon name="arrowRight" size={15} />
           </Link>
         ))}
       </div>
