@@ -2,9 +2,7 @@
 
 import { useTransition } from "react";
 import { setCurrency, setLocale, setTheme } from "@/app/actions/preferences";
-import { Icon, type IconName } from "@/components/icons";
-
-type Choice = { value: string; label: string; hint: string };
+import { Field } from "@/components/ui/field";
 
 /**
  * Language, currency and theme, chosen where the rest of the account is
@@ -42,95 +40,70 @@ export default function PreferencesPanel({
     <section className="card card-pad space-y-4">
       <h3 className="font-semibold">{labels.title}</h3>
 
-      {!anything && <p className="muted text-sm">{labels.fixed}</p>}
+      {!anything ? (
+        <p className="muted text-sm">{labels.fixed}</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {allowLocale && (
+            <Field name="locale" label={labels.language}>
+              <select
+                id="locale"
+                name="locale"
+                className="field"
+                value={locale}
+                disabled={pending}
+                onChange={(e) => start(() => setLocale(e.target.value))}
+              >
+                {languages.map((l) => (
+                  <option key={l.code} value={l.code}>
+                    {l.nativeName} — {l.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
 
-      {allowLocale && (
-        <Choices
-          icon="language"
-          label={labels.language}
-          active={locale}
-          disabled={pending}
-          choices={languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name }))}
-          onPick={(v) => start(() => setLocale(v))}
-        />
-      )}
+          {allowCurrency && (
+            <Field name="currency" label={labels.currency}>
+              <select
+                id="currency"
+                name="currency"
+                className="field"
+                value={currency}
+                disabled={pending}
+                onChange={(e) => start(() => setCurrency(e.target.value))}
+              >
+                {currencies.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} {c.symbol} — {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
 
-      {allowCurrency && (
-        <Choices
-          icon="wallet"
-          label={labels.currency}
-          active={currency}
-          disabled={pending}
-          choices={currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}`, hint: c.name }))}
-          onPick={(v) => start(() => setCurrency(v))}
-        />
-      )}
-
-      {allowTheme && (
-        <Choices
-          icon="palette"
-          label={labels.theme}
-          active={theme}
-          disabled={pending}
-          choices={themes.map((t) => ({ value: t.slug, label: t.name, hint: t.description }))}
-          onPick={(v) => start(() => setTheme(v))}
-        />
+          {allowTheme && (
+            // The description follows the selection: a theme name alone does
+            // not say what picking it does.
+            <Field name="theme" label={labels.theme} hint={themes.find((t) => t.slug === theme)?.description}>
+              <select
+                id="theme"
+                name="theme"
+                className="field"
+                value={theme}
+                disabled={pending}
+                onChange={(e) => start(() => setTheme(e.target.value))}
+              >
+                {themes.map((t) => (
+                  <option key={t.slug} value={t.slug}>
+                    {t.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+        </div>
       )}
     </section>
-  );
-}
-
-/**
- * Cards rather than a select: there are only a handful of each, and the page
- * has the room to show what every option is without a click.
- */
-function Choices({
-  icon,
-  label,
-  choices,
-  active,
-  disabled,
-  onPick,
-}: {
-  icon: IconName;
-  label: string;
-  choices: Choice[];
-  active: string;
-  disabled: boolean;
-  onPick: (value: string) => void;
-}) {
-  return (
-    <div>
-      <span className="label flex items-center gap-1.5">
-        <Icon name={icon} size={14} />
-        {label}
-      </span>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {choices.map((c) => (
-          <button
-            key={c.value}
-            type="button"
-            disabled={disabled}
-            aria-pressed={c.value === active}
-            onClick={() => onPick(c.value)}
-            className={`flex items-center justify-between gap-3 rounded-xl border px-3.5 py-2.5 text-left transition-colors ${
-              c.value === active
-                ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_12%,transparent)]"
-                : "border-[var(--border)] hover:bg-[var(--surface2)]"
-            }`}
-          >
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-medium">{c.label}</span>
-              <span className="muted block truncate text-xs">{c.hint}</span>
-            </span>
-            {c.value === active && (
-              <span className="shrink-0 text-[var(--primary)]">
-                <Icon name="check" size={16} />
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
   );
 }
