@@ -37,6 +37,7 @@ const pass = (msg) => console.log(`  ok    ${msg}`);
  */
 const EDGES = [
   ["session", "userId", "user"],
+  ["authToken", "userId", "user"],
   ["activityLog", "userId", "user"],
   ["category", "platformId", "platform"],
   ["service", "categoryId", "category"],
@@ -80,7 +81,7 @@ async function checkForeignKeys() {
 async function checkNoOrphans() {
   console.log("\nNo row left with the placeholder panelId");
   const models = [
-    "setting", "counter", "user", "session", "activityLog", "media", "platform", "category",
+    "setting", "counter", "user", "session", "authToken", "activityLog", "media", "platform", "category",
     "provider", "service", "order", "orderRequest", "paymentMethod", "transaction", "ticket",
     "ticketMessage", "notification", "coupon", "couponRedemption", "referralEarning",
     "announcement", "page", "userTier", "tierPrice",

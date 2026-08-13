@@ -1,14 +1,21 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import LoginForm from "@/components/auth/login-form";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage() {
-  const { t } = await getAppContext();
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
+  const { reset } = await searchParams;
+  const ctx = await getAppContext();
+  // Someone already signed in has no use for a sign-in form.
+  if (ctx.user) redirect(ctx.user.role === "admin" ? "/admin" : "/dashboard");
+  const { t } = ctx;
+
   return (
     <LoginForm
+      notice={reset ? t("auth.reset.done") : ""}
       captcha={await captchaFor("login")}
       labels={{
         title: t("auth.signin.title"),

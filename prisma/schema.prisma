@@ -134,6 +134,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   sessions        Session[]
+  authTokens      AuthToken[]
   orders          Order[]
   transactions    Transaction[]
   tickets         Ticket[]
@@ -159,6 +160,27 @@ model User {
   @@unique([panelId, username])
   @@unique([panelId, email])
   @@unique([panelId, referralCode])
+  @@index([panelId])
+}
+
+/// One-time links sent by email: password resets and address verification.
+/// Separate from Session because these are consumed rather than kept alive,
+/// and a used or expired row is evidence, not a login.
+model AuthToken {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelAuthTokens", fields: [panelId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// reset | verify
+  type      String
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
   @@index([panelId])
 }
 
@@ -658,6 +680,7 @@ model Panel {
   counters       Counter[]          @relation("PanelCounters")
   users          User[]             @relation("PanelUsers")
   sessions       Session[]          @relation("PanelSessions")
+  authTokens     AuthToken[]        @relation("PanelAuthTokens")
   activityLogs   ActivityLog[]      @relation("PanelActivityLogs")
   media          Media[]            @relation("PanelMedia")
   platforms      Platform[]         @relation("PanelPlatforms")

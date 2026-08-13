@@ -14,6 +14,7 @@ const GROUP_TITLES: Record<string, string> = {
   auth: "Registration",
   api: "API",
   support: "Support",
+  mail: "Email",
   panel: "Child panels",
   maintenance: "Maintenance",
 };

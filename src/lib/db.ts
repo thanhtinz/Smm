@@ -11,6 +11,7 @@ const TENANT_MODELS = new Set([
   "Counter",
   "User",
   "Session",
+  "AuthToken",
   "ActivityLog",
   "Media",
   "Platform",
