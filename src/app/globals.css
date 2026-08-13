@@ -359,6 +359,11 @@ body {
     border-color: color-mix(in srgb, var(--success) 34%, transparent);
     color: var(--success);
   }
+  .alert-warning {
+    background: color-mix(in srgb, var(--warning) 12%, transparent);
+    border-color: color-mix(in srgb, var(--warning) 34%, transparent);
+    color: var(--warning);
+  }
   .alert-info {
     background: color-mix(in srgb, var(--accent) 12%, transparent);
     border-color: color-mix(in srgb, var(--accent) 34%, transparent);
