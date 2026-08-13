@@ -6,6 +6,7 @@ import { getCurrentUser, logActivity } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { calculateCharge, isValidOrderLink } from "@/lib/orders";
+import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 
 export type OrderState = {
   error?: string;
@@ -61,7 +62,9 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   }
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
-  const charge = calculateCharge(service.rate, totalQuantity);
+  // The tier price, not the list price — the same number the order form showed.
+  const rate = await priceService(await resolveTier(user), service);
+  const charge = calculateCharge(rate, totalQuantity);
   const minCharge = Number(await getSetting("order.minCharge")) || 0;
   if (charge < minCharge) {
     return { fieldErrors: { quantity: `The minimum order value is ${minCharge.toLocaleString()}` } };
@@ -162,6 +165,9 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   const services = await db.service.findMany({ where: { enabled: true } });
   const byPublicId = new Map(services.map((s) => [String(s.publicId), s]));
 
+  const rates = await priceServices(await resolveTier(user), services);
+  const rateOf = (id: string, fallback: number) => rates.get(id) ?? fallback;
+
   type Parsed = { line: number; raw: string; service: (typeof services)[number]; link: string; quantity: number; charge: number };
   const parsed: Parsed[] = [];
   const results: NonNullable<MassOrderState["results"]> = [];
@@ -193,7 +199,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
       });
       return;
     }
-    parsed.push({ line, raw, service, link, quantity, charge: calculateCharge(service.rate, quantity) });
+    parsed.push({ line, raw, service, link, quantity, charge: calculateCharge(rateOf(service.id, service.rate), quantity) });
   });
 
   if (parsed.length === 0) return { results: results.sort((a, b) => a.line - b.line), placed: 0, totalCharge: 0 };

@@ -147,6 +147,10 @@ model User {
   /// needed no backfill and no reset of existing accounts.
   referralCode    String?
 
+  /// Set by an admin, and then sticky: an override outranks the spend ladder.
+  tierId String?
+  tier   UserTier? @relation(fields: [tierId], references: [id], onDelete: SetNull)
+
   @@unique([panelId, publicId])
   @@unique([panelId, username])
   @@unique([panelId, email])
@@ -257,30 +261,31 @@ model Provider {
 }
 
 model Service {
-  id                String    @id @default(cuid())
-  panelId           String    @default("")
-  panel             Panel     @relation("PanelServices", fields: [panelId], references: [id], onDelete: Cascade)
+  id                String      @id @default(cuid())
+  panelId           String      @default("")
+  panel             Panel       @relation("PanelServices", fields: [panelId], references: [id], onDelete: Cascade)
   publicId          Int
   categoryId        String
-  category          Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category          Category    @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   providerId        String?
-  provider          Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  providerServiceId String    @default("")
+  provider          Provider?   @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  providerServiceId String      @default("")
   name              String
-  description       String    @default("")
-  type              String    @default("default") // default | custom_comments | drip_feed | subscription
+  description       String      @default("")
+  type              String      @default("default") // default | custom_comments | drip_feed | subscription
   rate              Float // price per 1000, in base currency
-  providerRate      Float     @default(0)
-  min               Int       @default(10)
-  max               Int       @default(100000)
-  refill            Boolean   @default(false)
-  cancel            Boolean   @default(false)
-  dripfeed          Boolean   @default(false)
-  averageTime       String    @default("")
-  enabled           Boolean   @default(true)
-  position          Int       @default(0)
+  providerRate      Float       @default(0)
+  min               Int         @default(10)
+  max               Int         @default(100000)
+  refill            Boolean     @default(false)
+  cancel            Boolean     @default(false)
+  dripfeed          Boolean     @default(false)
+  averageTime       String      @default("")
+  enabled           Boolean     @default(true)
+  position          Int         @default(0)
   orders            Order[]
-  createdAt         DateTime  @default(now())
+  tierPrices        TierPrice[]
+  createdAt         DateTime    @default(now())
 
   @@unique([panelId, publicId])
   @@index([categoryId])
@@ -545,6 +550,50 @@ model Page {
   @@index([panelId])
 }
 
+/// Customer tiers. Each tier can take a flat percentage off every price, and
+/// override individual services outright when the percentage is the wrong
+/// shape for a particular one.
+model UserTier {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelTiers", fields: [panelId], references: [id], onDelete: Cascade)
+
+  name            String
+  slug            String
+  /// Percentage off the list price. Ignored for services with a manual price.
+  discountPercent Float   @default(0)
+  /// Lifetime spend that reaches this tier on its own. 0 = assigned by hand.
+  minSpent        Float   @default(0)
+  color           String  @default("#6366f1")
+  /// The tier a customer sits in before they have spent anything.
+  isDefault       Boolean @default(false)
+  position        Int     @default(0)
+
+  users     User[]
+  prices    TierPrice[]
+  createdAt DateTime    @default(now())
+
+  @@unique([panelId, slug])
+  @@index([panelId])
+}
+
+/// One service priced by hand for one tier, overriding the tier percentage.
+model TierPrice {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelTierPrices", fields: [panelId], references: [id], onDelete: Cascade)
+
+  tierId    String
+  tier      UserTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  rate      Float
+
+  @@unique([tierId, serviceId])
+  @@index([panelId])
+  @@index([serviceId])
+}
+
 // ---------------------------------------------------------------------------
 // Panels — the root panel plus every child panel resold beneath it.
 // ---------------------------------------------------------------------------
@@ -596,6 +645,8 @@ model Panel {
   earnings       ReferralEarning[]  @relation("PanelReferralEarnings")
   announcements  Announcement[]     @relation("PanelAnnouncements")
   pages          Page[]             @relation("PanelPages")
+  tiers          UserTier[]         @relation("PanelTiers")
+  tierPrices     TierPrice[]        @relation("PanelTierPrices")
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 

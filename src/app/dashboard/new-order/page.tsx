@@ -6,6 +6,7 @@ import MassOrderForm from "@/components/orders/mass-order-form";
 import OrderTabs from "@/components/orders/order-tabs";
 import { Icon } from "@/components/icons";
 import { getSetting } from "@/lib/settings";
+import { priceServices, resolveTier } from "@/lib/pricing";
 
 export const metadata: Metadata = { title: "New order" };
 
@@ -29,12 +30,15 @@ export default async function NewOrderPage() {
     db.service.findMany({ where: { enabled: true }, orderBy: [{ position: "asc" }, { rate: "asc" }] }),
   ]);
 
+  const tier = await resolveTier(user);
+  const rates = await priceServices(tier, services);
+
   const serviceOptions: ServiceOption[] = services.map((s) => ({
     id: s.id,
     publicId: s.publicId,
     name: s.name,
     categoryId: s.categoryId,
-    rate: s.rate,
+    rate: rates.get(s.id) ?? s.rate,
     min: s.min,
     max: s.max,
     refill: s.refill,

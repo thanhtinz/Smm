@@ -3,6 +3,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { displayMoney } from "@/lib/currency";
+import { priceServices, resolveTier } from "@/lib/pricing";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import ServiceSearch from "@/components/services/service-search";
@@ -39,6 +40,12 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
       },
     },
   });
+
+  // Signed-out visitors see the starting tier's prices, which is what they
+  // would pay if they registered right now.
+  const tier = await resolveTier(ctx.user);
+  const rates = await priceServices(tier, categories.flatMap((c) => c.services));
+  const rateOf = (id: string, fallback: number) => rates.get(id) ?? fallback;
 
   const total = categories.reduce((n, c) => n + c.services.length, 0);
 
@@ -125,7 +132,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                           )}
                         </td>
                         <td className="text-right font-semibold tabular-nums">
-                          {displayMoney(s.rate, currency, locale)}
+                          {displayMoney(rateOf(s.id, s.rate), currency, locale)}
                         </td>
                         <td className="muted text-right tabular-nums">{s.min.toLocaleString()}</td>
                         <td className="muted text-right tabular-nums">{s.max.toLocaleString()}</td>
@@ -156,7 +163,7 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
                       <span className="muted shrink-0 font-mono text-xs">{s.publicId}</span>
                     </div>
                     <dl className="mt-2.5 grid grid-cols-3 gap-2 text-xs">
-                      <Cell label={t("order.rate")} value={displayMoney(s.rate, currency, locale)} strong />
+                      <Cell label={t("order.rate")} value={displayMoney(rateOf(s.id, s.rate), currency, locale)} strong />
                       <Cell label={t("order.min")} value={s.min.toLocaleString()} />
                       <Cell label={t("order.max")} value={s.max.toLocaleString()} />
                     </dl>
