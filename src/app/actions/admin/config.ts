@@ -274,3 +274,105 @@ export async function saveTranslationsAction(_prev: ActionResult, form: FormData
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+// ------------------------------------------------------------------- themes
+
+const COLOR_TOKENS = [
+  "bg",
+  "surface",
+  "surface2",
+  "border",
+  "text",
+  "muted",
+  "primary",
+  "primaryFg",
+  "accent",
+  "success",
+  "warning",
+  "danger",
+] as const;
+
+export async function saveThemeAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const admin = await requireAdmin();
+
+  const id = String(form.get("id") ?? "");
+  const name = String(form.get("name") ?? "").trim();
+  if (!name) return { fieldErrors: { name: "Enter a name" } };
+
+  const slug = String(form.get("slug") ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (!slug) return { fieldErrors: { slug: "Enter a slug" } };
+
+  const clash = await db.theme.findFirst({ where: { slug, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
+  if (clash) return { fieldErrors: { slug: "That slug is already used" } };
+
+  const read = (mode: "light" | "dark") => {
+    const out: Record<string, string> = {};
+    for (const token of COLOR_TOKENS) out[token] = String(form.get(`${mode}.${token}`) ?? "").trim() || "#000000";
+    out.bgAccent = String(form.get(`${mode}.bgAccent`) ?? "").trim() || "none";
+    return out;
+  };
+
+  const tokens = {
+    radius: String(form.get("radius") ?? "16px").trim() || "16px",
+    font: String(form.get("font") ?? "").trim() || "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif",
+    light: read("light"),
+    dark: read("dark"),
+  };
+
+  const data = {
+    slug,
+    name,
+    description: String(form.get("description") ?? "").trim(),
+    layout: String(form.get("layout") ?? "classic"),
+    enabled: bool(form, "enabled"),
+    position: num(form, "position"),
+    tokens: JSON.stringify(tokens),
+  };
+
+  if (id) await db.theme.update({ where: { id }, data });
+  else await db.theme.create({ data });
+
+  await logActivity(admin.id, "admin.theme.save", slug);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function deleteThemeAction(id: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const theme = await db.theme.findUnique({ where: { id } });
+  if (!theme) return { error: "Theme not found" };
+  if (theme.isDefault) return { error: "The default theme cannot be deleted. Make another one default first." };
+
+  const remaining = await db.theme.count({ where: { enabled: true, NOT: { id } } });
+  if (remaining === 0) return { error: "At least one theme must remain enabled." };
+
+  // Anyone still on this skin falls back to the default.
+  const fallback = await db.theme.findFirst({ where: { isDefault: true } });
+  if (fallback) await db.user.updateMany({ where: { theme: theme.slug }, data: { theme: fallback.slug } });
+
+  await db.theme.delete({ where: { id } });
+  await logActivity(admin.id, "admin.theme.delete", theme.slug);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function setDefaultThemeAction(id: string): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const theme = await db.theme.findUnique({ where: { id } });
+  if (!theme) return { error: "Theme not found" };
+
+  await db.$transaction([
+    db.theme.updateMany({ data: { isDefault: false } }),
+    db.theme.update({ where: { id }, data: { isDefault: true, enabled: true } }),
+  ]);
+  await setSetting("appearance.defaultTheme", theme.slug);
+
+  await logActivity(admin.id, "admin.theme.default", theme.slug);
+  invalidateSettings();
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

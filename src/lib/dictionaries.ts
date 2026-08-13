@@ -296,6 +296,10 @@ export const en = {
   "admin.reject": "Reject",
   "admin.joined": "Joined",
   "admin.confirmApprove": "Credit this deposit to the customer?",
+  "admin.radius": "Corner radius",
+  "admin.layout": "Layout",
+  "admin.font": "Font stack",
+  "admin.makeDefault": "Make default",
 } as const;
 
 export const vi: Partial<Record<keyof typeof en, string>> = {
@@ -590,6 +594,10 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "admin.reject": "Từ chối",
   "admin.joined": "Tham gia",
   "admin.confirmApprove": "Cộng tiền lệnh nạp này cho khách?",
+  "admin.radius": "Bo góc",
+  "admin.layout": "Bố cục",
+  "admin.font": "Bộ font",
+  "admin.makeDefault": "Đặt làm mặc định",
 };
 
 export const bundledDictionaries: Record<string, Record<string, string>> = {

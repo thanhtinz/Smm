@@ -80,6 +80,10 @@ Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screens
 | --------------- | -------------- |
 | ![](docs/screenshots/22-admin-platform-drawer.png) | ![](docs/screenshots/24-admin-service-drawer.png) |
 
+| Appearance | Theme editor |
+| ---------- | ------------ |
+| ![](docs/screenshots/45-admin-appearance.png) | ![](docs/screenshots/46-admin-theme-editor.png) |
+
 | Payment methods | Currencies | Settings |
 | --------------- | ---------- | -------- |
 | ![](docs/screenshots/29-admin-payments.png) | ![](docs/screenshots/31-admin-currencies.png) | ![](docs/screenshots/34-admin-settings.png) |
