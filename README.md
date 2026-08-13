@@ -70,6 +70,12 @@ Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screens
 | ------ | ----------------- |
 | ![](docs/screenshots/13-orders.png) | ![](docs/screenshots/09-services.png) |
 
+### Wallet and payments
+
+| Add funds | SePay transfer | Transactions |
+| --------- | -------------- | ------------ |
+| ![](docs/screenshots/17-wallet.png) | ![](docs/screenshots/18-deposit-qr.png) | ![](docs/screenshots/19-transactions.png) |
+
 ### Mobile
 
 | Dashboard | Service picker | Order form |
@@ -98,7 +104,7 @@ Features land one at a time, each verified with a screenshot before the next beg
 - [x] 2 — Authentication
 - [x] 3 — Service catalogue
 - [x] 4 — User dashboard and ordering
-- [ ] 5 — Wallet and payment gateways
+- [x] 5 — Wallet and payment gateways
 - [ ] 6 — Support tickets and notifications
 - [ ] 7 — Admin area
 - [ ] 8 — Public API v2
