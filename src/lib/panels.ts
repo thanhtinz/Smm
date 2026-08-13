@@ -27,6 +27,7 @@ const DEFAULT_METHODS = [
   { code: "seapay", name: "Bank transfer (SePay)", driver: "seapay", icon: "bank", currencies: ["VND"] },
   { code: "paypal", name: "PayPal", driver: "paypal", icon: "paypal", currencies: ["USD", "EUR"] },
   { code: "link", name: "Card / Link", driver: "link", icon: "creditCard", currencies: ["USD", "EUR"] },
+  { code: "crypto", name: "Crypto", driver: "crypto", icon: "bitcoin", currencies: ["USD"] },
   { code: "manual_bank", name: "Manual bank transfer", driver: "manual", icon: "wallet", currencies: [] },
 ];
 
