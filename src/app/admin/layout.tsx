@@ -5,6 +5,7 @@ import { guardPanel } from "@/lib/tenancy";
 import PanelSuspended from "@/components/panel-suspended";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
+import { twoFactorRequired } from "@/lib/two-factor";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
@@ -13,6 +14,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const ctx = await getAppContext();
   if (!ctx.user) redirect("/login");
   if (ctx.user.role !== "admin") redirect("/dashboard");
+
+  // Enforced but not yet set up: the admin area stays closed until it is, and
+  // the profile page is where the setup lives.
+  if (!ctx.user.totpEnabledAt && (await twoFactorRequired())) redirect("/dashboard/profile");
 
   const { t } = ctx;
   const isRoot = panel.parentId === null;

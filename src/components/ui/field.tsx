@@ -49,6 +49,7 @@ export function TextInput({
   name,
   error,
   hint,
+  className = "",
   ...props
 }: React.InputHTMLAttributes<HTMLInputElement> & { name: string; error?: string; hint?: string }) {
   return (
@@ -56,7 +57,7 @@ export function TextInput({
       {...props}
       id={name}
       name={name}
-      className="field"
+      className={`field ${className}`.trim()}
       aria-invalid={error ? true : undefined}
       aria-describedby={error ? `${name}-error` : hint ? `${name}-hint` : undefined}
     />

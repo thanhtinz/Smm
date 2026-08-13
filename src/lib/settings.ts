@@ -77,6 +77,7 @@ export const settingDefinitions = {
   // --- Registration -------------------------------------------------------
   "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
   "auth.requireEmailVerification": { group: "auth", type: "boolean", value: false },
+  "auth.requireAdminTwoFactor": { group: "auth", type: "boolean", value: false },
   "auth.signupBonus": { group: "auth", type: "number", value: 0 },
   "auth.captchaProvider": {
     group: "auth",

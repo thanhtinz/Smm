@@ -8,6 +8,7 @@ import {
   type ActionResult,
 } from "@/app/actions/admin/operations";
 import { setUserTierAction } from "@/app/actions/admin/tiers";
+import { clearForUserAction } from "@/app/actions/two-factor";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
@@ -24,6 +25,8 @@ export type AdminUserRow = {
   banned: boolean;
   banReason: string;
   createdAt: string;
+  /** Set when the account has two-step verification on. */
+  twoFactor: boolean;
   /** Empty when the customer follows the spend ladder rather than an override. */
   tierId: string;
   tierName: string;
@@ -142,6 +145,21 @@ export default function UserManager({
                         >
                           <Icon name="wallet" size={14} />
                         </button>
+                        {/* The way back in for a member of staff who has lost
+                            both the phone and the recovery sheet. */}
+                        {row.twoFactor && (
+                          <button
+                            type="button"
+                            disabled={pending}
+                            onClick={() => {
+                              if (confirm(labels.confirmClear2fa)) run(() => clearForUserAction(row.id));
+                            }}
+                            className="btn btn-ghost btn-sm"
+                            title={labels.clear2fa}
+                          >
+                            <Icon name="shield" size={14} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           disabled={pending}
