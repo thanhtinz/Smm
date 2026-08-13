@@ -7,6 +7,7 @@ import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
+import { getCurrentPanel } from "@/lib/tenancy";
 
 /**
  * Reseller API, shaped to the de-facto SMM panel standard so existing client
@@ -19,6 +20,14 @@ export async function POST(request: Request) {
   const params = await readParams(request);
   const key = String(params.key ?? "");
   if (!key) return fail("Missing key");
+
+  // A panel that is not trading refuses its API too, or a reseller would keep
+  // taking orders it can no longer fulfil.
+  const panel = await getCurrentPanel();
+  if (!panel) return NextResponse.json({ error: "Unknown panel" }, { status: 404 });
+  if (panel.status !== "active") {
+    return NextResponse.json({ error: "This panel is temporarily unavailable" }, { status: 503 });
+  }
 
   const user = await db.user.findUnique({ where: { apiKey: key } });
   if (!user) return fail("Invalid API key");

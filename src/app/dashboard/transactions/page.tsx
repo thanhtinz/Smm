@@ -29,7 +29,7 @@ export default async function TransactionsPage({
   const user = ctx.user!;
   const { t, currency, locale } = ctx;
 
-  const types = ["deposit", "order", "refund", "bonus", "admin_credit", "admin_debit"];
+  const types = ["deposit", "order", "refund", "bonus", "rent", "admin_credit", "admin_debit"];
   const type = types.includes(params.type ?? "") ? params.type : undefined;
   const page = Math.max(1, Number(params.page) || 1);
 

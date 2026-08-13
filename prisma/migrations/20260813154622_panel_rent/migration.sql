@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Panel" ADD COLUMN "lastBilledAt" DATETIME;
+ALTER TABLE "Panel" ADD COLUMN "nextDueAt" DATETIME;
+ALTER TABLE "Panel" ADD COLUMN "rentPrice" REAL;
