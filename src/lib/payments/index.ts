@@ -21,6 +21,11 @@ export type DepositInstruction =
 
 export type Driver = {
   key: string;
+  /**
+   * Path segment of the callback this driver listens on, when it has one.
+   * Drives what the admin page tells an operator to configure at the gateway.
+   */
+  webhook?: string;
   /** Which config fields must be non-empty for the method to be usable. */
   required: string[];
   /** Fields shown in the admin editor, in order. */
@@ -31,6 +36,7 @@ export type Driver = {
 export const drivers: Record<string, Driver> = {
   seapay: {
     key: "seapay",
+    webhook: "seapay",
     required: ["accountNumber", "bankCode", "accountName"],
     fields: [
       { name: "accountNumber", label: "Account number" },
@@ -103,6 +109,51 @@ export const drivers: Record<string, Driver> = {
       const approve = order.links?.find((l) => l.rel === "approve" || l.rel === "payer-action");
       if (!approve) return { kind: "unconfigured", message: "PayPal did not return an approval link." };
       return { kind: "redirect", url: approve.href };
+    },
+  },
+
+  crypto: {
+    key: "crypto",
+    webhook: "crypto",
+    required: ["apiKey", "ipnSecret"],
+    fields: [
+      { name: "apiKey", label: "API key", type: "password" },
+      { name: "ipnSecret", label: "IPN secret", type: "password", hint: "Signs the callback, so it is what proves a payment" },
+      { name: "payCurrency", label: "Coin", hint: "Leave blank to let the payer choose, or set one, e.g. usdttrc20" },
+      {
+        name: "apiUrl",
+        label: "API base URL",
+        hint: "NOWPayments by default; any service with the same invoice API works",
+      },
+    ],
+    async prepare(ctx) {
+      const base = (ctx.config.apiUrl || "https://api.nowpayments.io/v1").replace(/\/$/, "");
+
+      const res = await fetch(`${base}/invoice`, {
+        method: "POST",
+        headers: { "x-api-key": ctx.config.apiKey, "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          price_amount: ctx.amount,
+          price_currency: ctx.currency.toLowerCase(),
+          ...(ctx.config.payCurrency ? { pay_currency: ctx.config.payCurrency } : {}),
+          // The reference is what the callback is matched back to, so it has
+          // to be the order id rather than anything cosmetic.
+          order_id: ctx.reference,
+          order_description: `Balance top-up ${ctx.reference}`,
+          ipn_callback_url: `${ctx.appUrl}/api/webhooks/crypto`,
+          success_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?crypto=success`,
+          cancel_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?crypto=cancel`,
+        }),
+      });
+
+      if (!res.ok) {
+        return { kind: "unconfigured", message: "The crypto gateway rejected the request. Check the API key." };
+      }
+
+      const data = (await res.json()) as { invoice_url?: string };
+      if (!data.invoice_url) return { kind: "unconfigured", message: "The crypto gateway returned no invoice." };
+      return { kind: "redirect", url: data.invoice_url };
     },
   },
 

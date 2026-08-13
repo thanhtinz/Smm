@@ -16,24 +16,33 @@ export default async function AdminPaymentMethodsPage() {
 
   const methods = await db.paymentMethod.findMany({ orderBy: { position: "asc" } });
 
-  // The callback a gateway should be pointed at. It carries the panel in the
+  // The callbacks a gateway should be pointed at. They carry the panel in the
   // path, because a gateway posts from its own servers with no hostname of
   // ours to resolve.
   const panel = await requirePanel();
   const token = await ensureWebhookToken(panel.id);
-  const webhookUrl = `${await panelBaseUrl()}/api/webhooks/${token}/seapay`;
+  const origin = await panelBaseUrl();
+  const callbacks = methods
+    .map((m) => ({ method: m, path: drivers[m.driver]?.webhook }))
+    .filter((row): row is { method: (typeof methods)[number]; path: string } => Boolean(row.path))
+    .map((row) => ({ name: row.method.name, url: `${origin}/api/webhooks/${token}/${row.path}` }));
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
-      <div className="card card-pad">
-        <CopyField
-          label={t("admin.webhookUrl")}
-          value={webhookUrl}
-          copyLabel={t("wallet.copy")}
-          copiedLabel={t("wallet.copied")}
-          mono
-        />
-      </div>
+      {callbacks.length > 0 && (
+        <div className="card card-pad space-y-3">
+          {callbacks.map((cb) => (
+            <CopyField
+              key={cb.url}
+              label={`${t("admin.webhookUrl")} · ${cb.name}`}
+              value={cb.url}
+              copyLabel={t("wallet.copy")}
+              copiedLabel={t("wallet.copied")}
+              mono
+            />
+          ))}
+        </div>
+      )}
 
       <PaymentMethodManager
         currencyCodes={ctx.currencies.map((c) => c.code)}
