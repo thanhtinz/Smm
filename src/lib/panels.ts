@@ -119,6 +119,12 @@ export async function createChildPanel(parent: Panel, draft: ChildDraft): Promis
       });
     }
 
+    // A starting tier, so the panel prices coherently from its first customer
+    // and its admin has something to clone rather than an empty page.
+    await db.userTier.create({
+      data: { name: "Standard", slug: "standard", discountPercent: 0, isDefault: true, color: "#94a3b8" },
+    });
+
     await db.user.create({
       data: {
         publicId: await nextPublicId("user"),
