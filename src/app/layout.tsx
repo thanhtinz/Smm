@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import "./globals.css";
 import ThemeStyles from "@/components/theme-styles";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
-import { getCurrentPanel } from "@/lib/panel";
 
 export async function generateMetadata(): Promise<Metadata> {
   const [name, description] = await Promise.all([getSetting("site.name"), getSetting("site.description")]);
@@ -15,10 +13,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // A host we do not serve gets nothing. Falling back to the root panel here
-  // would quietly show one tenant's storefront on another tenant's domain.
-  if (!(await getCurrentPanel())) notFound();
-
   const { theme, mode, locale } = await getAppContext();
   return (
     <html lang={locale} data-theme={theme} data-mode={mode} suppressHydrationWarning>

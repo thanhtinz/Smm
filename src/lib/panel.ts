@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { headers } from "next/headers";
+import { notFound } from "next/navigation";
 import { cache } from "react";
 import type { Panel } from "@prisma/client";
 import { db } from "./db";
@@ -63,6 +64,16 @@ export async function getCurrentPanel(): Promise<Panel | null> {
 export async function requirePanel(): Promise<Panel> {
   const panel = await getCurrentPanel();
   if (!panel) throw new Error("UNKNOWN_PANEL_HOST");
+  return panel;
+}
+
+/**
+ * Page-side guard. Lives in the segment layouts rather than the root layout,
+ * which is the one place React refuses to let `notFound()` run.
+ */
+export async function guardPanel(): Promise<Panel> {
+  const panel = await getCurrentPanel();
+  if (!panel) notFound();
   return panel;
 }
 
