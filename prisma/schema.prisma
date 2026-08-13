@@ -1,0 +1,349 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Settings — every configurable value lives here so the admin UI owns config.
+// ---------------------------------------------------------------------------
+
+model Setting {
+  key       String   @id
+  value     String // JSON-encoded
+  group     String   @default("general")
+  updatedAt DateTime @updatedAt
+}
+
+/// Sequence source for the short human-facing ids (order #, user #...).
+/// SQLite only autoincrements primary keys, so the counters live here.
+model Counter {
+  name  String @id
+  value Int    @default(0)
+}
+
+model Language {
+  id        String   @id @default(cuid())
+  code      String   @unique // vi, en, tr...
+  name      String
+  nativeName String
+  flag      String   @default("") // inline svg id
+  enabled   Boolean  @default(true)
+  isDefault Boolean  @default(false)
+  direction String   @default("ltr")
+  position  Int      @default(0)
+  strings   Translation[]
+  createdAt DateTime @default(now())
+}
+
+model Translation {
+  id         String   @id @default(cuid())
+  languageId String
+  language   Language @relation(fields: [languageId], references: [id], onDelete: Cascade)
+  namespace  String   @default("common")
+  key        String
+  value      String
+
+  @@unique([languageId, namespace, key])
+  @@index([languageId, namespace])
+}
+
+model Currency {
+  id           String  @id @default(cuid())
+  code         String  @unique // VND, USD, EUR
+  name         String
+  symbol       String
+  symbolBefore Boolean @default(true)
+  decimals     Int     @default(2)
+  rate         Float   @default(1) // value of 1 base currency in this currency
+  enabled      Boolean @default(true)
+  isBase       Boolean @default(false)
+  position     Int     @default(0)
+  updatedAt    DateTime @updatedAt
+}
+
+model Theme {
+  id          String  @id @default(cuid())
+  slug        String  @unique
+  name        String
+  description String  @default("")
+  tokens      String // JSON: css custom properties for light/dark
+  layout      String  @default("classic") // classic | compact | canvas
+  enabled     Boolean @default(true)
+  isDefault   Boolean @default(false)
+  position    Int     @default(0)
+}
+
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  publicId  Int      @unique
+  username  String   @unique
+  email     String   @unique
+  password  String
+  fullName  String   @default("")
+  role      String   @default("user") // user | support | admin
+  balance   Float    @default(0)
+  spent     Float    @default(0)
+  currency  String   @default("VND")
+  locale    String   @default("vi")
+  theme     String   @default("aurora")
+  colorMode String   @default("dark") // dark | light | system
+  timezone  String   @default("Asia/Ho_Chi_Minh")
+  apiKey    String   @unique @default(cuid())
+  emailVerified Boolean @default(false)
+  banned    Boolean  @default(false)
+  banReason String   @default("")
+  lastLoginAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  sessions      Session[]
+  orders        Order[]
+  transactions  Transaction[]
+  tickets       Ticket[]
+  ticketMessages TicketMessage[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  ip        String   @default("")
+  userAgent String   @default("")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  detail    String   @default("")
+  ip        String   @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue
+// ---------------------------------------------------------------------------
+
+model Platform {
+  id       String  @id @default(cuid())
+  slug     String  @unique
+  name     String
+  icon     String  @default("globe") // svg icon key
+  color    String  @default("#6366f1")
+  visible  Boolean @default(true)
+  position Int     @default(0)
+  categories Category[]
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  platformId  String?
+  platform    Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
+  name        String
+  description String  @default("")
+  visible     Boolean @default(true)
+  position    Int     @default(0)
+  services    Service[]
+
+  @@index([platformId])
+}
+
+model Provider {
+  id        String  @id @default(cuid())
+  name      String
+  apiUrl    String
+  apiKey    String
+  enabled   Boolean @default(true)
+  balance   Float   @default(0)
+  currency  String  @default("USD")
+  lastSyncAt DateTime?
+  services  Service[]
+  createdAt DateTime @default(now())
+}
+
+model Service {
+  id          String  @id @default(cuid())
+  publicId    Int     @unique
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  providerId  String?
+  provider    Provider? @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  providerServiceId String @default("")
+  name        String
+  description String  @default("")
+  type        String  @default("default") // default | custom_comments | drip_feed | subscription
+  rate        Float // price per 1000, in base currency
+  providerRate Float  @default(0)
+  min         Int     @default(10)
+  max         Int     @default(100000)
+  refill      Boolean @default(false)
+  cancel      Boolean @default(false)
+  dripfeed    Boolean @default(false)
+  averageTime String  @default("")
+  enabled     Boolean @default(true)
+  position    Int     @default(0)
+  orders      Order[]
+  createdAt   DateTime @default(now())
+
+  @@index([categoryId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id          String  @id @default(cuid())
+  publicId    Int     @unique
+  userId      String
+  user        User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId   String
+  service     Service @relation(fields: [serviceId], references: [id])
+  link        String
+  quantity    Int
+  charge      Float // in base currency
+  startCount  Int     @default(0)
+  remains     Int     @default(0)
+  status      String  @default("pending") // pending processing inprogress completed partial canceled refunded
+  providerOrderId String @default("")
+  note        String  @default("")
+  runs        Int?
+  interval    Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Wallet & payments
+// ---------------------------------------------------------------------------
+
+model PaymentMethod {
+  id          String  @id @default(cuid())
+  code        String  @unique // seapay | paypal | link | manual_bank | crypto
+  name        String
+  driver      String // implementation key
+  enabled     Boolean @default(false)
+  icon        String  @default("wallet")
+  description String  @default("")
+  config      String  @default("{}") // JSON credentials, edited in admin
+  currencies  String  @default("[]") // JSON array of accepted currency codes
+  minAmount   Float   @default(0)
+  maxAmount   Float   @default(0)
+  feePercent  Float   @default(0)
+  feeFixed    Float   @default(0)
+  bonusPercent Float  @default(0)
+  position    Int     @default(0)
+  transactions Transaction[]
+}
+
+model Transaction {
+  id        String  @id @default(cuid())
+  publicId  Int     @unique
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  methodId  String?
+  method    PaymentMethod? @relation(fields: [methodId], references: [id], onDelete: SetNull)
+  type      String  @default("deposit") // deposit | order | refund | admin_credit | admin_debit | bonus
+  amount    Float // base currency, signed
+  paidAmount Float  @default(0) // amount in payment currency
+  currency  String  @default("VND")
+  fee       Float   @default(0)
+  status    String  @default("pending") // pending | completed | failed | canceled
+  reference String  @default("") // gateway transaction id
+  note      String  @default("")
+  meta      String  @default("{}")
+  balanceAfter Float @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Support & notifications
+// ---------------------------------------------------------------------------
+
+model Ticket {
+  id        String  @id @default(cuid())
+  publicId  Int     @unique
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  category  String  @default("general")
+  status    String  @default("open") // open | answered | pending | closed
+  messages  TicketMessage[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model TicketMessage {
+  id        String  @id @default(cuid())
+  ticketId  String
+  ticket    Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?   @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  fromStaff Boolean @default(false)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([ticketId])
+}
+
+model Notification {
+  id        String  @id @default(cuid())
+  userId    String?
+  user      User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  body      String
+  level     String  @default("info") // info | success | warning | danger
+  read      Boolean @default(false)
+  href      String  @default("")
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Announcement {
+  id        String  @id @default(cuid())
+  title     String
+  body      String
+  level     String  @default("info")
+  enabled   Boolean @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Page {
+  id        String  @id @default(cuid())
+  slug      String  @unique
+  title     String
+  body      String
+  published Boolean @default(true)
+  showInFooter Boolean @default(true)
+  position  Int     @default(0)
+  updatedAt DateTime @updatedAt
+}
