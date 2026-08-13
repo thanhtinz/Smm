@@ -33,7 +33,7 @@ is stored in the database and edited from the admin area.
 ```bash
 npm install
 cp .env.example .env      # set DATABASE_URL and AUTH_SECRET
-npx prisma db push
+npx prisma migrate deploy
 npx tsx prisma/seed.ts
 npm run dev
 ```
