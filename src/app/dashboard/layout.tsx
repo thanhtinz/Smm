@@ -4,6 +4,7 @@ import { getAppContext } from "@/lib/context";
 import { guardPanel } from "@/lib/tenancy";
 import PanelSuspended from "@/components/panel-suspended";
 import { db } from "@/lib/db";
+import AnnouncementBanner from "@/components/announcement-banner";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
@@ -56,8 +57,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/profile", label: t("nav.profile"), icon: "user" },
   ];
 
+  const notices = await db.announcement.findMany({
+    where: { enabled: true },
+    orderBy: { createdAt: "desc" },
+    take: 3,
+  });
+
   return (
     <AppShell ctx={ctx} groups={groups} primaryMobile={primaryMobile} title={t("dash.title")}>
+      {notices.length > 0 && (
+        <div className="mb-5">
+          <AnnouncementBanner
+            closeLabel={t("common.close")}
+            items={notices.map((a) => ({ id: a.id, title: a.title, body: a.body, level: a.level }))}
+          />
+        </div>
+      )}
       {children}
     </AppShell>
   );
