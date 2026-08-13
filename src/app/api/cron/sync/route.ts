@@ -22,6 +22,7 @@ export async function POST(request: Request) {
     dispatched: result.sent,
     updated: result.synced,
     chain: result.chain,
+    requests: result.requests,
     rent: result.rent,
     failures: result.failures,
   });

@@ -349,6 +349,9 @@ model OrderRequest {
   status            String   @default("pending") // pending | approved | rejected | completed
   note              String   @default("")
   providerRequestId String   @default("")
+  /// The request one level down that raised this one, mirroring the way
+  /// sourceOrderId links the orders themselves.
+  sourceRequestId   String   @default("")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
@@ -356,6 +359,7 @@ model OrderRequest {
   @@index([userId])
   @@index([orderId])
   @@index([status])
+  @@index([sourceRequestId])
   @@index([panelId])
 }
 

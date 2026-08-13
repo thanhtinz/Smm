@@ -82,16 +82,19 @@ export default function RequestManager({ rows, labels }: { rows: RequestRow[]; l
                       <StatusBadge status={row.status === "pending" ? "pending" : row.status === "rejected" ? "canceled" : "completed"} label={labels[`decision.${row.status}`] ?? row.status} />
                     </td>
                     <td>
-                      {row.status === "pending" ? (
+                      {row.status === "pending" || row.status === "approved" ? (
                         <div className="flex justify-end gap-1">
+                          {/* Approved means "passed on" where there is a panel
+                              or provider above; the level that actually does
+                              the work is the one that marks it done. */}
                           <button
                             type="button"
                             disabled={pending}
-                            onClick={() => resolve(row, "approved")}
+                            onClick={() => resolve(row, row.status === "pending" ? "approved" : "completed")}
                             className="btn btn-ghost btn-sm"
-                            title={labels.approve}
+                            title={row.status === "pending" ? labels.approve : labels.complete}
                           >
-                            <Icon name="check" size={14} />
+                            <Icon name={row.status === "pending" ? "check" : "checkCircle"} size={14} />
                           </button>
                           <button
                             type="button"

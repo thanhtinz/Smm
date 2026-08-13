@@ -84,6 +84,7 @@ export default async function AdminRequestsPage({
           cancel: t("order.cancel"),
           approve: t("admin.approve"),
           reject: t("admin.reject"),
+          complete: t("request.complete"),
           reason: t("admin.reason"),
           confirmRefund: t("admin.confirmRefund"),
           "decision.pending": t("request.status.pending"),
