@@ -6,12 +6,16 @@ import { registerAction, type FormState } from "@/app/actions/auth";
 import { Field, TextInput } from "@/components/ui/field";
 import { Icon } from "@/components/icons";
 import SubmitButton from "@/components/ui/submit-button";
+import CaptchaField, { type CaptchaProps } from "@/components/auth/captcha-field";
 
 export default function RegisterForm({
+  captcha,
   labels,
   termsRequired,
   referralCode,
 }: {
+  /** Null when captcha is off or not configured. */
+  captcha: CaptchaProps | null;
   referralCode?: string;
   labels: Record<
     | "title"
@@ -128,6 +132,8 @@ export default function RegisterForm({
             )}
           </div>
         )}
+
+        {captcha && <CaptchaField config={captcha} />}
 
         <SubmitButton className="btn btn-primary w-full">
           {labels.submit}

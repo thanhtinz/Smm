@@ -6,10 +6,14 @@ import { loginAction, type FormState } from "@/app/actions/auth";
 import { Field, TextInput } from "@/components/ui/field";
 import { Icon } from "@/components/icons";
 import SubmitButton from "@/components/ui/submit-button";
+import CaptchaField, { type CaptchaProps } from "@/components/auth/captcha-field";
 
 export default function LoginForm({
+  captcha,
   labels,
 }: {
+  /** Null when captcha is off or not configured. */
+  captcha: CaptchaProps | null;
   labels: Record<"title" | "sub" | "identifier" | "password" | "remember" | "forgot" | "submit" | "noaccount" | "signup", string>;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, {});
@@ -58,6 +62,8 @@ export default function LoginForm({
             {labels.forgot}
           </Link>
         </div>
+
+        {captcha && <CaptchaField config={captcha} />}
 
         <SubmitButton className="btn btn-primary w-full">
           {labels.submit}

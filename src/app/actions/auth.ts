@@ -7,6 +7,7 @@ import { createSession, destroySession, hashPassword, logActivity, verifyPasswor
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { findReferrerByCode } from "@/lib/affiliate";
+import { verifyCaptcha } from "@/lib/captcha";
 
 export type FormState = {
   error?: string;
@@ -27,6 +28,12 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const parsed = loginSchema.safeParse(raw);
   if (!parsed.success) {
     return { fieldErrors: fieldErrors(parsed.error), values: { identifier: raw.identifier } };
+  }
+
+  // Before the password is checked, so a failed captcha costs an attacker a
+  // round trip without telling them anything about the account.
+  if (!(await verifyCaptcha("login", formData))) {
+    return { error: "Please complete the verification and try again.", values: { identifier: raw.identifier } };
   }
 
   const user = await db.user.findFirst({
@@ -70,6 +77,10 @@ const registerSchema = z
 export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
   if (!(await getSetting("auth.registrationOpen"))) {
     return { error: "Registration is currently closed." };
+  }
+
+  if (!(await verifyCaptcha("register", formData))) {
+    return { error: "Please complete the verification and try again." };
   }
 
   const raw = {
