@@ -213,6 +213,13 @@ export const en = {
   "service.sourceHint": "The parent panel's service this one is fulfilled by",
   "service.noSource": "Choose a service",
 
+  "currency.rate": "Rate",
+  "currency.autoRate": "Auto rate",
+  "currency.autoOn": "Automatic",
+  "currency.autoPinned": "Pinned",
+  "currency.autoOff": "Automatic rates are switched off in Settings.",
+  "currency.refresh": "Update rates now",
+
   "tier.title": "Customer tiers",
   "tier.new": "New tier",
   "tier.empty": "No tiers yet",
@@ -619,6 +626,13 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "service.source": "Lấy từ dịch vụ",
   "service.sourceHint": "Dịch vụ của panel cha sẽ thực hiện đơn này",
   "service.noSource": "Chọn một dịch vụ",
+
+  "currency.rate": "Tỉ giá",
+  "currency.autoRate": "Tỉ giá tự động",
+  "currency.autoOn": "Tự động",
+  "currency.autoPinned": "Cố định",
+  "currency.autoOff": "Tỉ giá tự động đang tắt trong Cài đặt.",
+  "currency.refresh": "Cập nhật tỉ giá ngay",
 
   "tier.title": "Cấp bậc khách hàng",
   "tier.new": "Tạo cấp bậc",
