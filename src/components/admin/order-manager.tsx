@@ -21,6 +21,7 @@ export type AdminOrderRow = {
   remains: number;
   providerOrderId: string;
   note: string;
+  comments: string;
   /** Set when this order was bought on behalf of a panel below. */
   fromChild: boolean;
 };
@@ -181,6 +182,17 @@ function OrderDrawer({
           {row.fromChild && <Row label={labels.source} value={labels.fromChild} />}
           {row.note && <Row label={labels.note} value={row.note} />}
         </dl>
+
+        {/* Read-only: the comments are what the customer paid for, and the
+            quantity is derived from them, so they are not editable here. */}
+        {row.comments && (
+          <div>
+            <span className="label">{labels.comments}</span>
+            <pre className="surface-2 max-h-56 overflow-auto rounded-xl p-3 text-sm whitespace-pre-wrap">
+              {row.comments}
+            </pre>
+          </div>
+        )}
 
         <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>
           <TextInput name="link" defaultValue={row.link} error={state.fieldErrors?.link} />

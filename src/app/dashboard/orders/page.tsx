@@ -108,7 +108,17 @@ export default async function OrdersPage({
                   {orders.map((o) => (
                     <tr key={o.id}>
                       <td className="font-mono text-xs">#{o.publicId}</td>
-                      <td className="max-w-[20rem] truncate">{o.service.name}</td>
+                      <td className="max-w-[20rem]">
+                        <p className="truncate">{o.service.name}</p>
+                        {o.comments && (
+                          <details className="mt-1">
+                            <summary className="muted cursor-pointer text-xs">{t("order.comments")}</summary>
+                            <pre className="surface-2 mt-1 max-h-40 overflow-auto rounded-lg p-2 text-xs whitespace-pre-wrap">
+                              {o.comments}
+                            </pre>
+                          </details>
+                        )}
+                      </td>
                       <td className="max-w-[14rem] truncate">
                         <a href={o.link} target="_blank" rel="noopener noreferrer" className="muted hover:text-[var(--text)]">
                           {o.link}
@@ -146,6 +156,14 @@ export default async function OrdersPage({
                   </div>
                   <p className="mt-1.5 text-sm font-medium">{o.service.name}</p>
                   <p className="muted mt-0.5 truncate text-xs">{o.link}</p>
+                  {o.comments && (
+                    <details className="mt-1.5">
+                      <summary className="muted cursor-pointer text-xs">{t("order.comments")}</summary>
+                      <pre className="surface-2 mt-1 max-h-40 overflow-auto rounded-lg p-2 text-xs whitespace-pre-wrap">
+                        {o.comments}
+                      </pre>
+                    </details>
+                  )}
                   <div className="mt-2.5 flex items-center justify-between gap-3 text-xs">
                     <span className="muted tabular-nums">{o.quantity.toLocaleString()}</span>
                     <span className="font-semibold tabular-nums">{displayMoney(o.charge, currency, locale)}</span>

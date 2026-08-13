@@ -20,6 +20,7 @@ export type ServiceOption = {
   refill: boolean;
   cancel: boolean;
   dripfeed: boolean;
+  type: string;
   averageTime: string;
   description: string;
 };
@@ -55,6 +56,8 @@ export type OrderLabels = Record<
   | "track"
   | "insufficient"
   | "dripfeed"
+  | "comments"
+  | "commentsHint"
   | "runs"
   | "interval"
   | "intervalHint"
@@ -113,11 +116,17 @@ export default function NewOrderForm({
   const service = visibleServices.find((s) => s.id === serviceId);
 
   const [quantity, setQuantity] = useState("");
+  const [comments, setComments] = useState("");
+
+  // These services are bought by the comment, not by the thousand, so the
+  // quantity is however many lines the customer wrote.
+  const custom = service?.type === "custom_comments";
+  const commentLines = comments.split("\n").map((l) => l.trim()).filter(Boolean).length;
   const [dripfeed, setDripfeed] = useState(false);
   const [runs, setRuns] = useState("");
   const [interval, setInterval] = useState("");
 
-  const qty = Number(quantity);
+  const qty = custom ? commentLines : Number(quantity);
   const runsNum = Number(runs);
   const units = dripfeed && runsNum > 1 ? qty * runsNum : qty;
   const charge = service && Number.isFinite(units) && units > 0 ? Math.round((service.rate * units) / 1000) : 0;
@@ -243,6 +252,29 @@ export default function NewOrderForm({
           />
         </Field>
 
+        {custom ? (
+          <Field
+            name="comments"
+            label={labels.comments}
+            error={
+              state.fieldErrors?.comments ??
+              (outOfRange && service
+                ? `${labels.min} ${service.min.toLocaleString()} — ${labels.max} ${service.max.toLocaleString()}`
+                : undefined)
+            }
+            hint={labels.commentsHint.replace("{count}", String(commentLines))}
+            required
+          >
+            <textarea
+              id="comments"
+              name="comments"
+              rows={6}
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+              className={`field ${state.fieldErrors?.comments ? "field-error" : ""}`}
+            />
+          </Field>
+        ) : (
         <Field
           name="quantity"
           label={labels.quantity}
@@ -272,6 +304,7 @@ export default function NewOrderForm({
             hint={service ? "range" : undefined}
           />
         </Field>
+        )}
 
         {/* Progressive disclosure: drip-feed appears only for services that
             support it, and its inputs stay collapsed until it is switched on. */}

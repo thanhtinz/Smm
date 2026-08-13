@@ -8,6 +8,9 @@ import { requirePanel, runAsPanel } from "@/lib/tenancy";
 
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
+/** What the order form asks for: a quantity, or the comments to post. */
+const SERVICE_TYPES = new Set(["default", "custom_comments"]);
+
 function slugify(input: string) {
   return input
     .normalize("NFD")
@@ -172,7 +175,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     providerId: providerId || null,
     providerServiceId: String(form.get("providerServiceId") ?? "").trim(),
     description: String(form.get("description") ?? "").trim(),
-    type: String(form.get("type") ?? "default"),
+    type: SERVICE_TYPES.has(String(form.get("type"))) ? String(form.get("type")) : "default",
     rate,
     providerRate: num(form, "providerRate"),
     min: Math.round(min),

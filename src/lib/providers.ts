@@ -109,7 +109,14 @@ export async function requestProviderCancel(
 
 export function placeProviderOrder(
   provider: { apiUrl: string; apiKey: string },
-  order: { service: string; link: string; quantity: number; runs?: number | null; interval?: number | null }
+  order: {
+    service: string;
+    link: string;
+    quantity: number;
+    comments?: string;
+    runs?: number | null;
+    interval?: number | null;
+  }
 ) {
   const params: Record<string, string | number> = {
     action: "add",
@@ -117,6 +124,9 @@ export function placeProviderOrder(
     link: order.link,
     quantity: order.quantity,
   };
+  // The standard sends the comments instead of a quantity for these; keeping
+  // both is harmless and providers that ignore one still get the other.
+  if (order.comments) params.comments = order.comments;
   if (order.runs && order.interval) {
     params.runs = order.runs;
     params.interval = order.interval;
@@ -172,6 +182,7 @@ export async function dispatchPendingOrders(limit = 25) {
       service: order.service.providerServiceId,
       link: order.link,
       quantity: order.quantity,
+      comments: order.comments,
       runs: order.runs,
       interval: order.interval,
     });

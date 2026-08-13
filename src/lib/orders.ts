@@ -17,6 +17,14 @@ export const ORDER_STATUSES = [
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+/** One comment per line, blank lines dropped. */
+export function commentLines(raw: string): string[] {
+  return raw
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
 /** Rejects links that are not plausibly a social media target. */
 export function isValidOrderLink(link: string): boolean {
   try {

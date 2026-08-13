@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
-import { calculateCharge, isValidOrderLink } from "@/lib/orders";
+import { calculateCharge, commentLines, isValidOrderLink } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { getBaseCurrency } from "@/lib/currency";
@@ -102,7 +102,10 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
 
   const serviceId = Number(params.service);
   const link = String(params.link ?? "").trim();
-  const quantity = Number(params.quantity);
+  // The standard sends `comments` instead of `quantity` for comment services,
+  // and the count of lines is the quantity.
+  const comments = commentLines(String(params.comments ?? ""));
+  const quantity = comments.length > 0 ? comments.length : Number(params.quantity);
 
   if (!Number.isInteger(serviceId)) return fail("Incorrect service ID");
   if (!link || !isValidOrderLink(link)) return fail("Incorrect link");
@@ -110,6 +113,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
 
   const service = await db.service.findFirst({ where: { publicId: serviceId, enabled: true } });
   if (!service) return fail("Incorrect service ID");
+  if (service.type === "custom_comments" && comments.length === 0) return fail("Incorrect comments");
   if (quantity < service.min || quantity > service.max) return fail("Incorrect quantity");
 
   const dripfeed = params.runs !== undefined || params.interval !== undefined;
@@ -148,6 +152,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           charge,
           remains: totalQuantity,
           status: "pending",
+          comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
         },
@@ -171,6 +176,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
       await writeUpstream(tx, plan.hops, {
         downstreamOrderId: created.id,
         link,
+        comments: comments.join("\n"),
         quantity: totalQuantity,
         runs: dripfeed ? runs : null,
         interval: dripfeed ? interval : null,

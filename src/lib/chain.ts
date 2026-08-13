@@ -130,6 +130,7 @@ export async function writeUpstream(
   base: {
     downstreamOrderId: string;
     link: string;
+    comments?: string;
     quantity: number;
     runs: number | null;
     interval: number | null;
@@ -156,6 +157,9 @@ export async function writeUpstream(
           charge: hop.charge,
           remains: base.quantity,
           status: "pending",
+          // The comments travel with the order: the panel that finally sends
+          // it to a provider is the one that needs them.
+          comments: base.comments ?? "",
           sourceOrderId: downstream,
           runs: base.runs,
           interval: base.interval,

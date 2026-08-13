@@ -342,6 +342,9 @@ model Order {
   remains         Int            @default(0)
   status          String         @default("pending") // pending processing inprogress completed partial canceled refunded
   providerOrderId String         @default("")
+  /// One comment per line, for services that take them instead of a count.
+  /// The quantity is then the number of lines.
+  comments        String         @default("")
   /// The order one level down that caused this one. Following it walks the
   /// chain back to the customer who actually placed it.
   sourceOrderId   String         @default("")
