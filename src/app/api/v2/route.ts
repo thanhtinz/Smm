@@ -1,0 +1,250 @@
+import { NextResponse } from "next/server";
+import { db } from "@/lib/db";
+import { getSetting } from "@/lib/settings";
+import { nextPublicId } from "@/lib/ids";
+import { calculateCharge, isValidOrderLink } from "@/lib/orders";
+import { getBaseCurrency } from "@/lib/currency";
+
+/**
+ * Reseller API, shaped to the de-facto SMM panel standard so existing client
+ * libraries work unchanged: a single endpoint, form or JSON body, `key` plus
+ * `action`, and errors returned as {"error": "..."} with HTTP 200.
+ */
+export async function POST(request: Request) {
+  if (!(await getSetting("api.enabled"))) return fail("API is disabled");
+
+  const params = await readParams(request);
+  const key = String(params.key ?? "");
+  if (!key) return fail("Missing key");
+
+  const user = await db.user.findUnique({ where: { apiKey: key } });
+  if (!user) return fail("Invalid API key");
+  if (user.banned) return fail("Account suspended");
+
+  if (!(await withinRateLimit(user.id))) return fail("Rate limit exceeded");
+
+  const action = String(params.action ?? "");
+  switch (action) {
+    case "services":
+      return services();
+    case "balance":
+      return balance(user.id);
+    case "add":
+      return add(user.id, params);
+    case "status":
+      return status(user.id, params);
+    case "orders":
+      return statuses(user.id, params);
+    default:
+      return fail("Invalid action");
+  }
+}
+
+export async function GET() {
+  return fail("Use POST");
+}
+
+// ------------------------------------------------------------------ actions
+
+async function services() {
+  const rows = await db.service.findMany({
+    where: { enabled: true },
+    orderBy: { publicId: "asc" },
+    include: { category: { select: { name: true } } },
+  });
+
+  return NextResponse.json(
+    rows.map((s) => ({
+      service: s.publicId,
+      name: s.name,
+      type: s.type === "default" ? "Default" : s.type,
+      category: s.category.name,
+      // Rates go out as strings: the standard clients parse them that way.
+      rate: s.rate.toFixed(4),
+      min: String(s.min),
+      max: String(s.max),
+      refill: s.refill,
+      cancel: s.cancel,
+      dripfeed: s.dripfeed,
+    }))
+  );
+}
+
+async function balance(userId: string) {
+  const [user, base] = await Promise.all([
+    db.user.findUniqueOrThrow({ where: { id: userId }, select: { balance: true } }),
+    getBaseCurrency(),
+  ]);
+  return NextResponse.json({ balance: user.balance.toFixed(base.decimals), currency: base.code });
+}
+
+async function add(userId: string, params: Record<string, unknown>) {
+  if (!(await getSetting("order.enabled"))) return fail("Ordering is disabled");
+
+  const serviceId = Number(params.service);
+  const link = String(params.link ?? "").trim();
+  const quantity = Number(params.quantity);
+
+  if (!Number.isInteger(serviceId)) return fail("Incorrect service ID");
+  if (!link || !isValidOrderLink(link)) return fail("Incorrect link");
+  if (!Number.isInteger(quantity) || quantity <= 0) return fail("Incorrect quantity");
+
+  const service = await db.service.findFirst({ where: { publicId: serviceId, enabled: true } });
+  if (!service) return fail("Incorrect service ID");
+  if (quantity < service.min || quantity > service.max) return fail("Incorrect quantity");
+
+  const dripfeed = params.runs !== undefined || params.interval !== undefined;
+  const runs = Number(params.runs ?? 0);
+  const interval = Number(params.interval ?? 0);
+  if (dripfeed) {
+    if (!service.dripfeed) return fail("Dripfeed is not supported by this service");
+    if (!Number.isInteger(runs) || runs < 2) return fail("Incorrect runs");
+    if (!Number.isInteger(interval) || interval < 1) return fail("Incorrect interval");
+  }
+
+  const totalQuantity = dripfeed ? quantity * runs : quantity;
+  const charge = calculateCharge(service.rate, totalQuantity);
+
+  const [orderPublicId, txPublicId] = await Promise.all([nextPublicId("order"), nextPublicId("transaction")]);
+
+  try {
+    const order = await db.$transaction(async (tx) => {
+      const fresh = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { balance: true, spent: true } });
+      if (fresh.balance < charge) throw new Error("FUNDS");
+
+      const created = await tx.order.create({
+        data: {
+          publicId: orderPublicId,
+          userId,
+          serviceId: service.id,
+          link,
+          quantity: totalQuantity,
+          charge,
+          remains: totalQuantity,
+          status: "pending",
+          runs: dripfeed ? runs : null,
+          interval: dripfeed ? interval : null,
+        },
+      });
+
+      const balanceAfter = fresh.balance - charge;
+      await tx.user.update({ where: { id: userId }, data: { balance: balanceAfter, spent: fresh.spent + charge } });
+      await tx.transaction.create({
+        data: {
+          publicId: txPublicId,
+          userId,
+          type: "order",
+          amount: -charge,
+          status: "completed",
+          reference: String(orderPublicId),
+          note: service.name,
+          balanceAfter,
+        },
+      });
+
+      return created;
+    });
+
+    return NextResponse.json({ order: order.publicId });
+  } catch (e) {
+    if (e instanceof Error && e.message === "FUNDS") return fail("Not enough funds on balance");
+    return fail("Order could not be created");
+  }
+}
+
+async function status(userId: string, params: Record<string, unknown>) {
+  const id = Number(params.order);
+  if (!Number.isInteger(id)) return fail("Incorrect order ID");
+
+  const order = await db.order.findFirst({ where: { publicId: id, userId } });
+  if (!order) return fail("Incorrect order ID");
+
+  const base = await getBaseCurrency();
+  return NextResponse.json(orderPayload(order, base.code, base.decimals));
+}
+
+/** Batch status: comma-separated ids, keyed by id in the response. */
+async function statuses(userId: string, params: Record<string, unknown>) {
+  const ids = String(params.orders ?? "")
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n))
+    .slice(0, 100);
+
+  if (ids.length === 0) return fail("Incorrect order IDs");
+
+  const [orders, base] = await Promise.all([
+    db.order.findMany({ where: { publicId: { in: ids }, userId } }),
+    getBaseCurrency(),
+  ]);
+
+  const found = new Map(orders.map((o) => [o.publicId, o]));
+  const out: Record<string, unknown> = {};
+  for (const id of ids) {
+    const order = found.get(id);
+    out[String(id)] = order ? orderPayload(order, base.code, base.decimals) : { error: "Incorrect order ID" };
+  }
+  return NextResponse.json(out);
+}
+
+// ------------------------------------------------------------------ helpers
+
+function orderPayload(
+  order: { charge: number; startCount: number; status: string; remains: number },
+  currency: string,
+  decimals: number
+) {
+  return {
+    charge: order.charge.toFixed(decimals),
+    start_count: String(order.startCount),
+    status: STATUS_LABEL[order.status] ?? order.status,
+    remains: String(order.remains),
+    currency,
+  };
+}
+
+/** The standard uses title-case status names. */
+const STATUS_LABEL: Record<string, string> = {
+  pending: "Pending",
+  processing: "Processing",
+  inprogress: "In progress",
+  completed: "Completed",
+  partial: "Partial",
+  canceled: "Canceled",
+  refunded: "Refunded",
+};
+
+function fail(message: string) {
+  // The standard returns errors with HTTP 200 and an `error` key.
+  return NextResponse.json({ error: message });
+}
+
+/** Accepts both form-encoded and JSON bodies, as clients differ. */
+async function readParams(request: Request): Promise<Record<string, unknown>> {
+  const type = request.headers.get("content-type") ?? "";
+  try {
+    if (type.includes("application/json")) return (await request.json()) as Record<string, unknown>;
+    const form = await request.formData();
+    return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+  } catch {
+    return {};
+  }
+}
+
+// A fixed window per key is enough to stop a runaway loop without adding
+// infrastructure; it resets every minute.
+const hits = new Map<string, { count: number; resetAt: number }>();
+
+async function withinRateLimit(userId: string): Promise<boolean> {
+  const limit = Number(await getSetting("api.rateLimitPerMinute")) || 0;
+  if (limit <= 0) return true;
+
+  const now = Date.now();
+  const entry = hits.get(userId);
+  if (!entry || now > entry.resetAt) {
+    hits.set(userId, { count: 1, resetAt: now + 60_000 });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= limit;
+}

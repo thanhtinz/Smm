@@ -122,6 +122,22 @@ Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screens
 | --------------- | -------------- |
 | ![](docs/screenshots/03-landing-midnight-dark.png) | ![](docs/screenshots/04-landing-citrus-light.png) |
 
+## Reseller API
+
+One endpoint, `POST /api/v2`, shaped to the de-facto SMM panel standard so
+existing client libraries work unchanged. Accepts form or JSON bodies; errors
+return HTTP 200 with an `error` key.
+
+| Action     | Parameters                                    |
+| ---------- | --------------------------------------------- |
+| `services` | —                                             |
+| `balance`  | —                                             |
+| `add`      | `service`, `link`, `quantity`, `runs`, `interval` |
+| `status`   | `order`                                       |
+| `orders`   | `orders` (comma-separated, max 100)           |
+
+![](docs/screenshots/43-api-docs.png)
+
 ## Build order
 
 Features land one at a time, each verified with a screenshot before the next begins.
@@ -133,4 +149,4 @@ Features land one at a time, each verified with a screenshot before the next beg
 - [x] 5 — Wallet and payment gateways
 - [x] 6 — Support tickets and notifications
 - [x] 7 — Admin area
-- [ ] 8 — Public API v2
+- [x] 8 — Public API v2
