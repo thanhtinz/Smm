@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import ServiceManager from "@/components/admin/service-manager";
+import { requirePanel, runAsPanel } from "@/lib/tenancy";
+import { priceServices, resolveTier } from "@/lib/pricing";
+import { displayMoney } from "@/lib/currency";
 
 export const metadata: Metadata = { title: "Services" };
 
@@ -9,12 +12,36 @@ export default async function AdminServicesPage() {
   const ctx = await getAppContext();
   const { t } = ctx;
 
+  const panel = await requirePanel();
+  const isChild = panel.parentId !== null;
+
   const [services, categories, platforms, providers] = await Promise.all([
     db.service.findMany({ orderBy: [{ position: "asc" }, { publicId: "asc" }] }),
     db.category.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     db.platform.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
-    db.provider.findMany({ orderBy: { name: "asc" } }),
+    isChild ? [] : db.provider.findMany({ orderBy: { name: "asc" } }),
   ]);
+
+  // What this panel would pay for each of its parent's services, priced for
+  // the owner's tier there — the cost side of every margin on this page.
+  const sourceCosts = new Map<string, number>();
+  const sourceServices = isChild
+    ? await runAsPanel(panel.parentId!, async () => {
+        const owner = panel.ownerUserId ? await db.user.findUnique({ where: { id: panel.ownerUserId } }) : null;
+        const rows = await db.service.findMany({
+          where: { enabled: true },
+          orderBy: [{ position: "asc" }, { publicId: "asc" }],
+          include: { category: { select: { name: true } } },
+        });
+        const rates = await priceServices(await resolveTier(owner), rows);
+        for (const s of rows) sourceCosts.set(s.id, rates.get(s.id) ?? s.rate);
+        return rows.map((s) => ({
+          id: s.id,
+          name: `#${s.publicId} ${s.category.name} · ${s.name}`,
+          cost: displayMoney(rates.get(s.id) ?? s.rate, ctx.currency, ctx.locale),
+        }));
+      })
+    : [];
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -27,6 +54,8 @@ export default async function AdminServicesPage() {
           categoryId: s.categoryId,
           providerId: s.providerId,
           providerServiceId: s.providerServiceId,
+          sourceServiceId: s.sourceServiceId,
+          sourceCost: sourceCosts.get(s.sourceServiceId) ?? 0,
           type: s.type,
           rate: s.rate,
           providerRate: s.providerRate,
@@ -42,6 +71,8 @@ export default async function AdminServicesPage() {
         categories={categories.map((c) => ({ id: c.id, name: c.name, platformId: c.platformId }))}
         platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
         providers={providers.map((p) => ({ id: p.id, name: p.name }))}
+        sourceServices={sourceServices}
+        isChild={isChild}
         currency={{
           symbol: ctx.currency.symbol,
           symbolBefore: ctx.currency.symbolBefore,
@@ -64,6 +95,9 @@ export default async function AdminServicesPage() {
           description: t("admin.description"),
           category: t("admin.category"),
           rate: t("admin.rate"),
+          sourceService: t("service.source"),
+          sourceHint: t("service.sourceHint"),
+          noSource: t("service.noSource"),
           providerRate: t("admin.providerRate"),
           margin: t("admin.margin"),
           limits: `${t("order.min")}/${t("order.max")}`,

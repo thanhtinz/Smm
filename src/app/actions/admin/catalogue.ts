@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
+import { requirePanel, runAsPanel } from "@/lib/tenancy";
 
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
@@ -149,7 +150,23 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
 
   const providerId = String(form.get("providerId") ?? "").trim();
 
+  // A child panel buys from the panel above it, and the form offers only that
+  // panel's services. Re-checked here so a crafted request cannot point a
+  // service at some other panel's catalogue.
+  const panel = await requirePanel();
+  const sourceServiceId = String(form.get("sourceServiceId") ?? "").trim();
+  if (sourceServiceId) {
+    if (!panel.parentId) return { fieldErrors: { sourceServiceId: "The root panel has no panel to buy from" } };
+    const source = await runAsPanel(panel.parentId, () =>
+      db.service.findFirst({ where: { id: sourceServiceId }, select: { id: true } }),
+    );
+    if (!source) return { fieldErrors: { sourceServiceId: "That service is not on the parent panel" } };
+  } else if (panel.parentId) {
+    return { fieldErrors: { sourceServiceId: "Choose the service this is bought from" } };
+  }
+
   const data = {
+    sourceServiceId,
     name,
     categoryId,
     providerId: providerId || null,
