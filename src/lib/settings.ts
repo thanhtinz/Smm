@@ -41,6 +41,8 @@ export const settingDefinitions = {
   "order.minCharge": { group: "order", type: "number", value: 0 },
   "order.duplicateWindowMinutes": { group: "order", type: "number", value: 0 },
   "order.autoSendToProvider": { group: "order", type: "boolean", value: false },
+  "order.refillWindowDays": { group: "order", type: "number", value: 30 },
+  "order.allowCancelRequests": { group: "order", type: "boolean", value: true },
 
   // --- Wallet -------------------------------------------------------------
   "wallet.minDeposit": { group: "wallet", type: "number", value: 20000 },

@@ -170,3 +170,4 @@ Features land one at a time, each verified with a screenshot before the next beg
 - [x] 7 — Admin area
 - [x] 8 — Public API v2
 - [x] 9 — Provider integration
+- [x] 10 — Refill and cancellation requests

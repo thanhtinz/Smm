@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import AppShell, { type NavGroup, type NavItem } from "@/components/app-shell";
 import { getAppContext } from "@/lib/context";
+import { db } from "@/lib/db";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getAppContext();
@@ -8,6 +9,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (ctx.user.role !== "admin") redirect("/dashboard");
 
   const { t } = ctx;
+  const openRequests = await db.orderRequest.count({ where: { status: "pending" } });
 
   const groups: NavGroup[] = [
     {
@@ -27,6 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       title: t("admin.operations"),
       items: [
         { href: "/admin/orders", label: t("dash.orders"), icon: "list" },
+        { href: "/admin/requests", label: t("request.title"), icon: "refresh", badge: openRequests || undefined },
         { href: "/admin/transactions", label: t("wallet.history"), icon: "creditCard" },
         { href: "/admin/users", label: t("admin.users"), icon: "users" },
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
