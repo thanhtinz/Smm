@@ -6,6 +6,7 @@ const START: Record<string, number> = {
   order: 100000,
   transaction: 100000,
   ticket: 1000,
+  request: 1000,
 };
 
 /**

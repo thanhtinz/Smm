@@ -5,6 +5,7 @@ import { getAppContext } from "@/lib/context";
 import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
+import OrderActions from "@/components/orders/order-actions";
 import { ORDER_STATUSES } from "@/lib/orders";
 
 export const metadata: Metadata = { title: "Orders" };
@@ -31,7 +32,10 @@ export default async function OrdersPage({
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-      include: { service: { select: { name: true } } },
+      include: {
+        service: { select: { name: true, refill: true, cancel: true } },
+        requests: { where: { status: { in: ["pending", "approved"] } }, select: { type: true } },
+      },
     }),
     db.order.count({ where }),
     db.order.groupBy({ by: ["status"], where: { userId: user.id }, _count: true }),
@@ -39,6 +43,13 @@ export default async function OrdersPage({
 
   const countFor = (s: string) => counts.find((c) => c.status === s)?._count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const requestLabels = {
+    refill: t("order.refill"),
+    cancel: t("order.cancel"),
+    refillPending: t("order.refillPending"),
+    cancelPending: t("order.cancelPending"),
+  };
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -90,6 +101,7 @@ export default async function OrdersPage({
                     <th className="w-28 text-right">{t("order.charge")}</th>
                     <th className="w-32">{t("common.status")}</th>
                     <th className="w-32">{t("common.date")}</th>
+                    <th className="w-40 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -108,6 +120,17 @@ export default async function OrdersPage({
                         <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
                       </td>
                       <td className="muted text-xs">{formatDate(o.createdAt, locale)}</td>
+                      <td>
+                        <OrderActions
+                          order={{
+                            orderId: o.id,
+                            canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
+                            canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
+                            openRequest: o.requests[0]?.type ?? null,
+                          }}
+                          labels={requestLabels}
+                        />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -123,9 +146,20 @@ export default async function OrdersPage({
                   </div>
                   <p className="mt-1.5 text-sm font-medium">{o.service.name}</p>
                   <p className="muted mt-0.5 truncate text-xs">{o.link}</p>
-                  <div className="mt-2.5 flex justify-between text-xs">
+                  <div className="mt-2.5 flex items-center justify-between gap-3 text-xs">
                     <span className="muted tabular-nums">{o.quantity.toLocaleString()}</span>
                     <span className="font-semibold tabular-nums">{displayMoney(o.charge, currency, locale)}</span>
+                  </div>
+                  <div className="mt-2 flex justify-end">
+                    <OrderActions
+                      order={{
+                        orderId: o.id,
+                        canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
+                        canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
+                        openRequest: o.requests[0]?.type ?? null,
+                      }}
+                      labels={requestLabels}
+                    />
                   </div>
                 </li>
               ))}

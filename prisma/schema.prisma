@@ -111,6 +111,7 @@ model User {
   ticketMessages TicketMessage[]
   notifications Notification[]
   activityLogs  ActivityLog[]
+  orderRequests OrderRequest[]
 }
 
 model Session {
@@ -243,8 +244,31 @@ model Order {
   interval    Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  requests    OrderRequest[]
 
   @@index([userId])
+  @@index([status])
+}
+
+/// Customer-raised refill and cancel requests. Both follow the same
+/// lifecycle, so they share a table with a discriminator rather than two
+/// near-identical ones.
+model OrderRequest {
+  id        String  @id @default(cuid())
+  publicId  Int     @unique
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // refill | cancel
+  status    String  @default("pending") // pending | approved | rejected | completed
+  note      String  @default("")
+  providerRequestId String @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([orderId])
   @@index([status])
 }
 
