@@ -53,10 +53,16 @@ export default async function TransactionsPage({
     <div className="mx-auto max-w-5xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">{t("wallet.history")}</h2>
-        <Link href="/dashboard/wallet" className="btn btn-primary btn-sm">
-          <Icon name="plus" size={15} />
-          {t("dash.addFunds")}
-        </Link>
+        <div className="flex gap-2">
+          <a href={`/api/export/transactions${type ? `?type=${type}` : ""}`} className="btn btn-ghost btn-sm">
+            <Icon name="download" size={15} />
+            {t("common.export")}
+          </a>
+          <Link href="/dashboard/wallet" className="btn btn-primary btn-sm">
+            <Icon name="plus" size={15} />
+            {t("dash.addFunds")}
+          </Link>
+        </div>
       </div>
 
       <div className="scroll-x -mx-1 px-1">

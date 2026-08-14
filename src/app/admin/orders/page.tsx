@@ -93,7 +93,13 @@ export default async function AdminOrdersPage({
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
-      <h2 className="text-2xl font-bold tracking-tight">{t("dash.orders")}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">{t("dash.orders")}</h2>
+        <a href={`/api/export/orders?all=1${status ? `&status=${status}` : ""}`} className="btn btn-ghost btn-sm">
+          <Icon name="download" size={15} />
+          {t("common.exportAll")}
+        </a>
+      </div>
 
       <form className="flex flex-wrap gap-2">
         <div className="relative min-w-56 flex-1">
