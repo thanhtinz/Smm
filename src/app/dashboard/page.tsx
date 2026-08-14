@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { resolveTier } from "@/lib/pricing";
+import { renderNotification } from "@/lib/notify";
 
 export default async function DashboardPage() {
   const ctx = await getAppContext();
@@ -129,14 +130,15 @@ export default async function DashboardPage() {
               <p className="muted px-5 py-8 text-center text-sm">{t("notify.empty")}</p>
             ) : (
               notifications.map((n) => {
+                const { title, body: text } = renderNotification(n, t);
                 const body = (
                   <>
                     <span className={`mt-0.5 shrink-0 text-[var(--${n.level === "info" ? "accent" : n.level})]`}>
                       <Icon name={n.level === "success" ? "checkCircle" : n.level === "warning" ? "alert" : "info"} size={17} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-medium">{n.title}</span>
-                      <span className="muted mt-0.5 block text-xs leading-relaxed">{n.body}</span>
+                      <span className="block text-sm font-medium">{title}</span>
+                      <span className="muted mt-0.5 block text-xs leading-relaxed">{text}</span>
                     </span>
                   </>
                 );

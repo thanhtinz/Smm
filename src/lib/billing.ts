@@ -5,6 +5,7 @@ import { runAsPanel } from "./tenancy";
 import { getSetting } from "./settings";
 import { nextPublicId } from "./ids";
 import { subtreeOf } from "./panels";
+import { notification } from "./notify";
 
 /**
  * Rent for child panels.
@@ -147,13 +148,12 @@ async function chargeRent(
           },
         });
         await tx.notification.create({
-          data: {
+          data: notification({
             userId: panel.ownerUserId,
-            title: `Rent charged for ${panel.name}`,
-            body: `Paid up to ${nextDueAt.toISOString().slice(0, 10)}.`,
-            level: "info",
+            key: "panel.rent",
+            params: { panel: panel.name, until: nextDueAt.toISOString().slice(0, 10) },
             href: "/dashboard/transactions",
-          },
+          }),
         });
 
         return { ok: true as const };
@@ -188,13 +188,13 @@ async function expire(panel: Panel) {
   if (panel.ownerUserId && panel.parentId) {
     await runAsPanel(panel.parentId, () =>
       db.notification.create({
-        data: {
+        data: notification({
           userId: panel.ownerUserId,
-          title: `${panel.name} has been switched off`,
-          body: "Rent is unpaid. Top up your balance and it comes back on the next billing run.",
+          key: "panel.suspended",
+          params: { panel: panel.name },
           level: "danger",
           href: "/dashboard/wallet",
-        },
+        }),
       }),
     );
   }

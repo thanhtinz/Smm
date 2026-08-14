@@ -4,6 +4,7 @@ import { basePrisma } from "./db-base";
 import { nextPublicId } from "./ids";
 import { currentPanelId, runAsPanel } from "./tenancy";
 import { fetchProviderBalance, fetchProviderServices } from "./providers";
+import { notifications, type Alert } from "./notify";
 
 /**
  * Keeping the catalogue in step with a provider.
@@ -22,8 +23,10 @@ export type SyncReport = {
   repriced: number;
   missing: number;
   returned: number;
-  /** Changes worth a human look, in the order they were found. */
-  alerts: string[];
+  /** Changes worth a human look, in the order they were found. Each is the
+      event and its values, not a sentence: an admin reads them in whichever
+      language they picked. */
+  alerts: Alert[];
   error?: string;
 };
 
@@ -85,7 +88,7 @@ export async function syncProviderCatalogue(
           data: { missingSince: new Date(), enabled: false },
         });
         report.missing += 1;
-        report.alerts.push(`#${service.publicId} ${service.name} is no longer listed — taken off sale`);
+        report.alerts.push({ key: "delisted", id: service.publicId, name: service.name });
       }
       continue;
     }
@@ -108,14 +111,17 @@ export async function syncProviderCatalogue(
     if (service.missingSince) {
       data.missingSince = null;
       report.returned += 1;
-      report.alerts.push(`#${service.publicId} ${service.name} is listed again — still off sale`);
+      report.alerts.push({ key: "relisted", id: service.publicId, name: service.name });
     }
 
     if (movedTooFar(service.providerRate, providerRate, provider.alertPercent)) {
-      const direction = providerRate > service.providerRate ? "up" : "down";
-      report.alerts.push(
-        `#${service.publicId} ${service.name} cost moved ${direction}: ${service.providerRate} → ${providerRate}`,
-      );
+      report.alerts.push({
+        key: providerRate > service.providerRate ? "costMovedUp" : "costMovedDown",
+        id: service.publicId,
+        name: service.name,
+        from: service.providerRate,
+        to: providerRate,
+      });
     }
 
     if (service.autoPrice) {
@@ -127,9 +133,13 @@ export async function syncProviderCatalogue(
     } else if (providerRate > service.rate && service.rate > 0) {
       // Hand-priced and now under water. Nothing is changed — the price is
       // the operator's — but it is not left unsaid.
-      report.alerts.push(
-        `#${service.publicId} ${service.name} sells at ${service.rate} and now costs ${providerRate}`,
-      );
+      report.alerts.push({
+        key: "underWater",
+        id: service.publicId,
+        name: service.name,
+        rate: service.rate,
+        cost: providerRate,
+      });
     }
 
     await db.service.update({ where: { id: service.id }, data });
@@ -191,7 +201,11 @@ export async function syncProviderCatalogue(
       data: { balance: amount, currency: balance.data.currency || provider.currency },
     });
     if (provider.lowBalance > 0 && amount < provider.lowBalance) {
-      report.alerts.push(`Balance is down to ${amount} ${balance.data.currency || provider.currency}`);
+      report.alerts.push({
+        key: "lowBalance",
+        amount,
+        currency: balance.data.currency || provider.currency,
+      });
     }
   }
 
@@ -204,22 +218,24 @@ export async function syncProviderCatalogue(
  * user, so every admin on the panel gets one — a warning delivered to a
  * single account is a warning missed while that person is away.
  */
-async function notifyAdmins(providerName: string, alerts: string[]): Promise<void> {
+async function notifyAdmins(providerName: string, alerts: Alert[]): Promise<void> {
   const admins = await db.user.findMany({ where: { role: "admin", banned: false }, select: { id: true } });
   if (admins.length === 0) return;
 
-  const shown = alerts.slice(0, 8);
-  const body =
-    shown.join("\n") + (alerts.length > shown.length ? `\n…and ${alerts.length - shown.length} more` : "");
+  // Eight lines is as much as the bell can show; the rest are counted rather
+  // than dropped silently.
+  const shown: Alert[] = alerts.slice(0, 8);
+  if (alerts.length > shown.length) shown.push({ key: "more", count: alerts.length - shown.length });
 
   await db.notification.createMany({
-    data: admins.map((a) => ({
-      userId: a.id,
+    data: notifications(admins.map((a) => a.id), {
+      // English says "one change" and "two changes"; Vietnamese says neither,
+      // so the count picks the sentence instead of being pasted into it.
+      key: alerts.length === 1 ? "provider.change" : "provider.changes",
+      params: { provider: providerName, count: alerts.length, alerts: shown },
       level: "warning",
-      title: `${providerName}: ${alerts.length} change${alerts.length === 1 ? "" : "s"} to look at`,
-      body,
       href: "/admin/services",
-    })),
+    }),
   });
 }
 

@@ -7,6 +7,7 @@ import { nextPublicId } from "@/lib/ids";
 import { creditDeposit } from "@/lib/payments/credit";
 import { ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
 import type { ActionResult } from "./catalogue";
+import { notification } from "@/lib/notify";
 
 export type { ActionResult };
 
@@ -63,13 +64,13 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
           },
         });
         await tx.notification.create({
-          data: {
+          data: notification({
             userId: order.userId,
-            title: `Order #${order.publicId} refunded`,
-            body: order.service.name,
+            key: "order.refunded",
+            params: { id: order.publicId, service: order.service.name },
             level: "warning",
             href: "/dashboard/orders",
-          },
+          }),
         });
       }
     });
@@ -166,13 +167,14 @@ export async function adjustBalanceAction(_prev: ActionResult, form: FormData): 
         },
       });
       await tx.notification.create({
-        data: {
+        data: notification({
           userId,
-          title: amount > 0 ? "Balance added" : "Balance adjusted",
-          body: note || "An administrator adjusted your balance.",
+          key: amount > 0 ? "balance.added" : "balance.adjusted",
+          // An operator's note is shown as typed rather than translated.
+          params: note ? { note } : {},
           level: amount > 0 ? "success" : "warning",
           href: "/dashboard/transactions",
-        },
+        }),
       });
     });
   } catch (e) {

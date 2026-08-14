@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { nextPublicId } from "@/lib/ids";
+import { notification } from "./notify";
 
 /**
  * Client for upstream panels. They speak the same standard this panel exposes
@@ -381,13 +382,13 @@ export async function settleRefund(
       },
     });
     await tx.notification.create({
-      data: {
+      data: notification({
         userId,
-        title: `Order #${orderPublicId} refunded`,
-        body: "The provider could not complete this order in full.",
+        key: "order.partial",
+        params: { id: orderPublicId },
         level: "warning",
         href: "/dashboard/orders",
-      },
+      }),
     });
   });
 }

@@ -8,6 +8,7 @@ import NotificationBell, { type BellItem } from "@/components/notification-bell"
 import { Icon, type IconName } from "@/components/icons";
 import { db } from "@/lib/db";
 import { dateFormats } from "@/lib/dates";
+import { renderNotification } from "@/lib/notify";
 import { displayMoney } from "@/lib/currency";
 import type { AppContext } from "@/lib/context";
 
@@ -42,8 +43,7 @@ export default async function AppShell({
   ]);
   const bellItems: BellItem[] = recent.map((n) => ({
     id: n.id,
-    title: n.title,
-    body: n.body,
+    ...renderNotification(n, t),
     level: n.level,
     read: n.read,
     href: n.href,

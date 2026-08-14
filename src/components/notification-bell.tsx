@@ -150,7 +150,7 @@ function Row({ item, onOpen }: { item: BellItem; onOpen: () => void }) {
       />
       <span className="min-w-0 flex-1">
         <span className={`block truncate text-sm ${item.read ? "" : "font-semibold"}`}>{item.title}</span>
-        <span className="muted mt-0.5 line-clamp-2 block text-xs">{item.body}</span>
+        <span className="muted whitespace-pre-line mt-0.5 line-clamp-2 block text-xs">{item.body}</span>
         <span className="muted mt-1 block text-[0.68rem]">{item.when}</span>
       </span>
     </>

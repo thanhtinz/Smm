@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
+import { renderNotification } from "@/lib/notify";
 import NotificationList, { type NotificationRow } from "@/components/notification-list";
 
 export const metadata: Metadata = { title: "Notifications" };
@@ -34,8 +35,7 @@ export default async function NotificationsPage({
 
   const items: NotificationRow[] = rows.map((n) => ({
     id: n.id,
-    title: n.title,
-    body: n.body,
+    ...renderNotification(n, t),
     level: n.level,
     read: n.read,
     href: n.href,
