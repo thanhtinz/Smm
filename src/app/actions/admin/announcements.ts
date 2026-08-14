@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import type { ActionResult } from "./catalogue";
+import { readerMessages } from "@/lib/context";
 
 export type { ActionResult };
 
@@ -16,14 +17,15 @@ function revalidateAnnouncements() {
 }
 
 export async function saveAnnouncementAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  if (!title) return { fieldErrors: { title: "Enter a title" } };
+  if (!title) return { fieldErrors: { title: t("adm.titleRequired") } };
 
   const body = String(form.get("body") ?? "").trim();
-  if (!body) return { fieldErrors: { body: "Enter the message" } };
+  if (!body) return { fieldErrors: { body: t("adm.messageRequired") } };
 
   const level = String(form.get("level") ?? "info");
   const data = {
@@ -42,9 +44,10 @@ export async function saveAnnouncementAction(_prev: ActionResult, form: FormData
 }
 
 export async function deleteAnnouncementAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const row = await db.announcement.findUnique({ where: { id } });
-  if (!row) return { error: "Announcement not found" };
+  if (!row) return { error: t("adm.announcementMissing") };
 
   await db.announcement.delete({ where: { id } });
   await logActivity(admin.id, "admin.announcement.delete", row.title);
@@ -53,9 +56,10 @@ export async function deleteAnnouncementAction(id: string): Promise<ActionResult
 }
 
 export async function setAnnouncementEnabledAction(id: string, enabled: boolean): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const row = await db.announcement.findUnique({ where: { id } });
-  if (!row) return { error: "Announcement not found" };
+  if (!row) return { error: t("adm.announcementMissing") };
 
   await db.announcement.update({ where: { id }, data: { enabled } });
   await logActivity(admin.id, "admin.announcement.toggle", `${row.title} ${enabled ? "on" : "off"}`);

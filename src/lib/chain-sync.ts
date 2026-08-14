@@ -8,6 +8,7 @@ import { updateExchangeRates } from "./exchange";
 import { syncDueProviders } from "./provider-sync";
 import { runAutoDecisions } from "./auto-orders";
 import { notification, requestKey } from "./notify";
+import { englishMessage } from "./fault";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -183,7 +184,11 @@ export async function runSyncCycle() {
   // Last: a repriced catalogue should not change what the orders dispatched a
   // moment ago were charged at.
   const catalogue = await syncDueProviders();
-  failures.push(...catalogue.filter((r) => r.error).map((r) => `${r.provider}: ${r.error}`));
+  failures.push(
+    ...catalogue
+      .filter((r) => r.fault)
+      .map((r) => `${r.provider}: ${englishMessage(r.fault!.key, r.fault!.vars)}`),
+  );
 
   return {
     sent,

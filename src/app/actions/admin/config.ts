@@ -10,6 +10,7 @@ import { updateExchangeRates } from "@/lib/exchange";
 import { invalidateDictionaries } from "@/lib/i18n";
 import { drivers, parseConfig } from "@/lib/payments";
 import type { ActionResult } from "./catalogue";
+import { readerMessages } from "@/lib/context";
 
 export type { ActionResult };
 
@@ -25,6 +26,7 @@ function bool(form: FormData, key: string) {
 // ----------------------------------------------------------------- settings
 
 export async function saveSettingsAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   // Only keys the form declares are touched, so one group's form cannot
@@ -58,7 +60,7 @@ export async function saveSettingsAction(_prev: ActionResult, form: FormData): P
         try {
           value = JSON.parse(String(form.get(key) ?? "{}"));
         } catch {
-          return { fieldErrors: { [key]: "That is not valid JSON" } };
+          return { fieldErrors: { [key]: t("adm.badJson") } };
         }
         break;
       default:
@@ -76,11 +78,12 @@ export async function saveSettingsAction(_prev: ActionResult, form: FormData): P
 // ---------------------------------------------------------- payment methods
 
 export async function savePaymentMethodAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const method = await db.paymentMethod.findUnique({ where: { id } });
-  if (!method) return { error: "Payment method not found" };
+  if (!method) return { error: t("adm.methodMissing") };
 
   const driver = drivers[method.driver];
   const config = parseConfig(method.config);
@@ -127,17 +130,18 @@ export async function savePaymentMethodAction(_prev: ActionResult, form: FormDat
 // --------------------------------------------------------------- currencies
 
 export async function saveCurrencyAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const code = String(form.get("code") ?? "").trim().toUpperCase();
-  if (!/^[A-Z]{3}$/.test(code)) return { fieldErrors: { code: "Use a three-letter code, e.g. USD" } };
+  if (!/^[A-Z]{3}$/.test(code)) return { fieldErrors: { code: t("adm.currencyCode") } };
 
   const rate = num(form, "rate", -1);
-  if (rate <= 0) return { fieldErrors: { rate: "Rate must be greater than zero" } };
+  if (rate <= 0) return { fieldErrors: { rate: t("adm.ratePositive") } };
 
   const clash = await db.currency.findFirst({ where: { code, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { code: "That currency already exists" } };
+  if (clash) return { fieldErrors: { code: t("adm.currencyExists") } };
 
   const data = {
     code,
@@ -160,10 +164,11 @@ export async function saveCurrencyAction(_prev: ActionResult, form: FormData): P
 }
 
 export async function deleteCurrencyAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
   const currency = await db.currency.findUnique({ where: { id } });
-  if (!currency) return { error: "Currency not found" };
-  if (currency.isBase) return { error: "The base currency cannot be deleted. Set another as base first." };
+  if (!currency) return { error: t("adm.currencyMissing") };
+  if (currency.isBase) return { error: t("adm.currencyBase") };
 
   await db.currency.delete({ where: { id } });
   await logActivity(admin.id, "admin.currency.delete", currency.code);
@@ -174,10 +179,11 @@ export async function deleteCurrencyAction(id: string): Promise<ActionResult> {
 
 /** Moving the base rebases every other rate so relative values are preserved. */
 export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
   const target = await db.currency.findUnique({ where: { id } });
-  if (!target) return { error: "Currency not found" };
-  if (target.rate <= 0) return { error: "That currency has no usable rate." };
+  if (!target) return { error: t("adm.currencyMissing") };
+  if (target.rate <= 0) return { error: t("adm.currencyNoRate") };
 
   const all = await db.currency.findMany();
   const divisor = target.rate;
@@ -203,6 +209,7 @@ export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
 
 /** Pulls fresh rates immediately, ignoring the schedule. */
 export async function refreshRatesAction(): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
   const result = await updateExchangeRates(true);
 
@@ -210,15 +217,16 @@ export async function refreshRatesAction(): Promise<ActionResult> {
   invalidateCurrencies();
   revalidatePath("/", "layout");
 
-  if ("skipped" in result) return { error: `Rates not updated: ${result.skipped}` };
-  if (result.updated.length === 0) return { error: "The rates service returned nothing for these currencies." };
+  if ("skipped" in result) return { error: t("adm.ratesSkipped", { reason: result.skipped }) };
+  if (result.updated.length === 0) return { error: t("adm.ratesEmpty") };
   return { ok: true };
 }
 
 export async function setCurrencyAutoAction(id: string, autoUpdate: boolean): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
   const currency = await db.currency.findUnique({ where: { id } });
-  if (!currency) return { error: "Currency not found" };
+  if (!currency) return { error: t("adm.currencyMissing") };
 
   await db.currency.update({ where: { id }, data: { autoUpdate } });
   await logActivity(admin.id, "admin.currency.auto", `${currency.code} ${autoUpdate ? "on" : "off"}`);
@@ -227,16 +235,17 @@ export async function setCurrencyAutoAction(id: string, autoUpdate: boolean): Pr
 }
 
 export async function saveLanguageAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const code = String(form.get("code") ?? "").trim().toLowerCase();
   if (!/^[a-z]{2}(-[a-z]{2})?$/.test(code)) {
-    return { fieldErrors: { code: "Use a language code like vi, en or pt-br" } };
+    return { fieldErrors: { code: t("adm.languageCode") } };
   }
 
   const clash = await db.language.findFirst({ where: { code, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { code: "That language already exists" } };
+  if (clash) return { fieldErrors: { code: t("adm.languageExists") } };
 
   const data = {
     code,
@@ -257,12 +266,13 @@ export async function saveLanguageAction(_prev: ActionResult, form: FormData): P
 }
 
 export async function deleteLanguageAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
   const language = await db.language.findUnique({ where: { id } });
-  if (!language) return { error: "Language not found" };
+  if (!language) return { error: t("adm.languageMissing") };
 
   const remaining = await db.language.count({ where: { enabled: true, NOT: { id } } });
-  if (remaining === 0) return { error: "At least one language must remain enabled." };
+  if (remaining === 0) return { error: t("adm.languageLast") };
 
   await db.language.delete({ where: { id } });
   await logActivity(admin.id, "admin.language.delete", language.code);
@@ -273,11 +283,12 @@ export async function deleteLanguageAction(id: string): Promise<ActionResult> {
 
 /** Saves only the keys that differ from what is already stored. */
 export async function saveTranslationsAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
 
   const languageId = String(form.get("languageId") ?? "");
   const language = await db.language.findUnique({ where: { id: languageId } });
-  if (!language) return { error: "Language not found" };
+  if (!language) return { error: t("adm.languageMissing") };
 
   const existing = await db.translation.findMany({ where: { languageId } });
   const current = new Map(existing.map((t) => [t.key, t.value]));
@@ -326,21 +337,22 @@ const COLOR_TOKENS = [
 ] as const;
 
 export async function saveThemeAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  if (!name) return { fieldErrors: { name: "Enter a name" } };
+  if (!name) return { fieldErrors: { name: t("adm.nameRequired") } };
 
   const slug = String(form.get("slug") ?? "")
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
-  if (!slug) return { fieldErrors: { slug: "Enter a slug" } };
+  if (!slug) return { fieldErrors: { slug: t("adm.slugRequired") } };
 
   const clash = await db.theme.findFirst({ where: { slug, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { slug: "That slug is already used" } };
+  if (clash) return { fieldErrors: { slug: t("adm.slugTaken") } };
 
   const read = (mode: "light" | "dark") => {
     const out: Record<string, string> = {};
@@ -375,13 +387,14 @@ export async function saveThemeAction(_prev: ActionResult, form: FormData): Prom
 }
 
 export async function deleteThemeAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireRootAdmin();
   const theme = await db.theme.findUnique({ where: { id } });
-  if (!theme) return { error: "Theme not found" };
-  if (theme.isDefault) return { error: "The default theme cannot be deleted. Make another one default first." };
+  if (!theme) return { error: t("adm.themeMissing") };
+  if (theme.isDefault) return { error: t("adm.themeDefault") };
 
   const remaining = await db.theme.count({ where: { enabled: true, NOT: { id } } });
-  if (remaining === 0) return { error: "At least one theme must remain enabled." };
+  if (remaining === 0) return { error: t("adm.themeLast") };
 
   // Anyone still on this skin falls back to the default.
   const fallback = await db.theme.findFirst({ where: { isDefault: true } });
@@ -394,9 +407,10 @@ export async function deleteThemeAction(id: string): Promise<ActionResult> {
 }
 
 export async function setDefaultThemeAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const theme = await db.theme.findUnique({ where: { id } });
-  if (!theme) return { error: "Theme not found" };
+  if (!theme) return { error: t("adm.themeMissing") };
 
   // Which theme this panel opens on is its own setting. The isDefault flag on
   // the shared Theme row decides what a panel with no setting falls back to,
@@ -420,6 +434,7 @@ export async function setDefaultThemeAction(id: string): Promise<ActionResult> {
 // ------------------------------------------------------------------ coupons
 
 export async function saveCouponAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
@@ -427,20 +442,20 @@ export async function saveCouponAction(_prev: ActionResult, form: FormData): Pro
     .trim()
     .toUpperCase()
     .replace(/\s+/g, "");
-  if (code.length < 3) return { fieldErrors: { code: "Use at least three characters" } };
+  if (code.length < 3) return { fieldErrors: { code: t("adm.threeChars") } };
 
   const clash = await db.coupon.findFirst({ where: { code, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { code: "That code already exists" } };
+  if (clash) return { fieldErrors: { code: t("adm.codeExists") } };
 
   const type = String(form.get("type") ?? "percent") === "fixed" ? "fixed" : "percent";
   const value = num(form, "value", -1);
-  if (value <= 0) return { fieldErrors: { value: "Enter a value above zero" } };
-  if (type === "percent" && value > 100) return { fieldErrors: { value: "A percentage cannot exceed 100" } };
+  if (value <= 0) return { fieldErrors: { value: t("adm.abovezero") } };
+  if (type === "percent" && value > 100) return { fieldErrors: { value: t("adm.percentMax") } };
 
   const expiresRaw = String(form.get("expiresAt") ?? "").trim();
   const expiresAt = expiresRaw ? new Date(expiresRaw) : null;
   if (expiresAt && Number.isNaN(expiresAt.getTime())) {
-    return { fieldErrors: { expiresAt: "That is not a valid date" } };
+    return { fieldErrors: { expiresAt: t("adm.badDate") } };
   }
 
   const data = {
@@ -464,6 +479,7 @@ export async function saveCouponAction(_prev: ActionResult, form: FormData): Pro
 }
 
 export async function deleteCouponAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const used = await db.couponRedemption.count({ where: { couponId: id } });
   if (used > 0) {
@@ -471,7 +487,7 @@ export async function deleteCouponAction(id: string): Promise<ActionResult> {
     // disabled rather than deleted.
     await db.coupon.update({ where: { id }, data: { enabled: false } });
     revalidatePath("/admin/coupons");
-    return { error: `This coupon has been used ${used} time${used === 1 ? "" : "s"}, so it was disabled instead of deleted.` };
+    return { error: t("adm.couponInUse", { count: used }) };
   }
   await db.coupon.delete({ where: { id } });
   await logActivity(admin.id, "admin.coupon.delete", id);

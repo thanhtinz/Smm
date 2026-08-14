@@ -1,5 +1,6 @@
 import { db } from "./db";
 import { getSetting } from "./settings";
+import type { Fault } from "./fault";
 
 /**
  * The two checks that stand between an account and a runaway order loop.
@@ -12,12 +13,6 @@ import { getSetting } from "./settings";
 /** Orders that were paid for. A refunded one should not block a retry. */
 const COUNTED_STATUSES = ["pending", "processing", "inprogress", "completed", "partial"];
 
-/**
- * What was refused and the numbers the sentence needs — not the sentence.
- * The same refusal is read by a customer in their own language on the web and
- * by a reseller's client over the API, where the wording is fixed English.
- */
-export type Fault = { key: string; vars?: Record<string, string | number> };
 export type GuardResult = Fault | null;
 
 /**

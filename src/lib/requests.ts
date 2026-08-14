@@ -6,8 +6,15 @@ import { nextPublicId } from "./ids";
 import { runAsPanel } from "./tenancy";
 import { requestProviderCancel, requestProviderRefill } from "./providers";
 import { notification, requestKey } from "./notify";
+import { englishMessage, type Fault } from "./fault";
 
-export type RequestOutcome = { error?: string; ok?: true };
+/**
+ * Refusals here are read three ways at once: shown to an admin, written into
+ * the request's note and copied into the activity log — and the cron pass that
+ * auto-approves has no reader at all. So this says what was wrong and leaves
+ * the wording to each of them.
+ */
+export type RequestOutcome = { ok?: true } | Fault;
 
 /**
  * Approving a cancel returns the customer's money; approving a refill does
@@ -44,7 +51,7 @@ async function forwardTarget(orderId: string): Promise<Forward | null> {
 async function forwardRequest(
   request: { id: string; type: string; publicId: number },
   target: Forward,
-): Promise<{ error?: string }> {
+): Promise<Fault | Record<string, never>> {
   if (target.kind === "provider") {
     const order = await db.order.findUniqueOrThrow({
       where: { id: target.orderId },
@@ -52,14 +59,14 @@ async function forwardRequest(
     });
     // Whoever took the order is who can refill or cancel it.
     const provider = order.provider ?? order.service.provider;
-    if (!provider?.enabled) return { error: "The provider for this order is disabled." };
+    if (!provider?.enabled) return { key: "adm.providerDisabled" };
 
     const result =
       request.type === "refill"
         ? await requestProviderRefill(provider, order.providerOrderId)
         : await requestProviderCancel(provider, order.providerOrderId);
 
-    if (!result.ok) return { error: result.error };
+    if (!result.ok) return { key: "adm.providerCallFailed", vars: { detail: result.error } };
     await db.orderRequest.update({ where: { id: request.id }, data: { providerRequestId: result.data } });
     return {};
   }
@@ -94,12 +101,12 @@ export async function resolveRequest(
   note = "",
   actorId: string | null = null,
 ): Promise<RequestOutcome> {
-  if (!["approved", "rejected", "completed"].includes(decision)) return { error: "Unknown decision" };
+  if (!["approved", "rejected", "completed"].includes(decision)) return { key: "adm.unknownDecision" };
 
   const request = await db.orderRequest.findUnique({ where: { id }, include: { order: true } });
-  if (!request) return { error: "That request no longer exists." };
+  if (!request) return { key: "adm.requestMissing" };
   if (request.status === "rejected" || request.status === "completed") {
-    return { error: "This request has already been resolved." };
+    return { key: "adm.requestResolved" };
   }
 
   // Where this order is actually fulfilled decides what "approved" can do
@@ -150,11 +157,14 @@ export async function resolveRequest(
     // not throw here. It is recorded on the request instead, where an operator
     // can see it and retry rather than guess.
     const outcome = await forwardRequest(request, forward).catch((error: unknown) => ({
-      error: error instanceof Error ? error.message : "Could not pass this request on.",
+      key: "adm.forwardFailed",
+      vars: { detail: error instanceof Error ? error.message : "" },
     }));
-    if (outcome.error) {
-      await db.orderRequest.update({ where: { id }, data: { note: outcome.error } });
-      await logActivity(actorId, "request.forward.failed", `${request.type} #${request.publicId}: ${outcome.error}`);
+    if ("key" in outcome) {
+      // Stored and logged, so English: the note outlives whoever is signed in.
+      const note = englishMessage(outcome.key, outcome.vars);
+      await db.orderRequest.update({ where: { id }, data: { note } });
+      await logActivity(actorId, "request.forward.failed", `${request.type} #${request.publicId}: ${note}`);
     }
   }
 

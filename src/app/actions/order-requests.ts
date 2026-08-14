@@ -33,7 +33,7 @@ export async function createOrderRequestAction(orderId: string, type: string): P
 
     const days = Number(await getSetting("order.refillWindowDays")) || 0;
     if (days > 0 && order.updatedAt.getTime() < Date.now() - days * 864e5) {
-      return { error: `The refill window for this order closed after ${days} days.` };
+      return { error: t("err.refillWindow", { days }) };
     }
   } else {
     if (!(await getSetting("order.allowCancelRequests"))) {
@@ -60,6 +60,8 @@ export async function createOrderRequestAction(orderId: string, type: string): P
 }
 
 export async function resolveOrderRequestAction(id: string, decision: string, note = ""): Promise<RequestState> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
-  return resolveRequest(id, decision, note, admin.id);
+  const outcome = await resolveRequest(id, decision, note, admin.id);
+  return "key" in outcome ? { error: t(outcome.key, outcome.vars) } : outcome;
 }

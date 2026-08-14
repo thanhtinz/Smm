@@ -44,10 +44,10 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   if (!currency) return { fieldErrors: { currency: t("err.currencyForMethod") } };
 
   if (method.minAmount > 0 && amount < method.minAmount) {
-    return { fieldErrors: { amount: `Minimum for this method is ${method.minAmount.toLocaleString()} ${currency.code}` } };
+    return { fieldErrors: { amount: t("err.methodMin", { amount: method.minAmount.toLocaleString(), currency: currency.code }) } };
   }
   if (method.maxAmount > 0 && amount > method.maxAmount) {
-    return { fieldErrors: { amount: `Maximum for this method is ${method.maxAmount.toLocaleString()} ${currency.code}` } };
+    return { fieldErrors: { amount: t("err.methodMax", { amount: method.maxAmount.toLocaleString(), currency: currency.code }) } };
   }
 
   // The panel's own floor is expressed in the base currency.
@@ -56,10 +56,10 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   const minDeposit = Number(await getSetting("wallet.minDeposit")) || 0;
   const maxDeposit = Number(await getSetting("wallet.maxDeposit")) || 0;
   if (minDeposit > 0 && amountInBase < minDeposit) {
-    return { fieldErrors: { amount: `Minimum deposit is ${minDeposit.toLocaleString()} ${base.code}` } };
+    return { fieldErrors: { amount: t("err.depositMin", { amount: minDeposit.toLocaleString(), currency: base.code }) } };
   }
   if (maxDeposit > 0 && amountInBase > maxDeposit) {
-    return { fieldErrors: { amount: `Maximum deposit is ${maxDeposit.toLocaleString()} ${base.code}` } };
+    return { fieldErrors: { amount: t("err.depositMax", { amount: maxDeposit.toLocaleString(), currency: base.code }) } };
   }
 
   const totals = computeTotals(amount, method);
@@ -107,7 +107,6 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
  * that was temporarily unreachable.
  */
 export async function prepareDeposit(transactionId: string) {
-  const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -119,9 +118,9 @@ export async function prepareDeposit(transactionId: string) {
 
   const driver = drivers[txn.method.driver];
   const config = parseConfig(txn.method.config);
-  if (!driver) return { kind: "unconfigured" as const, message: t("err.payDriver") };
+  if (!driver) return { kind: "unconfigured" as const, key: "err.payDriver" };
   if (!isConfigured(txn.method.driver, config)) {
-    return { kind: "unconfigured" as const, message: t("err.payUnconfigured") };
+    return { kind: "unconfigured" as const, key: "err.payUnconfigured" };
   }
 
   const prefix = (config.prefix || "NOVA").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "NOVA";
@@ -137,7 +136,7 @@ export async function prepareDeposit(transactionId: string) {
       appUrl: await panelBaseUrl(),
     });
   } catch {
-    return { kind: "unconfigured" as const, message: t("err.payUnreachable") };
+    return { kind: "unconfigured" as const, key: "err.payUnreachable" };
   }
 }
 

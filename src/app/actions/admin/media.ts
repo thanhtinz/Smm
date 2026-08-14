@@ -2,6 +2,7 @@
 
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
+import { readerMessages } from "@/lib/context";
 
 /**
  * SVG is deliberately excluded: it can carry script, and these files are
@@ -44,12 +45,13 @@ function readDimensions(mime: string, bytes: Uint8Array): { width: number; heigh
 }
 
 export async function uploadImageAction(formData: FormData): Promise<UploadResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choose a file to upload" };
-  if (!ALLOWED.has(file.type)) return { error: "Use a PNG, JPEG, WebP, GIF or AVIF image" };
-  if (file.size > MAX_BYTES) return { error: `The image must be under ${Math.round(MAX_BYTES / 1024)} KB` };
+  if (!(file instanceof File) || file.size === 0) return { error: t("adm.chooseFile") };
+  if (!ALLOWED.has(file.type)) return { error: t("adm.imageType") };
+  if (file.size > MAX_BYTES) return { error: t("adm.imageTooBig", { kb: Math.round(MAX_BYTES / 1024) }) };
 
   const bytes = new Uint8Array(await file.arrayBuffer());
   const { width, height } = readDimensions(file.type, bytes);

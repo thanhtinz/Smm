@@ -14,7 +14,7 @@ import {
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { guardOrder } from "@/lib/order-guard";
-import { englishMessage } from "@/lib/notify";
+import { englishMessage } from "@/lib/fault";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";

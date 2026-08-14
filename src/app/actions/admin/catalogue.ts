@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
+import { readerMessages } from "@/lib/context";
 
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
@@ -41,17 +42,18 @@ function revalidateCatalogue() {
 // ---------------------------------------------------------------- platforms
 
 export async function savePlatformAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  if (!name) return { fieldErrors: { name: "Enter a name" } };
+  if (!name) return { fieldErrors: { name: t("adm.nameRequired") } };
 
   const slug = slugify(String(form.get("slug") ?? "").trim() || name);
-  if (!slug) return { fieldErrors: { slug: "Enter a slug" } };
+  if (!slug) return { fieldErrors: { slug: t("adm.slugRequired") } };
 
   const clash = await db.platform.findFirst({ where: { slug, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { slug: "That slug is already used" } };
+  if (clash) return { fieldErrors: { slug: t("adm.slugTaken") } };
 
   const data = {
     name,
@@ -76,10 +78,11 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
 }
 
 export async function deletePlatformAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const inUse = await db.category.count({ where: { platformId: id } });
   if (inUse > 0) {
-    return { error: `This platform still has ${inUse} categor${inUse === 1 ? "y" : "ies"}. Move or delete them first.` };
+    return { error: t("adm.platformInUse", { count: inUse }) };
   }
   await db.platform.delete({ where: { id } });
   await logActivity(admin.id, "admin.platform.delete", id);
@@ -90,14 +93,15 @@ export async function deletePlatformAction(id: string): Promise<ActionResult> {
 // --------------------------------------------------------------- categories
 
 export async function saveCategoryAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  if (!name) return { fieldErrors: { name: "Enter a name" } };
+  if (!name) return { fieldErrors: { name: t("adm.nameRequired") } };
 
   const platformId = String(form.get("platformId") ?? "").trim();
-  if (!platformId) return { fieldErrors: { platformId: "Choose a platform" } };
+  if (!platformId) return { fieldErrors: { platformId: t("adm.choosePlatform") } };
 
   const data = {
     name,
@@ -120,10 +124,11 @@ export async function saveCategoryAction(_prev: ActionResult, form: FormData): P
 }
 
 export async function deleteCategoryAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const inUse = await db.service.count({ where: { categoryId: id } });
   if (inUse > 0) {
-    return { error: `This category still has ${inUse} service${inUse === 1 ? "" : "s"}. Move or delete them first.` };
+    return { error: t("adm.categoryInUse", { count: inUse }) };
   }
   await db.category.delete({ where: { id } });
   await logActivity(admin.id, "admin.category.delete", id);
@@ -134,22 +139,23 @@ export async function deleteCategoryAction(id: string): Promise<ActionResult> {
 // ----------------------------------------------------------------- services
 
 export async function saveServiceAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  if (!name) return { fieldErrors: { name: "Enter a name" } };
+  if (!name) return { fieldErrors: { name: t("adm.nameRequired") } };
 
   const categoryId = String(form.get("categoryId") ?? "").trim();
-  if (!categoryId) return { fieldErrors: { categoryId: "Choose a category" } };
+  if (!categoryId) return { fieldErrors: { categoryId: t("adm.chooseCategory") } };
 
   const rate = num(form, "rate", -1);
-  if (rate < 0) return { fieldErrors: { rate: "Enter a rate per 1000" } };
+  if (rate < 0) return { fieldErrors: { rate: t("adm.rateRequired") } };
 
   const min = num(form, "min", 0);
   const max = num(form, "max", 0);
-  if (min <= 0) return { fieldErrors: { min: "Minimum must be greater than zero" } };
-  if (max < min) return { fieldErrors: { max: "Maximum must be at least the minimum" } };
+  if (min <= 0) return { fieldErrors: { min: t("adm.minPositive") } };
+  if (max < min) return { fieldErrors: { max: t("adm.maxAboveMin") } };
 
   const providerId = String(form.get("providerId") ?? "").trim();
 
@@ -159,13 +165,13 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
   const panel = await requirePanel();
   const sourceServiceId = String(form.get("sourceServiceId") ?? "").trim();
   if (sourceServiceId) {
-    if (!panel.parentId) return { fieldErrors: { sourceServiceId: "The root panel has no panel to buy from" } };
+    if (!panel.parentId) return { fieldErrors: { sourceServiceId: t("adm.rootNoParent") } };
     const source = await runAsPanel(panel.parentId, () =>
       db.service.findFirst({ where: { id: sourceServiceId }, select: { id: true } }),
     );
-    if (!source) return { fieldErrors: { sourceServiceId: "That service is not on the parent panel" } };
+    if (!source) return { fieldErrors: { sourceServiceId: t("adm.serviceNotParent") } };
   } else if (panel.parentId) {
-    return { fieldErrors: { sourceServiceId: "Choose the service this is bought from" } };
+    return { fieldErrors: { sourceServiceId: t("adm.chooseSource") } };
   }
 
   const data = {
@@ -208,7 +214,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     }
     const tierRate = Number(raw);
     if (!Number.isFinite(tierRate) || tierRate < 0) {
-      return { fieldErrors: { [`tierPrice:${tier.id}`]: "Enter a price" } };
+      return { fieldErrors: { [`tierPrice:${tier.id}`]: t("adm.priceRequired") } };
     }
     await db.tierPrice.upsert({
       where: { tierId_serviceId: { tierId: tier.id, serviceId: service.id } },
@@ -223,6 +229,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
 }
 
 export async function deleteServiceAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const inUse = await db.order.count({ where: { serviceId: id } });
   if (inUse > 0) {
@@ -230,7 +237,7 @@ export async function deleteServiceAction(id: string): Promise<ActionResult> {
     await db.service.update({ where: { id }, data: { enabled: false } });
     await logActivity(admin.id, "admin.service.disable", id);
     revalidateCatalogue();
-    return { error: `This service has ${inUse} order${inUse === 1 ? "" : "s"} against it, so it was disabled instead of deleted.` };
+    return { error: t("adm.serviceInUse", { count: inUse }) };
   }
   await db.service.delete({ where: { id } });
   await logActivity(admin.id, "admin.service.delete", id);
