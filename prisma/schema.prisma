@@ -790,7 +790,11 @@ model PanelDomain {
   verified    Boolean  @default(false)
   isPrimary   Boolean  @default(false)
   /// Random token the owner publishes as a TXT record to prove ownership.
+  /// Unused for hostnames inside a zone the panel itself controls.
   verifyToken String   @default("")
+  /// Set when the panel created this hostname's DNS record through
+  /// Cloudflare, so deleting the hostname can take the record with it.
+  dnsRecordId String   @default("")
   createdAt   DateTime @default(now())
 
   @@index([panelId])
