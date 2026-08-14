@@ -17,6 +17,7 @@ import { guardOrder } from "@/lib/order-guard";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
+import { STAFF_ROLES } from "@/lib/two-factor";
 
 /**
  * Reseller API, shaped to the de-facto SMM panel standard so existing client
@@ -45,6 +46,13 @@ export async function POST(request: Request) {
   if (!(await withinRateLimit(user.id))) return fail("Rate limit exceeded");
 
   const action = String(params.action ?? "");
+
+  // Reads stay open while the panel is closed for maintenance, so a reseller
+  // can still track orders it has already paid for. Only new business stops.
+  if (action === "add" && (await getSetting("maintenance.enabled")) && !STAFF_ROLES.has(user.role)) {
+    return NextResponse.json({ error: String(await getSetting("maintenance.message")) }, { status: 503 });
+  }
+
   switch (action) {
     case "services":
       return services(user);
