@@ -23,6 +23,7 @@ export default async function AdminSettingsPage() {
     // added since is left to the form's derived name rather than showing
     // "setting.foo.bar" to an operator.
     const named = t(`setting.${key}`);
+    const options = (def as { options?: readonly string[] }).options;
     const entry: SettingField = {
       key,
       label: named === `setting.${key}` ? "" : named,
@@ -31,8 +32,17 @@ export default async function AdminSettingsPage() {
       uploadLabel: t("admin.upload"),
       removeLabel: t("admin.remove"),
       type: (def as { type: string }).type,
-      options: (def as { options?: readonly string[] }).options
-        ? [...((def as { options?: readonly string[] }).options as readonly string[])]
+      options: options ? [...options] : undefined,
+      // A stored value like "priceBoard" is a code, not a word. Where the
+      // dictionary names one, the operator reads the name; where it does
+      // not, the code stands in rather than an empty option.
+      optionLabels: options
+        ? Object.fromEntries(
+            options.map((o) => {
+              const label = t(`settingOption.${key}.${o}`);
+              return [o, label === `settingOption.${key}.${o}` ? o : label];
+            }),
+          )
         : undefined,
       value: (current as Record<string, unknown>)[key],
     };

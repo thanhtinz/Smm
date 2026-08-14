@@ -20,7 +20,7 @@ export default async function NewOrderPage() {
     return (
       <div className="alert alert-info mx-auto max-w-2xl" role="status">
         <Icon name="info" size={16} />
-        <span>Ordering is temporarily disabled. Please try again later.</span>
+        <span>{t("order.disabled")}</span>
       </div>
     );
   }
