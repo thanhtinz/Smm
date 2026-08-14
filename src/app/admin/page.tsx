@@ -6,6 +6,9 @@ import { displayMoney } from "@/lib/currency";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon, type IconName } from "@/components/icons";
+import SyncStatus, { type SyncView } from "@/components/admin/sync-status";
+import { syncHealth } from "@/lib/sync-health";
+import { getRootPanel, currentPanelId } from "@/lib/tenancy";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -27,6 +30,33 @@ export default async function AdminOverviewPage() {
     }),
   ]);
 
+  const [health, root, panelId] = await Promise.all([syncHealth(), getRootPanel(), currentPanelId()]);
+
+  // Worded from the state rather than assembled from fragments: "never",
+  // "quiet for 40 minutes" and "started and never finished" are three
+  // different problems and each has its own sentence.
+  const sync: SyncView = {
+    tone: health.stale || health.unfinished ? "warn" : "ok",
+    headline: health.unfinished
+      ? t("sync.unfinished")
+      : health.lastAt === null
+        ? t("sync.never")
+        : health.stale
+          ? t("sync.stale", { n: health.ageMinutes ?? 0 })
+          : (health.ageMinutes ?? 0) < 1
+            ? t("sync.justNow")
+            : t("sync.ok", { n: health.ageMinutes ?? 0 }),
+    detail:
+      health.lastAt === null
+        ? ""
+        : `${t("sync.counts", { dispatched: health.dispatched, synced: health.synced })}${
+            health.trigger && health.trigger !== "cron" ? ` · ${t("sync.byHand")}` : ""
+          }`,
+    failures: health.failures,
+    // One cycle covers every panel, so only the root panel's admin may start one.
+    canRun: Boolean(root && root.id === panelId),
+  };
+
   const shortcuts: { href: string; label: string; icon: IconName }[] = [
     { href: "/admin/platforms", label: t("admin.platforms"), icon: "globe" },
     { href: "/admin/categories", label: t("admin.categories"), icon: "layers" },
@@ -37,6 +67,11 @@ export default async function AdminOverviewPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <h2 className="text-2xl font-bold tracking-tight">{t("admin.overview")}</h2>
+
+      <SyncStatus
+        view={sync}
+        labels={{ runNow: t("sync.runNow"), running: t("sync.running"), failures: t("sync.failures") }}
+      />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         <StatCard label={t("admin.revenue")} value={displayMoney(revenue._sum.charge ?? 0, currency, locale)} icon="trending" />
