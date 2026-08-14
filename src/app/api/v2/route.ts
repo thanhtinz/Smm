@@ -12,6 +12,7 @@ import {
 } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
+import { guardOrder } from "@/lib/order-guard";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
@@ -169,6 +170,9 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     if (!Number.isInteger(runs) || runs < 2) return fail("Incorrect runs");
     if (!Number.isInteger(interval) || interval < 1) return fail("Incorrect interval");
   }
+
+  const guarded = await guardOrder(userId, service.id, link);
+  if (guarded) return fail(guarded.error);
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   const rate = await priceService(await resolveTier(user), service);

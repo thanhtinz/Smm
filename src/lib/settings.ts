@@ -49,6 +49,7 @@ export const settingDefinitions = {
   "order.enabled": { group: "order", type: "boolean", value: true },
   "order.minCharge": { group: "order", type: "number", value: 0 },
   "order.duplicateWindowMinutes": { group: "order", type: "number", value: 0 },
+  "order.maxPerMinute": { group: "order", type: "number", value: 0 },
   "order.autoSendToProvider": { group: "order", type: "boolean", value: false },
   "order.refillWindowDays": { group: "order", type: "number", value: 30 },
   "order.allowCancelRequests": { group: "order", type: "boolean", value: true },

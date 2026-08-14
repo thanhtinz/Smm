@@ -15,6 +15,7 @@ import {
 } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
+import { duplicateOrder, guardOrder, orderRateLimit } from "@/lib/order-guard";
 
 export type OrderState = {
   error?: string;
@@ -105,6 +106,11 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     if (!service.dripfeed) fieldErrors.dripfeed = "This service does not support drip-feed";
     if (Object.keys(fieldErrors).length) return { fieldErrors };
   }
+
+  // After the shape of the order is known, so the message names the service
+  // the customer actually chose.
+  const guarded = await guardOrder(user.id, service.id, link);
+  if (guarded) return { error: guarded.error };
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   // The tier price, not the list price — the same number the order form showed.
@@ -288,6 +294,15 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
     parsed.push({ line, raw, service, link, quantity, charge: calculateCharge(rateOf(service.id, service.rate), quantity) });
   });
 
+  const throttled = await orderRateLimit(user.id, parsed.length);
+  if (throttled) return { error: throttled.error };
+
+  for (const p of [...parsed]) {
+    const clash = await duplicateOrder(user.id, p.service.id, p.link);
+    if (!clash) continue;
+    results.push({ line: p.line, raw: p.raw, ok: false, message: clash.error });
+    parsed.splice(parsed.indexOf(p), 1);
+  }
   if (parsed.length === 0) return { results: results.sort((a, b) => a.line - b.line), placed: 0, totalCharge: 0 };
 
   // One chain per line, planned before the transaction for the same reason as
