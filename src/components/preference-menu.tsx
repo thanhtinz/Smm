@@ -95,7 +95,7 @@ function PreferencesPopover({ groups, label }: { groups: Group[]; label: string 
       </button>
 
       {open && (
-        <div className="card absolute right-0 z-50 mt-2 max-h-[70vh] w-60 overflow-y-auto p-1.5 shadow-2xl">
+        <div className="popover absolute right-0 z-50 mt-2 max-h-[70vh] w-60 overflow-y-auto p-1.5 shadow-2xl">
           {groups.map((group, i) => (
             <div key={group.key} className={i > 0 ? "mt-1 border-t border-[var(--border)] pt-1" : ""}>
               <OptionList group={group} onDone={() => setOpen(false)} showHeading />

@@ -60,7 +60,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     },
     {
       title: t("nav.account"),
-      items: [{ href: "/dashboard/profile", label: t("nav.profile"), icon: "user" }],
+      items: [
+        { href: "/dashboard/notifications", label: t("dash.notifications"), icon: "bell" },
+        { href: "/dashboard/profile", label: t("nav.profile"), icon: "user" },
+      ],
     },
   ];
 

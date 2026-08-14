@@ -87,6 +87,15 @@ body {
     padding: 1.25rem 1.35rem;
   }
 
+  /* A menu floating over the page cannot borrow the card's translucency: the
+     content underneath shows through and neither layer stays readable. Same
+     frame, opaque fill. */
+  .popover {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+
   /* Admin-written page bodies. Styled here because the markup comes from the
      database, so the elements cannot carry classes of their own. */
   .prose-page {

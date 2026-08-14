@@ -4,7 +4,10 @@ import PreferenceMenu from "@/components/preference-menu";
 import UserMenu from "@/components/user-menu";
 import MobileNav from "@/components/mobile-nav";
 import NavLink from "@/components/nav-link";
+import NotificationBell, { type BellItem } from "@/components/notification-bell";
 import { Icon, type IconName } from "@/components/icons";
+import { db } from "@/lib/db";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import type { AppContext } from "@/lib/context";
 
@@ -16,7 +19,7 @@ export type NavGroup = { title: string; items: NavItem[] };
  * navigation; on small screens it collapses into a bottom bar capped at five
  * destinations so the back behaviour stays predictable.
  */
-export default function AppShell({
+export default async function AppShell({
   ctx,
   groups,
   children,
@@ -31,6 +34,21 @@ export default function AppShell({
 }) {
   const { user, t, settings } = ctx;
   if (!user) return null;
+
+  const dates = dateFormats(ctx.locale, ctx.timezone);
+  const [recent, unread] = await Promise.all([
+    db.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 8 }),
+    db.notification.count({ where: { userId: user.id, read: false } }),
+  ]);
+  const bellItems: BellItem[] = recent.map((n) => ({
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    level: n.level,
+    read: n.read,
+    href: n.href,
+    when: dates.full(n.createdAt),
+  }));
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
@@ -85,6 +103,17 @@ export default function AppShell({
               <Icon name="wallet" size={13} />
               {displayMoney(user.balance, ctx.currency, ctx.locale)}
             </Link>
+            <NotificationBell
+              items={bellItems}
+              unread={unread}
+              labels={{
+                title: t("dash.notifications"),
+                empty: t("notify.empty"),
+                markAll: t("notify.markAll"),
+                seeAll: t("notify.seeAll"),
+                unread: t("notify.unread"),
+              }}
+            />
             {/* Signed in, the pickers live in the account page — only the
                 light/dark switch is worth a place in the header. */}
             <PreferenceMenu
@@ -104,7 +133,18 @@ export default function AppShell({
                 mode: t("common.appearance"),
               }}
             />
-            <UserMenu username={user.username} email={user.email} role={user.role} />
+            <UserMenu
+              username={user.username}
+              email={user.email}
+              role={user.role}
+              labels={{
+                profile: t("nav.profile"),
+                wallet: t("nav.wallet"),
+                apiKey: t("api.key"),
+                admin: t("admin.title"),
+                signOut: t("nav.signout"),
+              }}
+            />
           </div>
         </header>
 
