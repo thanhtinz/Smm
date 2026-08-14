@@ -17,6 +17,7 @@ import {
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 import { duplicateOrder, guardOrder, orderRateLimit } from "@/lib/order-guard";
+import { maintenanceState } from "@/lib/maintenance";
 
 export type OrderState = {
   error?: string;
@@ -31,6 +32,11 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   if (!(await getSetting("order.enabled"))) {
     return { error: "Ordering is temporarily disabled." };
   }
+
+  // The layout already shows the notice; this is what stops a form posted
+  // from a page that was open before the panel closed.
+  const closed = await maintenanceState();
+  if (closed.on) return { error: closed.message };
 
   const serviceId = String(formData.get("serviceId") ?? "");
   if (!serviceId) return { fieldErrors: { serviceId: "Choose a service" } };
@@ -239,6 +245,9 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   const user = await getCurrentUser();
   if (!user) return { error: "Your session expired. Please sign in again." };
   if (!(await getSetting("order.enabled"))) return { error: "Ordering is temporarily disabled." };
+
+  const closed = await maintenanceState();
+  if (closed.on) return { error: closed.message };
 
   const lines = String(formData.get("bulk") ?? "")
     .split("\n")

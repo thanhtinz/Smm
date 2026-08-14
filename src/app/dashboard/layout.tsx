@@ -1,14 +1,29 @@
 import { redirect } from "next/navigation";
 import AppShell, { type NavGroup, type NavItem } from "@/components/app-shell";
 import { getAppContext } from "@/lib/context";
+import { getSetting } from "@/lib/settings";
 import { guardPanel } from "@/lib/tenancy";
 import PanelSuspended from "@/components/panel-suspended";
+import MaintenanceNotice from "@/components/maintenance-notice";
+import { maintenanceState } from "@/lib/maintenance";
 import { db } from "@/lib/db";
 import AnnouncementBanner from "@/components/announcement-banner";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
   if (panel.status !== "active") return <PanelSuspended name={panel.name} note={panel.statusNote} />;
+
+  // Staff are let through, so the panel can be fixed while it is closed.
+  const closed = await maintenanceState();
+  if (closed.on) {
+    return (
+      <MaintenanceNotice
+        site={String(await getSetting("site.name"))}
+        message={closed.message}
+        signIn={(await getAppContext()).t("nav.signin")}
+      />
+    );
+  }
 
   const ctx = await getAppContext();
   if (!ctx.user) redirect("/login");
