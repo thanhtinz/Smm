@@ -96,6 +96,13 @@ export default function AppShell({
               theme={ctx.theme}
               mode={ctx.mode}
               showPickers={false}
+              labels={{
+                language: t("common.language"),
+                currency: t("common.currency"),
+                theme: t("common.theme"),
+                display: t("profile.preferences"),
+                mode: t("common.appearance"),
+              }}
             />
             <UserMenu username={user.username} email={user.email} role={user.role} />
           </div>

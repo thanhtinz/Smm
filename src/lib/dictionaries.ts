@@ -14,6 +14,7 @@ export const en = {
   "nav.signin": "Sign in",
   "nav.signup": "Create account",
   "nav.dashboard": "Dashboard",
+  "nav.menu": "Menu",
 
   "landing.badge": "Trusted by growing creators",
   "landing.headline": "Grow every social account from one panel",
@@ -548,6 +549,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "nav.signin": "Đăng nhập",
   "nav.signup": "Tạo tài khoản",
   "nav.dashboard": "Bảng điều khiển",
+  "nav.menu": "Menu",
 
   "landing.badge": "Được tin dùng bởi hàng nghìn nhà sáng tạo",
   "landing.headline": "Phát triển mọi tài khoản mạng xã hội từ một panel",

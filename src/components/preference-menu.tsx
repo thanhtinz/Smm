@@ -5,36 +5,80 @@ import { Icon, type IconName } from "@/components/icons";
 import { setColorMode, setCurrency, setLocale, setTheme } from "@/app/actions/preferences";
 
 type Option = { value: string; label: string; hint?: string };
+type Group = { key: string; icon: IconName; label: string; options: Option[]; active: string; onPick: (v: string) => void };
 
-function Popover({
-  icon,
-  label,
-  options,
-  active,
-  onPick,
-  align = "right",
+function OptionList({
+  group,
+  onDone,
+  showHeading,
 }: {
-  icon: IconName;
-  label: string;
-  options: Option[];
-  active: string;
-  onPick: (value: string) => void;
-  align?: "left" | "right";
+  group: Group;
+  onDone: () => void;
+  showHeading: boolean;
 }) {
+  const [, start] = useTransition();
+  return (
+    <div role="listbox" aria-label={group.label}>
+      {showHeading && (
+        <p className="muted flex items-center gap-1.5 px-2.5 pt-2 pb-1.5 text-[0.68rem] font-semibold tracking-widest uppercase">
+          <Icon name={group.icon} size={12} />
+          {group.label}
+        </p>
+      )}
+      {group.options.map((o) => (
+        <button
+          key={o.value}
+          type="button"
+          role="option"
+          aria-selected={o.value === group.active}
+          onClick={() => {
+            onDone();
+            start(() => group.onPick(o.value));
+          }}
+          className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-[var(--surface2)]"
+        >
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate">{o.label}</span>
+            {o.hint && <span className="muted truncate text-[0.7rem]">{o.hint}</span>}
+          </span>
+          {o.value === group.active && <Icon name="check" size={15} />}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * One popover holding every display choice.
+ *
+ * Three separate buttons, each wide enough to show its current value, took
+ * more of the header than the choices are worth — a visitor sets these once
+ * and never returns to them. The light/dark switch stays outside, because
+ * that one is worth a single press.
+ */
+function PreferencesPopover({ groups, label }: { groups: Group[]; label: string }) {
   const [open, setOpen] = useState(false);
-  const [pending, start] = useTransition();
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const handler = (e: MouseEvent) => {
+    const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
-  const current = options.find((o) => o.value === active);
+  const current = groups
+    .map((g) => g.options.find((o) => o.value === g.active)?.label)
+    .filter(Boolean)
+    .slice(0, 2)
+    .join(" · ");
 
   return (
     <div className="relative" ref={ref}>
@@ -44,38 +88,18 @@ function Popover({
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
         className="btn btn-ghost btn-sm ring-focus"
-        disabled={pending}
       >
-        <Icon name={icon} size={16} />
-        <span className="hidden sm:inline">{current?.label ?? label}</span>
+        <Icon name="settings" size={16} />
+        <span className="hidden max-w-40 truncate lg:inline">{current}</span>
         <Icon name="chevronDown" size={13} />
       </button>
+
       {open && (
-        <div
-          className={`card absolute z-50 mt-2 min-w-52 overflow-hidden p-1.5 shadow-2xl ${
-            align === "right" ? "right-0" : "left-0"
-          }`}
-          role="listbox"
-        >
-          <p className="muted px-2.5 pt-1.5 pb-2 text-[0.68rem] font-semibold tracking-widest uppercase">{label}</p>
-          {options.map((o) => (
-            <button
-              key={o.value}
-              type="button"
-              role="option"
-              aria-selected={o.value === active}
-              onClick={() => {
-                setOpen(false);
-                start(() => onPick(o.value));
-              }}
-              className="flex w-full items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm hover:bg-[var(--surface2)]"
-            >
-              <span className="flex flex-col">
-                <span>{o.label}</span>
-                {o.hint && <span className="muted text-[0.7rem]">{o.hint}</span>}
-              </span>
-              {o.value === active && <Icon name="check" size={15} />}
-            </button>
+        <div className="card absolute right-0 z-50 mt-2 max-h-[70vh] w-60 overflow-y-auto p-1.5 shadow-2xl">
+          {groups.map((group, i) => (
+            <div key={group.key} className={i > 0 ? "mt-1 border-t border-[var(--border)] pt-1" : ""}>
+              <OptionList group={group} onDone={() => setOpen(false)} showHeading />
+            </div>
           ))}
         </div>
       )}
@@ -91,8 +115,11 @@ export default function PreferenceMenu({
   currency,
   theme,
   mode,
+  labels,
   showTheme = true,
   showPickers = true,
+  /** Laid out down the page instead of in a popover, for the mobile sheet. */
+  stacked = false,
 }: {
   languages: { code: string; nativeName: string; name: string }[];
   currencies: { code: string; name: string; symbol: string }[];
@@ -101,6 +128,7 @@ export default function PreferenceMenu({
   currency: string;
   theme: string;
   mode: "dark" | "light";
+  labels: { language: string; currency: string; theme: string; display: string; mode: string };
   /** Off where the panel also offers a theme picker in the account page. */
   showTheme?: boolean;
   /**
@@ -108,46 +136,67 @@ export default function PreferenceMenu({
    * the account page there, and only the light/dark switch stays here.
    */
   showPickers?: boolean;
+  stacked?: boolean;
 }) {
   const [, start] = useTransition();
 
+  const groups: Group[] = [
+    {
+      key: "language",
+      icon: "language",
+      label: labels.language,
+      active: locale,
+      options: languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name })),
+      onPick: setLocale,
+    },
+    {
+      key: "currency",
+      icon: "wallet",
+      label: labels.currency,
+      active: currency,
+      options: currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}`, hint: c.name })),
+      onPick: setCurrency,
+    },
+    ...(showTheme
+      ? [
+          {
+            key: "theme",
+            icon: "palette" as IconName,
+            label: labels.theme,
+            active: theme,
+            options: themes.map((t) => ({ value: t.slug, label: t.name, hint: t.description })),
+            onPick: setTheme,
+          },
+        ]
+      : []),
+  ];
+
+  const toggle = (
+    <button
+      type="button"
+      aria-label={labels.mode}
+      className="btn btn-ghost btn-sm ring-focus"
+      onClick={() => start(() => setColorMode(mode === "dark" ? "light" : "dark"))}
+    >
+      <Icon name={mode === "dark" ? "sun" : "moon"} size={16} />
+      {stacked && <span>{labels.mode}</span>}
+    </button>
+  );
+
+  if (stacked) {
+    return (
+      <div className="space-y-1">
+        {showPickers &&
+          groups.map((group) => <OptionList key={group.key} group={group} onDone={() => {}} showHeading />)}
+        {toggle}
+      </div>
+    );
+  }
+
   return (
     <div className="flex items-center gap-1.5">
-      {showPickers && (
-        <>
-          <Popover
-            icon="language"
-            label="Language"
-            active={locale}
-            options={languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name }))}
-            onPick={(v) => setLocale(v)}
-          />
-          <Popover
-            icon="wallet"
-            label="Currency"
-            active={currency}
-            options={currencies.map((c) => ({ value: c.code, label: `${c.code} ${c.symbol}`, hint: c.name }))}
-            onPick={(v) => setCurrency(v)}
-          />
-          {showTheme && (
-            <Popover
-              icon="palette"
-              label="Theme"
-              active={theme}
-              options={themes.map((t) => ({ value: t.slug, label: t.name, hint: t.description }))}
-              onPick={(v) => setTheme(v)}
-            />
-          )}
-        </>
-      )}
-      <button
-        type="button"
-        aria-label="Toggle colour mode"
-        className="btn btn-ghost btn-sm ring-focus"
-        onClick={() => start(() => setColorMode(mode === "dark" ? "light" : "dark"))}
-      >
-        <Icon name={mode === "dark" ? "sun" : "moon"} size={16} />
-      </button>
+      {showPickers && <PreferencesPopover groups={groups} label={labels.display} />}
+      {toggle}
     </div>
   );
 }
