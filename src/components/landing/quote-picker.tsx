@@ -168,7 +168,7 @@ export default function QuotePicker({
             aria-invalid={outOfRange || undefined}
           />
           {service && (
-            <p className="muted mt-1.5 text-xs tabular-nums">
+            <p className="muted mt-1.5 font-mono text-xs">
               {count(service.min, m)} – {count(service.max, m)}
             </p>
           )}
@@ -176,8 +176,8 @@ export default function QuotePicker({
 
         <div>
           <span className="muted mb-1.5 block text-xs font-semibold tracking-wide uppercase">{labels.charge}</span>
-          <p className="text-3xl leading-none font-bold tabular-nums">{money(charge, m)}</p>
-          {service && <p className="muted mt-1.5 text-xs tabular-nums">{money(service.rate, m)} / 1000</p>}
+          <p className="font-mono text-4xl leading-none font-bold">{money(charge, m)}</p>
+          {service && <p className="muted mt-2 font-mono text-xs">{money(service.rate, m)} / 1000</p>}
         </div>
       </div>
 

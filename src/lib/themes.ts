@@ -13,7 +13,9 @@ export type ThemeDefinition = {
   tokens: ThemeTokens;
 };
 
-const sans = "'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif";
+// Loaded by the root layout through next/font, so the variable is always
+// defined; the stack after it only matters while the file is in flight.
+const sans = "var(--font-be-vietnam), 'Segoe UI', system-ui, -apple-system, sans-serif";
 
 /**
  * Built-in skins. They are copied into the Theme table on first boot, after

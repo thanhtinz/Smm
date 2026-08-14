@@ -32,8 +32,8 @@ export default function OrderFirst({ data, t, currency, locale, settings }: Land
     <>
       <section className="container-page grid gap-8 py-10 lg:grid-cols-[1.35fr_0.65fr] lg:py-14">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{t("landing.quote.title")}</h1>
-          <p className="muted mt-2 text-sm">{t("landing.quote.sub")}</p>
+          <h1 className="text-[2.1rem] leading-[1.05] font-extrabold tracking-[-0.03em] sm:text-[2.75rem]">{t("landing.quote.title")}</h1>
+          <p className="muted mt-3 text-lg">{t("landing.quote.sub")}</p>
           <div className="mt-5">
             <QuotePicker
               platforms={data.platforms}
@@ -73,7 +73,7 @@ export default function OrderFirst({ data, t, currency, locale, settings }: Land
               { k: t("landing.board.from"), v: null },
             ].map((s) => (
               <div key={s.k} className="bg-[var(--surface)] px-4 py-4">
-                <dd className="text-xl font-bold tabular-nums">
+                <dd className="font-mono text-2xl font-bold">
                   {s.v === null ? displayMoney(data.from, currency, locale) : s.v.toLocaleString()}
                 </dd>
                 <dt className="muted mt-0.5 text-xs">{s.k}</dt>
