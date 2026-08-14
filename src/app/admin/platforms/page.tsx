@@ -26,6 +26,11 @@ export default async function AdminPlatformsPage() {
           visible: p.visible,
           position: p.position,
           categoryCount: p._count.categories,
+          hosts: p.hosts,
+          postPattern: p.postPattern,
+          profilePattern: p.profilePattern,
+          postExample: p.postExample,
+          profileExample: p.profileExample,
         }))}
         labels={{
           close: t("common.close"),
@@ -53,6 +58,13 @@ export default async function AdminPlatformsPage() {
           categories: t("admin.categories"),
           status: t("common.status"),
           actions: t("common.actions"),
+          linkRules: t("link.rules"),
+          hosts: t("link.hosts"),
+          hostsHint: t("link.hostsHint"),
+          postPattern: t("link.postPattern"),
+          profilePattern: t("link.profilePattern"),
+          postExample: t("link.postExample"),
+          profileExample: t("link.profileExample"),
           save: t("common.save"),
           cancel: t("common.cancel"),
         }}

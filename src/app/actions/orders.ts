@@ -9,7 +9,6 @@ import {
   calculateCharge,
   commentLines,
   orderCost,
-  isValidOrderLink,
   parseSubscription,
   subscriptionFields,
   type Subscription,
@@ -19,6 +18,7 @@ import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@
 import { duplicateOrder, guardOrder, orderRateLimit } from "@/lib/order-guard";
 import { maintenanceState } from "@/lib/maintenance";
 import { readerMessages } from "@/lib/context";
+import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
 
 /** As many as one paste is allowed to place at once. */
 const MAX_LINES = 100;
@@ -47,8 +47,12 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   if (!serviceId) return { fieldErrors: { serviceId: t("err.chooseService") } };
 
   // Read first: the service type decides what the rest of the form means.
-  const service = await db.service.findFirst({ where: { id: serviceId, enabled: true } });
+  const service = await db.service.findFirst({
+    where: { id: serviceId, enabled: true },
+    include: { category: { select: { platform: { select: LINK_RULES } } } },
+  });
   if (!service) return { fieldErrors: { serviceId: t("err.serviceGone") } };
+  const rules = service.category.platform;
 
   // A subscription watches a profile instead of pointing at one post, so it
   // takes a username and a run of future posts rather than a link and a count.
@@ -60,7 +64,9 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   if (service.type === "subscription") {
     const parsed = parseSubscription(
       {
-        username: String(formData.get("username") ?? ""),
+        // A customer given a username box pastes a profile link into it about
+        // as often as the reverse, so either is accepted.
+        username: extractUsername(String(formData.get("username") ?? "")),
         posts: String(formData.get("posts") ?? ""),
         min: String(formData.get("minPerPost") ?? ""),
         max: String(formData.get("maxPerPost") ?? ""),
@@ -83,13 +89,20 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     comments = commentLines(String(formData.get("comments") ?? ""));
 
     const fieldErrors: Record<string, string> = {};
-    if (!link) fieldErrors.link = "Enter the link for this order";
-    else if (!isValidOrderLink(link)) fieldErrors.link = "Enter a full link starting with http:// or https://";
+    if (!link) {
+      fieldErrors.link = t("err.linkRequired");
+    } else {
+      // Checked against the platform's own shape, so a profile pasted into a
+      // likes service is refused here rather than by the provider later.
+      const wrong = checkLink(link, service.target, rules);
+      if (wrong) fieldErrors.link = t(wrong.key, wrong.vars);
+      else link = normaliseLink(link);
+    }
 
     quantity = comments.length > 0 ? comments.length : Number(quantityRaw);
     if (comments.length === 0) {
-      if (!quantityRaw) fieldErrors.quantity = "Enter a quantity";
-      else if (!Number.isInteger(quantity) || quantity <= 0) fieldErrors.quantity = "Quantity must be a whole number";
+      if (!quantityRaw) fieldErrors.quantity = t("err.quantityRequired");
+      else if (!Number.isInteger(quantity) || quantity <= 0) fieldErrors.quantity = t("err.quantityWhole");
     }
     if (Object.keys(fieldErrors).length) return { fieldErrors };
 
@@ -113,9 +126,9 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const interval = dripfeed ? Number(formData.get("interval") ?? 0) : 0;
   if (dripfeed) {
     const fieldErrors: Record<string, string> = {};
-    if (!Number.isInteger(runs) || runs < 2) fieldErrors.runs = "Runs must be 2 or more";
-    if (!Number.isInteger(interval) || interval < 1) fieldErrors.interval = "Interval must be at least 1 minute";
-    if (!service.dripfeed) fieldErrors.dripfeed = "This service does not support drip-feed";
+    if (!Number.isInteger(runs) || runs < 2) fieldErrors.runs = t("err.runsMin");
+    if (!Number.isInteger(interval) || interval < 1) fieldErrors.interval = t("err.intervalMin");
+    if (!service.dripfeed) fieldErrors.dripfeed = t("err.noDripfeed");
     if (Object.keys(fieldErrors).length) return { fieldErrors };
   }
 
@@ -263,7 +276,10 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   if (lines.length === 0) return { error: t("err.linesEmpty") };
   if (lines.length > MAX_LINES) return { error: t("err.linesMax", { max: MAX_LINES }) };
 
-  const services = await db.service.findMany({ where: { enabled: true } });
+  const services = await db.service.findMany({
+    where: { enabled: true },
+    include: { category: { select: { platform: { select: LINK_RULES } } } },
+  });
   const byPublicId = new Map(services.map((s) => [String(s.publicId), s]));
 
   const rates = await priceServices(await resolveTier(user), services);
@@ -286,8 +302,11 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
       results.push({ line, raw, ok: false, message: t("err.massUnknownService", { id: idPart }) });
       return;
     }
-    if (!isValidOrderLink(link)) {
-      results.push({ line, raw, ok: false, message: t("err.massLink") });
+    const wrong = checkLink(link, service.target, service.category.platform);
+    if (wrong) {
+      // The reason, not just "invalid": on a hundred-line paste the customer
+      // needs to know which lines to fix and how.
+      results.push({ line, raw, ok: false, message: t(wrong.key, wrong.vars) });
       return;
     }
     // A comment service is bought by the comment, and a line of this form has

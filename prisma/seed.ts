@@ -155,20 +155,80 @@ async function main() {
   });
 
   // --- Catalogue ----------------------------------------------------------
+  // The link rules ship as a working starting point, not as law: every one of
+  // them is edited in Admin -> Platforms, which is the only way a panel can
+  // sell on a platform this file has never heard of.
   const platforms = [
-    { slug: "instagram", name: "Instagram", icon: "instagram", color: "#e1306c", position: 0 },
-    { slug: "tiktok", name: "TikTok", icon: "tiktok", color: "#25f4ee", position: 1 },
-    { slug: "youtube", name: "YouTube", icon: "youtube", color: "#ff0000", position: 2 },
-    { slug: "facebook", name: "Facebook", icon: "facebook", color: "#1877f2", position: 3 },
-    { slug: "twitter", name: "X / Twitter", icon: "twitter", color: "#8899a6", position: 4 },
-    { slug: "telegram", name: "Telegram", icon: "telegram", color: "#229ed9", position: 5 },
-    { slug: "spotify", name: "Spotify", icon: "spotify", color: "#1db954", position: 6 },
+    {
+      slug: "instagram", name: "Instagram", icon: "instagram", color: "#e1306c", position: 0,
+      hosts: "instagram.com, instagr.am",
+      postPattern: String.raw`^/(p|reel|reels|tv)/[\w-]+`,
+      profilePattern: String.raw`^/[\w.]+/?$`,
+      postExample: "https://instagram.com/p/Cx1y2z3aBcD",
+      profileExample: "https://instagram.com/nova",
+    },
+    {
+      slug: "tiktok", name: "TikTok", icon: "tiktok", color: "#25f4ee", position: 1,
+      hosts: "tiktok.com, vt.tiktok.com",
+      postPattern: String.raw`^/@[\w.]+/video/\d+`,
+      profilePattern: String.raw`^/@[\w.]+/?$`,
+      postExample: "https://tiktok.com/@nova/video/7123456789012345678",
+      profileExample: "https://tiktok.com/@nova",
+    },
+    {
+      slug: "youtube", name: "YouTube", icon: "youtube", color: "#ff0000", position: 2,
+      hosts: "youtube.com, youtu.be",
+      postPattern: String.raw`^(/watch\?v=[\w-]+|/shorts/[\w-]+|/[\w-]{11}$)`,
+      profilePattern: String.raw`^(/@[\w.-]+|/(channel|c|user)/[\w-]+)/?$`,
+      postExample: "https://youtube.com/watch?v=dQw4w9WgXcQ",
+      profileExample: "https://youtube.com/@nova",
+    },
+    {
+      slug: "facebook", name: "Facebook", icon: "facebook", color: "#1877f2", position: 3,
+      hosts: "facebook.com, fb.com, fb.watch",
+      postPattern: String.raw`(/posts/|/videos/|/photo|/reel/|story_fbid=|/permalink)`,
+      profilePattern: String.raw`^/(profile\.php\?id=\d+|[\w.]+)/?$`,
+      postExample: "https://facebook.com/nova/posts/123456789",
+      profileExample: "https://facebook.com/nova",
+    },
+    {
+      slug: "twitter", name: "X / Twitter", icon: "twitter", color: "#8899a6", position: 4,
+      hosts: "twitter.com, x.com",
+      postPattern: String.raw`^/[\w]+/status/\d+`,
+      profilePattern: String.raw`^/[\w]+/?$`,
+      postExample: "https://x.com/nova/status/1234567890123456789",
+      profileExample: "https://x.com/nova",
+    },
+    {
+      slug: "telegram", name: "Telegram", icon: "telegram", color: "#229ed9", position: 5,
+      hosts: "t.me, telegram.me",
+      postPattern: String.raw`^/[\w_]+/\d+`,
+      profilePattern: String.raw`^/[\w_]+/?$`,
+      postExample: "https://t.me/nova/42",
+      profileExample: "https://t.me/nova",
+    },
+    {
+      slug: "spotify", name: "Spotify", icon: "spotify", color: "#1db954", position: 6,
+      hosts: "open.spotify.com, spotify.com",
+      postPattern: String.raw`^/(track|album|episode)/[\w]+`,
+      profilePattern: String.raw`^/(artist|user|playlist)/[\w]+`,
+      postExample: "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT",
+      profileExample: "https://open.spotify.com/artist/1vCWHaC5f2uS3yhpwWbIA6",
+    },
   ];
   for (const p of platforms) {
     await db.platform.upsert({
       where: { panelId_slug: { panelId: PANEL, slug: p.slug } },
       create: { ...p, panelId: PANEL },
-      update: { name: p.name, icon: p.icon },
+      update: {
+        name: p.name,
+        icon: p.icon,
+        hosts: p.hosts,
+        postPattern: p.postPattern,
+        profilePattern: p.profilePattern,
+        postExample: p.postExample,
+        profileExample: p.profileExample,
+      },
     });
   }
 

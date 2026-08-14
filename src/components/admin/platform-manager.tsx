@@ -20,6 +20,11 @@ export type PlatformRow = {
   visible: boolean;
   position: number;
   categoryCount: number;
+  hosts: string;
+  postPattern: string;
+  profilePattern: string;
+  postExample: string;
+  profileExample: string;
 };
 
 export default function PlatformManager({ rows, labels }: { rows: PlatformRow[]; labels: Record<string, string> }) {
@@ -206,6 +211,52 @@ function PlatformForm({
         <input type="checkbox" name="visible" defaultChecked={row?.visible ?? true} className="h-4 w-4 accent-[var(--primary)]" />
         {labels.visible}
       </label>
+
+      {/* What a link to this platform looks like. Each rule left blank is one
+          check not made, so a platform can be added first and taught later. */}
+      <fieldset className="space-y-4 rounded-xl border border-[var(--border)] p-4">
+        <legend className="px-1.5 text-sm font-semibold">{labels.linkRules}</legend>
+
+        <Field name="hosts" label={labels.hosts} hint={labels.hostsHint} error={state.fieldErrors?.hosts}>
+          <TextInput
+            name="hosts"
+            defaultValue={row?.hosts ?? ""}
+            hint={labels.hostsHint}
+            error={state.fieldErrors?.hosts}
+            placeholder="instagram.com"
+          />
+        </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="postPattern" label={labels.postPattern} error={state.fieldErrors?.postPattern}>
+            <TextInput
+              name="postPattern"
+              defaultValue={row?.postPattern ?? ""}
+              error={state.fieldErrors?.postPattern}
+              className="field font-mono text-xs"
+              placeholder="^/(p|reel)/[\\w-]+"
+            />
+          </Field>
+          <Field name="postExample" label={labels.postExample}>
+            <TextInput name="postExample" defaultValue={row?.postExample ?? ""} placeholder="https://instagram.com/p/Cxyz123" />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field name="profilePattern" label={labels.profilePattern} error={state.fieldErrors?.profilePattern}>
+            <TextInput
+              name="profilePattern"
+              defaultValue={row?.profilePattern ?? ""}
+              error={state.fieldErrors?.profilePattern}
+              className="field font-mono text-xs"
+              placeholder="^/[\\w.]+/?$"
+            />
+          </Field>
+          <Field name="profileExample" label={labels.profileExample}>
+            <TextInput name="profileExample" defaultValue={row?.profileExample ?? ""} placeholder="https://instagram.com/nova" />
+          </Field>
+        </div>
+      </fieldset>
 
       <div className="flex gap-2 pt-2">
         <SubmitButton className="btn btn-primary flex-1">

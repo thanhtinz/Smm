@@ -7,6 +7,7 @@ import OrderTabs from "@/components/orders/order-tabs";
 import { Icon } from "@/components/icons";
 import { getSetting } from "@/lib/settings";
 import { priceServices, resolveTier } from "@/lib/pricing";
+import { LINK_RULES } from "@/lib/links";
 
 export const metadata: Metadata = { title: "New order" };
 
@@ -27,7 +28,13 @@ export default async function NewOrderPage() {
   const [platforms, categories, services] = await Promise.all([
     db.platform.findMany({ where: { visible: true }, orderBy: { position: "asc" } }),
     db.category.findMany({ where: { visible: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
-    db.service.findMany({ where: { enabled: true }, orderBy: [{ position: "asc" }, { rate: "asc" }] }),
+    db.service.findMany({
+      where: { enabled: true },
+      orderBy: [{ position: "asc" }, { rate: "asc" }],
+      // The platform's example link, so the form can show the shape wanted
+      // before the order is refused for not having it.
+      include: { category: { select: { platform: { select: LINK_RULES } } } },
+    }),
   ]);
 
   const tier = await resolveTier(user);
@@ -38,6 +45,8 @@ export default async function NewOrderPage() {
     publicId: s.publicId,
     name: s.name,
     categoryId: s.categoryId,
+    linkExample:
+      (s.target === "profile" ? s.category.platform?.profileExample : s.category.platform?.postExample) ?? "",
     rate: rates.get(s.id) ?? s.rate,
     min: s.min,
     max: s.max,

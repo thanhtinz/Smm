@@ -22,6 +22,8 @@ export type ServiceOption = {
   cancel: boolean;
   dripfeed: boolean;
   type: string;
+  /** The shape this service's link should have, shown as the placeholder. */
+  linkExample: string;
   averageTime: string;
   description: string;
 };
@@ -376,7 +378,7 @@ export default function NewOrderForm({
               name="link"
               type="url"
               inputMode="url"
-              placeholder="https://instagram.com/yourprofile"
+              placeholder={service?.linkExample || ""}
               error={state.fieldErrors?.link}
             />
           </Field>
