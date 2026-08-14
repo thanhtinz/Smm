@@ -86,6 +86,8 @@ export default async function AdminOrdersPage({
     minutes: t("order.minutes"),
     source: t("order.source"),
     fromChild: t("order.fromChild"),
+    timeline: t("order.timeline"),
+    created: t("order.created"),
   };
   for (const s of ORDER_STATUSES) labels[`status.${s}`] = t(`status.${s}`);
   // The drawer shows the charge, and conversion belongs on the server.

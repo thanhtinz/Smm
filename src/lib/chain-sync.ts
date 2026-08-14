@@ -10,7 +10,7 @@ import { runAutoDecisions } from "./auto-orders";
 import { notification, requestKey } from "./notify";
 import { englishMessage } from "./fault";
 import { sendPendingNotificationMails } from "./notify-mail";
-import { withSettled } from "./orders";
+import { withSettled, recordOrderStep } from "./orders";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -80,6 +80,8 @@ export async function propagateChainStatuses(limit = 200) {
         } else {
           await db.order.update({ where: { id: downstream.id }, data: withSettled(data) });
         }
+        // The panel above decided this, so that is what the timeline says.
+        await recordOrderStep(db, downstream, data, "chain");
       });
 
       updated += 1;

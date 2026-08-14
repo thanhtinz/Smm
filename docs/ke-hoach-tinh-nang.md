@@ -74,6 +74,18 @@ partial → completed, đọc lại dòng thời gian thấy đủ bốn mốc k
 
 **Cỡ.** Vừa. Rủi ro chính là bỏ sót một chỗ đặt trạng thái.
 
+**Đã làm xong.** Bảng `OrderEvent`, ghi từ sáu chỗ đặt trạng thái (đẩy đơn,
+đồng bộ nhà cung cấp, chuỗi child panel, tự động bảo hành/huỷ, yêu cầu của
+khách, admin sửa tay). Dựng nhà cung cấp giả rồi chạy cron thật: đơn đi
+pending → processing → inprogress → completed, dòng thời gian ghi đủ bốn mốc
+kèm `startCount`/`remains` tại từng mốc. Một đơn thứ hai đi tới `partial` —
+sau đó nó **không** đi tiếp được, vì `partial` là trạng thái chốt (tiền đã
+hoàn), nên chuỗi bốn mốc trong kế hoạch thực tế là hai nhánh chứ không phải
+một.
+
+Trang của khách **không** hiện tên nhà cung cấp hay tên admin — mọi mốc không
+do chính khách tạo đều ghi là "hệ thống". Trang admin hiện tên thật.
+
 ---
 
 ## 3. API không gọi ngược về cho đại lý

@@ -7,6 +7,8 @@ import { dateFormats, formatDuration } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
+import OrderTimeline from "@/components/orders/order-timeline";
+import { ORDER_STATUSES } from "@/lib/orders";
 import OrderActions from "@/components/orders/order-actions";
 
 export const metadata: Metadata = { title: "Order" };
@@ -34,6 +36,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     include: {
       service: { select: { name: true, refill: true, cancel: true, description: true } },
       requests: { orderBy: { createdAt: "desc" } },
+      events: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!order) notFound();
@@ -41,6 +44,13 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   // remains only means anything once a provider has reported on the order.
   // Zero on something still queued is "nothing known", not "all delivered",
   // and showing a full bar there would be a lie the panel tells first.
+  const timelineLabels: Record<string, string> = {
+    created: t("order.created"),
+    startCount: t("order.startCount"),
+    remains: t("order.remains"),
+  };
+  for (const s of ORDER_STATUSES) timelineLabels[`status.${s}`] = t(`status.${s}`);
+
   const reported = order.status !== "pending" && (order.remains > 0 || order.status === "completed");
   const delivered = order.status === "completed" ? order.quantity : Math.max(0, order.quantity - order.remains);
   const percent = reported && order.quantity > 0 ? Math.min(100, Math.round((delivered / order.quantity) * 100)) : null;
@@ -179,6 +189,33 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
           </ul>
         </section>
       )}
+
+      {/* Last, because it answers a question the customer only asks when
+          something looks wrong. */}
+      <section className="card card-pad">
+        <h2 className="font-semibold">{t("order.timeline")}</h2>
+        <div className="mt-4">
+          <OrderTimeline
+            createdAt={dates.full(order.createdAt)}
+            steps={order.events.map((e) => ({
+              id: e.id,
+              from: e.from,
+              to: e.to,
+              startCount: e.startCount,
+              remains: e.remains,
+              // Steps are recorded with whoever made them — a provider's name,
+              // an operator's username — and the customer is entitled to
+              // neither. Only their own requests are named back to them.
+              actor: e.actor === "customer" ? t("order.byYou") : t("order.bySystem"),
+              // The operator's note on an order can name a provider or quote
+              // its refusal, which is not the customer's business.
+              note: "",
+              at: dates.full(e.createdAt),
+            }))}
+            labels={timelineLabels}
+          />
+        </div>
+      </section>
     </div>
   );
 }

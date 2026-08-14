@@ -5,10 +5,13 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { creditDeposit } from "@/lib/payments/credit";
-import { withSettled, ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
+import { withSettled, recordOrderStep, ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
 import type { ActionResult } from "./catalogue";
 import { notification } from "@/lib/notify";
-import { readerMessages } from "@/lib/context";
+import { readerMessages, getAppContext } from "@/lib/context";
+import { getCurrentUser } from "@/lib/auth";
+import { STAFF_ROLES } from "@/lib/two-factor";
+import { dateFormats } from "@/lib/dates";
 
 export type { ActionResult };
 
@@ -37,14 +40,13 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
       const wasRefunded = REFUNDING.has(order.status);
       const willRefund = REFUNDING.has(status);
 
-      await tx.order.update({
-        where: { id },
-        data: withSettled({
-          status,
-          note: note || order.note,
-          ...(status === "completed" ? { remains: 0 } : {}),
-        }),
-      });
+      const change = {
+        status,
+        note: note || order.note,
+        ...(status === "completed" ? { remains: 0 } : {}),
+      };
+      await tx.order.update({ where: { id }, data: withSettled(change) });
+      await recordOrderStep(tx, order, change, admin.username);
 
       if (willRefund && !wasRefunded) {
         const user = await tx.user.findUniqueOrThrow({ where: { id: order.userId }, select: { balance: true, spent: true } });
@@ -247,4 +249,44 @@ export async function rejectTransactionAction(id: string, note = ""): Promise<Ac
   await logActivity(admin.id, "admin.deposit.reject", id);
   revalidatePath("/admin/transactions");
   return { ok: true };
+}
+
+/**
+ * An order's timeline, fetched when the drawer opens.
+ *
+ * Not sent with the list: thirty orders carrying every step each would be a
+ * payload nobody reads, to answer a question support asks about one of them.
+ */
+export async function orderStepsAction(orderId: string): Promise<{
+  steps: { id: string; from: string; to: string; startCount: number; remains: number; actor: string; note: string; at: string }[];
+  createdAt: string;
+  error?: string;
+}> {
+  const t = await readerMessages();
+  const user = await getCurrentUser();
+  if (!user || !STAFF_ROLES.has(user.role)) return { steps: [], createdAt: "", error: t("err.supportOnly") };
+
+  const order = await db.order.findFirst({
+    where: { id: orderId },
+    include: { events: { orderBy: { createdAt: "asc" } } },
+  });
+  if (!order) return { steps: [], createdAt: "", error: t("err.orderGone") };
+
+  const { locale, timezone } = await getAppContext();
+  const dates = dateFormats(locale, timezone);
+
+  return {
+    createdAt: dates.full(order.createdAt),
+    steps: order.events.map((e) => ({
+      id: e.id,
+      from: e.from,
+      to: e.to,
+      startCount: e.startCount,
+      remains: e.remains,
+      actor: e.actor,
+      // Staff see the note; it is where a provider's refusal is recorded.
+      note: e.note,
+      at: dates.full(e.createdAt),
+    })),
+  };
 }

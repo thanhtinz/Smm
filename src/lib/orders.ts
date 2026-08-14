@@ -159,3 +159,59 @@ export function isValidOrderLink(link: string): boolean {
     return false;
   }
 }
+
+/**
+ * The client this can be written through: the panel-scoped one, or a
+ * transaction handle from inside `$transaction`.
+ */
+type StepRow = {
+  panelId: string;
+  orderId: string;
+  from: string;
+  to: string;
+  startCount: number;
+  remains: number;
+  actor: string;
+  note: string;
+};
+
+type EventClient = {
+  orderEvent: { create: (args: { data: StepRow }) => Promise<unknown> };
+};
+
+/**
+ * Records a step in an order's life.
+ *
+ * Called from every place that decides a status — seven of them, listed in
+ * the test that walks an order through each one. It records rather than
+ * updates, because the callers differ too much to share an update: some are
+ * inside a transaction, one hands its data to `settleRefund` to apply.
+ *
+ * Writing nothing when the status did not move is deliberate. A sync tick
+ * that only refreshes `remains` is not a step in the story, and a timeline
+ * of two hundred identical rows tells support less than one of four.
+ */
+export async function recordOrderStep(
+  client: EventClient,
+  before: { id: string; panelId: string; status: string; startCount: number; remains: number },
+  next: { status?: unknown; startCount?: unknown; remains?: unknown; note?: unknown },
+  actor: string,
+): Promise<void> {
+  const to = typeof next.status === "string" ? next.status : before.status;
+  if (to === before.status) return;
+
+  await client.orderEvent.create({
+    data: {
+      panelId: before.panelId,
+      orderId: before.id,
+      from: before.status,
+      to,
+      // The counts as they stand after this step, falling back to what the
+      // order already held when this step did not touch them.
+      startCount: typeof next.startCount === "number" ? next.startCount : before.startCount,
+      remains: typeof next.remains === "number" ? next.remains : before.remains,
+      actor,
+      note: typeof next.note === "string" ? next.note : "",
+    },
+  });
+}

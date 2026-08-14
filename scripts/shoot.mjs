@@ -2,6 +2,7 @@
  * Screenshot helper. Usage:
  *   node scripts/shoot.mjs <name> <path> [--mode=dark|light] [--theme=slug]
  *                          [--full] [--width=1440] [--height=900] [--login=user]
+ *                          [--click=<selector>]
  * Output lands in docs/screenshots/<name>.png
  */
 import { chromium } from "playwright";
@@ -60,6 +61,14 @@ if (login) {
 }
 
 await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
+
+// Drawers, dialogs and anything else that only exists after a click.
+const click = flag("click", null);
+if (click) {
+  await page.click(click);
+  await page.waitForTimeout(600);
+}
+
 await page.waitForTimeout(Number(flag("wait", 700)));
 
 const file = resolve(outDir, `${name}.png`);
