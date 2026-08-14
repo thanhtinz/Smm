@@ -428,7 +428,11 @@ model Order {
   cost            Float?
   startCount      Int            @default(0)
   remains         Int            @default(0)
-  status          String         @default("pending") // pending processing inprogress completed partial canceled refunded
+  status          String         @default("pending") // held pending processing inprogress completed partial canceled refunded
+  /// Why an abuse rule held this order back, in the operator's own terms.
+  /// Empty on every order that was never held — which, with the rules off by
+  /// default, is all of them.
+  holdReason      String         @default("")
   providerOrderId String         @default("")
   /// Which provider actually took this order. Set when it is sent, so status
   /// and refill follow the provider it went to rather than whichever one the
@@ -638,6 +642,28 @@ model OrderEvent {
   createdAt  DateTime @default(now())
 
   @@index([orderId, createdAt])
+  @@index([panelId])
+}
+
+/// Links and accounts the operator has decided this panel will not serve.
+///
+/// Deliberately not a rule that holds an order for review: someone typed this
+/// value in on purpose, so queueing it back to them to approve would be a
+/// loop. A blocked order is refused at the door and never charged.
+model Blocklist {
+  id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelBlocklist", fields: [panelId], references: [id], onDelete: Cascade)
+  /// "link" matches anywhere in the order's link; "username" is the whole
+  /// account name. Two kinds rather than a pattern language, because an
+  /// operator adding a scam domain at 2am should not have to write a regex.
+  kind      String
+  value     String
+  /// Why, for whoever reads the list in six months.
+  note      String   @default("")
+  createdAt DateTime @default(now())
+
+  @@unique([panelId, kind, value])
   @@index([panelId])
 }
 
@@ -1004,6 +1030,7 @@ model Panel {
   conversations  Conversation[]     @relation("PanelConversations")
   inboxMessages  InboxMessage[]     @relation("PanelInboxMessages")
   orderEvents    OrderEvent[]       @relation("PanelOrderEvents")
+  blocklist      Blocklist[]        @relation("PanelBlocklist")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
   createdAt      DateTime           @default(now())

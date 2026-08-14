@@ -99,6 +99,21 @@ export const settingDefinitions = {
   "order.autoApproveCancel": { group: "order", type: "boolean", value: false },
   "order.stuckAfterMinutes": { group: "order", type: "number", value: 0 },
 
+  // --- Abuse controls -----------------------------------------------------
+  // Every one of these is off at zero, and every one ships at zero. A panel
+  // whose customers are honest should never notice they exist, and holding a
+  // real customer's order is worse than losing one order to a fraudster.
+  //
+  // The same link ordered from several accounts is the cheapest way around a
+  // per-account limit. Legitimate too — an agency running one client's page
+  // from several logins — which is why it holds rather than refuses.
+  "guard.sharedLinkAccounts": { group: "order", type: "number", value: 0 },
+  "guard.sharedLinkHours": { group: "order", type: "number", value: 24 },
+  // A brand new account that has never paid in, spending big, is the shape of
+  // a stolen card being emptied before the chargeback lands.
+  "guard.minAccountAgeMinutes": { group: "order", type: "number", value: 0 },
+  "guard.newAccountMaxCharge": { group: "order", type: "number", value: 0 },
+
   // --- Scheduler ----------------------------------------------------------
   // How long the panel waits before saying the scheduler has stopped. Zero
   // switches the warning off for a deployment that runs the cycle by hand.

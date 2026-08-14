@@ -5,7 +5,8 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { creditDeposit } from "@/lib/payments/credit";
-import { withSettled, recordOrderStep, ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
+import { withSettled, recordOrderStep, readSubscription, ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
+import { planUpstream, writeUpstream } from "@/lib/chain";
 import type { ActionResult } from "./catalogue";
 import { notification } from "@/lib/notify";
 import { readerMessages, getAppContext } from "@/lib/context";
@@ -289,4 +290,72 @@ export async function orderStepsAction(orderId: string): Promise<{
       at: dates.full(e.createdAt),
     })),
   };
+}
+
+/**
+ * Lets a held order go.
+ *
+ * An abuse rule stopped it before it reached a provider, and the money it
+ * would spend upstream was never spent — so approving is not just a status
+ * flip on a child panel: the wholesale chain has to be bought now, at today's
+ * prices, exactly as it would have been at checkout.
+ *
+ * Refusing is not here. That is `setOrderStatusAction(id, "canceled")`, which
+ * already refunds the customer once and only once; a second path to the same
+ * money is a second chance to get it wrong.
+ */
+export async function releaseOrderAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
+  const admin = await requireAdmin();
+
+  const order = await db.order.findFirst({ where: { id }, include: { service: true } });
+  if (!order) return { error: t("err.orderGone") };
+  if (order.status !== "held") return { error: t("adm.notHeld") };
+
+  // Planned outside the transaction: it reads other panels and allocates
+  // their ids, neither of which belongs inside one.
+  const plan = await planUpstream(order.service, order.quantity);
+  if ("error" in plan) {
+    await logActivity(admin.id, "order.chain.blocked", plan.detail);
+    return { error: plan.error };
+  }
+
+  try {
+    await db.$transaction(async (tx) => {
+      // Re-read inside the transaction so two admins clicking at once cannot
+      // both buy the chain.
+      const fresh = await tx.order.findUniqueOrThrow({ where: { id } });
+      if (fresh.status !== "held") throw new Error("ALREADY_RELEASED");
+
+      const change = { status: "pending", holdReason: "", note: "" };
+      await tx.order.update({
+        where: { id },
+        data: {
+          ...change,
+          // A held order recorded the panel's own provider cost, because it
+          // had no chain. Now it has one.
+          ...(plan.hops.length ? { cost: plan.hops[0].charge } : {}),
+        },
+      });
+      await recordOrderStep(tx, fresh, change, admin.username);
+
+      await writeUpstream(tx, plan.hops, {
+        downstreamOrderId: fresh.id,
+        link: fresh.link,
+        comments: fresh.comments,
+        quantity: fresh.quantity,
+        runs: fresh.runs,
+        interval: fresh.interval,
+        subscription: readSubscription(fresh),
+      });
+    });
+  } catch (e) {
+    if (e instanceof Error && e.message === "ALREADY_RELEASED") return { error: t("adm.notHeld") };
+    if (e instanceof Error && e.message === "UPSTREAM_FUNDS") return { error: t("err.upstreamFunds") };
+    throw e;
+  }
+
+  await logActivity(admin.id, "order.release", `#${order.publicId} ${order.holdReason}`);
+  revalidatePath("/admin/orders");
+  return { ok: true };
 }

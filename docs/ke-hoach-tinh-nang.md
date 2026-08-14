@@ -136,6 +136,33 @@ thì nó chạy tiếp.
 
 **Cỡ.** Vừa.
 
+**Đã làm xong.** Trạng thái đơn mới `held`: đã trừ tiền, chưa gửi đi đâu, và
+**không mua hàng sỉ lên panel cha** cho tới khi có người duyệt. Admin duyệt thì
+lúc đó mới dựng chuỗi đơn lên trên; từ chối thì đi qua đúng đường huỷ cũ, hoàn
+tiền một lần.
+
+Ba luật, mặc định tắt hết:
+- cùng link từ N tài khoản khác nhau trong X giờ → **giữ**
+- tài khoản dưới X phút tuổi, hoặc chưa nạp lần nào, đặt đơn quá mức trần →
+  **giữ**
+- danh sách chặn link/tài khoản → **từ chối thẳng, không trừ tiền**. Khác kế
+  hoạch ban đầu: giá trị trong danh sách là do chính admin gõ vào, đưa ngược
+  lại cho họ duyệt là chạy vòng tròn.
+
+Khách **không** thấy đơn mình đang bị soi: `held` hiện ra là "Chờ xử lý" ở mọi
+chỗ khách nhìn thấy, kể cả API v2 — nói ra là chỉ đường cho người muốn lách, và
+là buộc tội nhầm số đông khách thật vướng luật do vô tình. Khách vẫn tự huỷ được
+đơn đang giữ, vì lúc đó chưa mua gì cả.
+
+**Chứng minh.** Ba tài khoản cùng đặt một link qua API thật, ngưỡng 3: hai cái
+đầu chạy, cái thứ ba bị giữ, không có mã đơn nhà cung cấp và không sinh đơn
+chuỗi nào. Link khác của cùng tài khoản đó vẫn chạy. Link/tài khoản trong danh
+sách chặn bị từ chối và **không tạo đơn**. Tài khoản 5 phút tuổi và tài khoản
+chưa nạp bao giờ đều bị giữ khi vượt trần, tài khoản cũ thì không, và đơn nhỏ
+của chính tài khoản mới đó cũng không. Bấm nút trong admin thật: duyệt → đơn về
+`pending`, dòng thời gian ghi `held -> pending by admin`; từ chối → huỷ và tiền
+về ví đủ.
+
 ---
 
 ## 5. Nạp tiền không có biên lai

@@ -132,11 +132,6 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     if (Object.keys(fieldErrors).length) return { fieldErrors };
   }
 
-  // After the shape of the order is known, so the message names the service
-  // the customer actually chose.
-  const guarded = await guardOrder(user.id, service.id, link);
-  if (guarded) return { error: t(guarded.key, guarded.vars) };
-
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   // The tier price, not the list price — the same number the order form showed.
   const rate = await priceService(await resolveTier(user), service);
@@ -146,10 +141,16 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     return { fieldErrors: { quantity: t("err.minCharge", { amount: minCharge.toLocaleString() }) } };
   }
 
-  // On a child panel the same order has to be bought from the panel above.
-  // Planned before the transaction opens: it reads other panels and allocates
-  // their ids, neither of which belongs inside one.
-  const plan = await planUpstream(service, totalQuantity);
+  // After the shape of the order is known, so the message names the service
+  // the customer actually chose and the ceiling weighs the real charge.
+  const guarded = await guardOrder(user.id, service.id, link, 1, { username: user.username, charge });
+  if (guarded && "block" in guarded) return { error: t(guarded.block.key, guarded.block.vars) };
+  const holdReason = guarded?.hold ?? "";
+
+  // On a child panel the same order has to be bought from the panel above —
+  // but not while it is held. Nothing is spent upstream until a human has
+  // said the order is real; approving it buys the chain then.
+  const plan = holdReason ? { hops: [] } : await planUpstream(service, totalQuantity);
   if ("error" in plan) {
     await logActivity(user.id, "order.chain.blocked", plan.detail);
     return { error: plan.error };
@@ -175,7 +176,8 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           quantity: totalQuantity,
           charge,
           remains: totalQuantity,
-          status: "pending",
+          status: holdReason ? "held" : "pending",
+          holdReason,
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,

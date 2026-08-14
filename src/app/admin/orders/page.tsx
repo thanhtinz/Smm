@@ -88,6 +88,8 @@ export default async function AdminOrdersPage({
     fromChild: t("order.fromChild"),
     timeline: t("order.timeline"),
     created: t("order.created"),
+    release: t("admin.release"),
+    refuse: t("admin.refuse"),
   };
   for (const s of ORDER_STATUSES) labels[`status.${s}`] = t(`status.${s}`);
   // The drawer shows the charge, and conversion belongs on the server.
@@ -160,6 +162,7 @@ export default async function AdminOrdersPage({
               }
             : null,
           fromChild: Boolean(o.sourceOrderId),
+          holdReason: o.holdReason,
         }))}
         money={Object.fromEntries(orders.map((o) => [o.id, displayMoney(o.charge, currency, locale)]))}
         labels={labels}

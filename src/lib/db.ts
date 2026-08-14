@@ -21,6 +21,7 @@ const TENANT_MODELS = new Set([
   "Service",
   "Order",
   "OrderEvent",
+  "Blocklist",
   "OrderRequest",
   "PaymentMethod",
   "Transaction",

@@ -36,6 +36,9 @@ export function withSettled<T extends Record<string, unknown>>(data: T): T {
 }
 
 export const ORDER_STATUSES = [
+  // Paid for, but stopped by an abuse rule before it could be sent. Not an
+  // active status: nothing dispatches it until a human says so.
+  "held",
   "pending",
   "processing",
   "inprogress",
@@ -46,6 +49,21 @@ export const ORDER_STATUSES = [
 ] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
+
+/**
+ * The statuses a customer is offered as filters — everything but `held`.
+ *
+ * Being under review is not something the panel tells the person it is
+ * reviewing: it would name the rule they tripped, which is a map for anyone
+ * working out how to get around it, and it would accuse the far larger number
+ * of honest customers who trip these rules by accident.
+ */
+export const CUSTOMER_ORDER_STATUSES = ORDER_STATUSES.filter((s) => s !== "held");
+
+/** A held order reads as pending to whoever placed it. */
+export function customerStatus(status: string): string {
+  return status === "held" ? "pending" : status;
+}
 
 /** One comment per line, blank lines dropped. */
 export function commentLines(raw: string): string[] {
@@ -87,6 +105,34 @@ export function subscriptionFields(sub: Subscription | null) {
     maxPerPost: sub?.maxPerPost ?? null,
     delay: sub?.delay ?? null,
     expiry: sub?.expiry ?? null,
+  };
+}
+
+/**
+ * The same columns read back off a stored order.
+ *
+ * `posts` is what makes an order a subscription — the other columns are null
+ * on ordinary orders too — so it is the one the check hangs on. Needed
+ * wherever an order is re-sent from the row rather than from a form, which is
+ * how a held order reaches its provider after approval.
+ */
+export function readSubscription(order: {
+  link: string;
+  posts: number | null;
+  minPerPost: number | null;
+  maxPerPost: number | null;
+  delay: number | null;
+  expiry: Date | null;
+}): Subscription | null {
+  if (order.posts === null) return null;
+  return {
+    // On a subscription order `link` holds the username being watched.
+    username: order.link,
+    posts: order.posts,
+    minPerPost: order.minPerPost ?? 0,
+    maxPerPost: order.maxPerPost ?? 0,
+    delay: order.delay ?? 0,
+    expiry: order.expiry,
   };
 }
 
