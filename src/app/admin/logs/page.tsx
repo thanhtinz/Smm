@@ -114,17 +114,27 @@ export default async function AdminLogsPage({
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {rows.map((row) => {
+                  // t() answers with the key itself when there is no entry,
+                  // which is how a brand-new action still shows something.
+                  const label = t(`log.${row.action}`);
+                  const named = label !== `log.${row.action}`;
+                  return (
                   <tr key={row.id}>
                     <td className="muted text-xs whitespace-nowrap">{fmt.format(row.createdAt)}</td>
                     <td className="text-sm">{row.user?.username ?? <span className="muted">—</span>}</td>
-                    <td className="font-mono text-xs">{row.action}</td>
+                    {/* The identifier is what the search box matches, so it
+                        stays on the row as its tooltip. */}
+                    <td className="text-sm" title={row.action}>
+                      {named ? label : <span className="font-mono text-xs">{row.action}</span>}
+                    </td>
                     <td className="muted max-w-0 truncate text-xs" title={row.detail}>
                       {row.detail}
                     </td>
                     <td className="muted font-mono text-xs">{row.ip || "—"}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
