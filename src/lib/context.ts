@@ -42,6 +42,37 @@ function validTimezone(name: string): boolean {
 }
 
 /**
+ * The language this reader gets, by the same rule as every other preference:
+ * signed-in profile, then cookie, then the admin default — unless the panel
+ * pins one for everyone.
+ *
+ * Split out of getAppContext so a server action can translate the sentence it
+ * hands back without loading currencies, themes and the whole settings map.
+ */
+export async function readerLocale(): Promise<string> {
+  const [jar, user, languages, allow, fallback] = await Promise.all([
+    cookies(),
+    getCurrentUser(),
+    getEnabledLanguages(),
+    getSetting("locale.allowUserLocale"),
+    getSetting("locale.default"),
+  ]);
+  const candidate = allow
+    ? user?.locale || jar.get(LOCALE_COOKIE)?.value || (fallback as string)
+    : (fallback as string);
+  return languages.some((l) => l.code === candidate) ? candidate : languages[0]?.code || "en";
+}
+
+/**
+ * The translator for whoever is reading. Server actions answer with sentences
+ * a person reads, so those sentences are looked up like any other string
+ * rather than written into the code in one language.
+ */
+export async function readerMessages(): Promise<Translator> {
+  return (await getTranslator(await readerLocale())).t;
+}
+
+/**
  * Resolution order for every preference: signed-in user profile, then cookie,
  * then the admin-configured default.
  */

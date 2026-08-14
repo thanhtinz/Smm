@@ -13,6 +13,7 @@ import {
   STAFF_ROLES,
   twoFactorRequired,
 } from "@/lib/two-factor";
+import { readerMessages } from "@/lib/context";
 
 export type ChallengeState = { error?: string };
 export type SetupState = { error?: string; fieldErrors?: Record<string, string>; codes?: string[]; ok?: true };
@@ -22,14 +23,15 @@ export type SetupState = { error?: string; fieldErrors?: Record<string, string>;
  * code the parked ticket expires and nothing was granted.
  */
 export async function submitCodeAction(_prev: ChallengeState, form: FormData): Promise<ChallengeState> {
+  const t = await readerMessages();
   const row = await pendingLogin();
-  if (!row) return { error: "This sign-in has expired. Start again." };
+  if (!row) return { error: t("err.2faExpired") };
 
   const submitted = String(form.get("code") ?? "").trim();
   const accepted = await acceptSecondFactor(row.user, submitted);
   if (!accepted) {
     await logActivity(row.userId, "login.2fa.failed");
-    return { error: "That code is not right. Check the app and try again." };
+    return { error: t("err.2faCode") };
   }
 
   await clearPendingLogin(row.id);
@@ -61,15 +63,16 @@ export async function beginSetupAction(): Promise<{ secret: string }> {
 }
 
 export async function confirmSetupAction(_prev: SetupState, form: FormData): Promise<SetupState> {
+  const t = await readerMessages();
   const user = await requireUser();
-  if (!STAFF_ROLES.has(user.role)) return { error: "Two-factor sign-in is for staff accounts." };
+  if (!STAFF_ROLES.has(user.role)) return { error: t("err.2faStaffOnly") };
 
   const fresh = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { totpSecret: true } });
-  if (!fresh.totpSecret) return { error: "Start the setup again." };
+  if (!fresh.totpSecret) return { error: t("err.2faRestart") };
 
   const code = String(form.get("code") ?? "").trim();
   if (!verifyCode(fresh.totpSecret, code)) {
-    return { fieldErrors: { code: "That code is not right. It changes every 30 seconds." } };
+    return { fieldErrors: { code: t("err.2faCodeShort") } };
   }
 
   await db.user.update({ where: { id: user.id }, data: { totpEnabledAt: new Date() } });
@@ -85,14 +88,15 @@ export async function confirmSetupAction(_prev: SetupState, form: FormData): Pro
  * account holder.
  */
 export async function disableAction(_prev: SetupState, form: FormData): Promise<SetupState> {
+  const t = await readerMessages();
   const user = await requireUser();
   if (await twoFactorRequired()) {
-    return { error: "This panel requires two-factor sign-in for staff accounts." };
+    return { error: t("err.2faRequired") };
   }
 
   const fresh = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { password: true } });
   if (!(await verifyPassword(String(form.get("password") ?? ""), fresh.password))) {
-    return { fieldErrors: { password: "That is not your password" } };
+    return { fieldErrors: { password: t("err.passwordWrong") } };
   }
 
   await db.user.update({ where: { id: user.id }, data: { totpSecret: "", totpEnabledAt: null } });
@@ -103,14 +107,15 @@ export async function disableAction(_prev: SetupState, form: FormData): Promise<
 }
 
 export async function regenerateRecoveryAction(_prev: SetupState, form: FormData): Promise<SetupState> {
+  const t = await readerMessages();
   const user = await requireUser();
   const fresh = await db.user.findUniqueOrThrow({
     where: { id: user.id },
     select: { password: true, totpEnabledAt: true },
   });
-  if (!fresh.totpEnabledAt) return { error: "Set up two-factor sign-in first." };
+  if (!fresh.totpEnabledAt) return { error: t("err.2faSetupFirst") };
   if (!(await verifyPassword(String(form.get("password") ?? ""), fresh.password))) {
-    return { fieldErrors: { password: "That is not your password" } };
+    return { fieldErrors: { password: t("err.passwordWrong") } };
   }
 
   const codes = await issueRecoveryCodes(user.id);
@@ -124,11 +129,12 @@ export async function regenerateRecoveryAction(_prev: SetupState, form: FormData
  * it, so a stolen device cannot keep the access it already had.
  */
 export async function clearForUserAction(userId: string): Promise<{ ok?: true; error?: string }> {
+  const t = await readerMessages();
   const admin = await requireUser();
-  if (admin.role !== "admin") return { error: "Only an admin can do that." };
+  if (admin.role !== "admin") return { error: t("err.adminOnly") };
 
   const target = await db.user.findUnique({ where: { id: userId }, select: { username: true } });
-  if (!target) return { error: "That account is not on this panel." };
+  if (!target) return { error: t("err.otherPanel") };
 
   await db.user.update({ where: { id: userId }, data: { totpSecret: "", totpEnabledAt: null } });
   await db.recoveryCode.deleteMany({ where: { userId } });

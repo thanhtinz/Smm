@@ -14,6 +14,7 @@ import {
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { guardOrder } from "@/lib/order-guard";
+import { englishMessage } from "@/lib/notify";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
@@ -181,7 +182,9 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   }
 
   const guarded = await guardOrder(userId, service.id, link);
-  if (guarded) return fail(guarded.error);
+  // The API answers in English whatever the account's own language is: these
+  // strings are read by a reseller's client code, not by a person.
+  if (guarded) return fail(englishMessage(guarded.key, guarded.vars));
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   const rate = await priceService(await resolveTier(user), service);

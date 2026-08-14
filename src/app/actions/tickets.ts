@@ -7,6 +7,7 @@ import { getCurrentUser, logActivity } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "@/lib/notify";
+import { readerMessages } from "@/lib/context";
 
 export type TicketState = {
   error?: string;
@@ -16,11 +17,12 @@ export type TicketState = {
 const OPEN_STATUSES = ["open", "answered", "pending"];
 
 export async function createTicketAction(_prev: TicketState, form: FormData): Promise<TicketState> {
+  const t = await readerMessages();
   const user = await getCurrentUser();
-  if (!user) return { error: "Your session expired. Please sign in again." };
+  if (!user) return { error: t("err.session") };
 
   if (!(await getSetting("support.enabled"))) {
-    return { error: "Support is currently unavailable." };
+    return { error: t("err.supportClosed") };
   }
 
   const subject = String(form.get("subject") ?? "").trim();
@@ -59,19 +61,20 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
 }
 
 export async function replyTicketAction(_prev: TicketState, form: FormData): Promise<TicketState> {
+  const t = await readerMessages();
   const user = await getCurrentUser();
-  if (!user) return { error: "Your session expired. Please sign in again." };
+  if (!user) return { error: t("err.session") };
 
   const ticketId = String(form.get("ticketId") ?? "");
   const body = String(form.get("body") ?? "").trim();
-  if (body.length < 2) return { fieldErrors: { body: "Write a reply first" } };
+  if (body.length < 2) return { fieldErrors: { body: t("err.replyEmpty") } };
 
   const isStaff = user.role === "admin" || user.role === "support";
   const ticket = await db.ticket.findFirst({
     where: { id: ticketId, ...(isStaff ? {} : { userId: user.id }) },
   });
-  if (!ticket) return { error: "That ticket no longer exists." };
-  if (ticket.status === "closed") return { error: "This ticket is closed." };
+  if (!ticket) return { error: t("err.ticketGone") };
+  if (ticket.status === "closed") return { error: t("err.ticketClosed") };
 
   await db.$transaction([
     db.ticketMessage.create({
@@ -103,17 +106,18 @@ export async function replyTicketAction(_prev: TicketState, form: FormData): Pro
 }
 
 export async function setTicketStatusAction(ticketId: string, status: string): Promise<TicketState> {
+  const t = await readerMessages();
   const user = await getCurrentUser();
-  if (!user) return { error: "Your session expired." };
+  if (!user) return { error: t("err.sessionShort") };
 
   const isStaff = user.role === "admin" || user.role === "support";
   // A customer may close their own ticket, but not reopen or re-queue it.
-  if (!isStaff && status !== "closed") return { error: "Only support can change that." };
+  if (!isStaff && status !== "closed") return { error: t("err.supportOnly") };
 
   const ticket = await db.ticket.findFirst({
     where: { id: ticketId, ...(isStaff ? {} : { userId: user.id }) },
   });
-  if (!ticket) return { error: "That ticket no longer exists." };
+  if (!ticket) return { error: t("err.ticketGone") };
 
   await db.ticket.update({ where: { id: ticket.id }, data: { status } });
   await logActivity(user.id, "ticket.status", `#${ticket.publicId} -> ${status}`);

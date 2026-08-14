@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { SESSION_COOKIE, logActivity, requireUser } from "@/lib/auth";
+import { readerMessages } from "@/lib/context";
 
 export type SessionActionResult = { ok?: true; error?: string; closed?: number };
 
@@ -15,9 +16,10 @@ export type SessionActionResult = { ok?: true; error?: string; closed?: number }
  * out is a reasonable thing to want from this screen.
  */
 export async function revokeSessionAction(id: string): Promise<SessionActionResult> {
+  const t = await readerMessages();
   const user = await requireUser();
   const row = await db.session.findFirst({ where: { id, userId: user.id } });
-  if (!row) return { error: "That sign-in is already closed." };
+  if (!row) return { error: t("err.signInGone") };
 
   await db.session.delete({ where: { id: row.id } });
   await logActivity(user.id, "auth.session.revoke");

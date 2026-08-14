@@ -12,7 +12,13 @@ import { getSetting } from "./settings";
 /** Orders that were paid for. A refunded one should not block a retry. */
 const COUNTED_STATUSES = ["pending", "processing", "inprogress", "completed", "partial"];
 
-export type GuardResult = { error: string } | null;
+/**
+ * What was refused and the numbers the sentence needs — not the sentence.
+ * The same refusal is read by a customer in their own language on the web and
+ * by a reseller's client over the API, where the wording is fixed English.
+ */
+export type Fault = { key: string; vars?: Record<string, string | number> };
+export type GuardResult = Fault | null;
 
 /**
  * The same service on the same link, again, within the window.
@@ -37,9 +43,7 @@ export async function duplicateOrder(userId: string, serviceId: string, link: st
   });
   if (!recent) return null;
 
-  return {
-    error: `You already ordered this service for this link (#${recent.publicId}). Wait ${minutes} minutes or use a different link.`,
-  };
+  return { key: "err.duplicateOrder", vars: { id: recent.publicId, minutes } };
 }
 
 /**
@@ -57,7 +61,8 @@ export async function orderRateLimit(userId: string, incoming = 1): Promise<Guar
   });
   if (placed + incoming <= limit) return null;
 
-  return { error: `You can place ${limit} order${limit === 1 ? "" : "s"} per minute. Try again shortly.` };
+  // English has a singular and a plural here; the count picks the sentence.
+  return { key: limit === 1 ? "err.rateLimitOne" : "err.rateLimit", vars: { limit } };
 }
 
 /** Both checks, in the order a customer would hit them. */

@@ -8,6 +8,7 @@ import { getSetting } from "@/lib/settings";
 import { panelBaseUrl } from "@/lib/tenancy";
 import { mailConfigured, mailTemplate, sendMail } from "@/lib/mail";
 import { verifyCaptcha } from "@/lib/captcha";
+import { readerMessages } from "@/lib/context";
 
 export type ResetState = { error?: string; sent?: true; fieldErrors?: Record<string, string> };
 
@@ -19,17 +20,18 @@ export type ResetState = { error?: string; sent?: true; fieldErrors?: Record<str
  * the caller cannot know if a mail went out, which is the point.
  */
 export async function requestPasswordResetAction(_prev: ResetState, form: FormData): Promise<ResetState> {
+  const t = await readerMessages();
   const email = String(form.get("email") ?? "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-    return { fieldErrors: { email: "Enter the email address on your account" } };
+    return { fieldErrors: { email: t("err.emailOnAccount") } };
   }
 
   if (!(await verifyCaptcha("login", form))) {
-    return { error: "Please complete the verification and try again." };
+    return { error: t("err.captcha") };
   }
 
   if (!(await mailConfigured())) {
-    return { error: "Password resets are unavailable right now. Please contact support." };
+    return { error: t("err.resetUnavailable") };
   }
 
   const user = await db.user.findFirst({ where: { email, banned: false } });
@@ -72,16 +74,17 @@ export async function requestPasswordResetAction(_prev: ResetState, form: FormDa
 }
 
 export async function completePasswordResetAction(_prev: ResetState, form: FormData): Promise<ResetState> {
+  const t = await readerMessages();
   const token = String(form.get("token") ?? "").trim();
   const password = String(form.get("password") ?? "");
   const confirm = String(form.get("confirm") ?? "");
 
-  if (password.length < 8) return { fieldErrors: { password: "At least 8 characters" } };
-  if (password !== confirm) return { fieldErrors: { confirm: "The passwords do not match" } };
+  if (password.length < 8) return { fieldErrors: { password: t("err.passwordLength") } };
+  if (password !== confirm) return { fieldErrors: { confirm: t("err.passwordMatch") } };
 
   const row = token ? await db.authToken.findUnique({ where: { token }, include: { user: true } }) : null;
   if (!row || row.type !== "reset" || row.usedAt || row.expiresAt < new Date()) {
-    return { error: "This link has expired or has already been used. Request a new one." };
+    return { error: t("err.linkUsed") };
   }
 
   await db.authToken.update({ where: { id: row.id }, data: { usedAt: new Date() } });
