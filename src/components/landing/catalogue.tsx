@@ -18,8 +18,8 @@ export default function Catalogue({ data, t, currency, locale, settings }: Landi
     <>
       <section className="container-page flex flex-wrap items-center justify-between gap-4 pt-10 pb-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">{t("landing.catalogue.title")}</h1>
-          <p className="muted mt-1.5 text-sm">
+          <h1 className="text-[2rem] leading-none font-extrabold tracking-[-0.03em] sm:text-[2.6rem]">{t("landing.catalogue.title")}</h1>
+          <p className="muted mt-3">
             {t("landing.catalogue.sub", { services: data.serviceCount, platforms: data.platforms.length })}
           </p>
         </div>
@@ -47,12 +47,12 @@ export default function Catalogue({ data, t, currency, locale, settings }: Landi
                       {p.name}
                     </Link>
                   </h2>
-                  <p className="muted text-xs tabular-nums">
+                  <p className="muted font-mono text-xs">
                     {t("landing.catalogue.count", { n: p.services })}
                   </p>
                 </div>
                 <span className="shrink-0 text-right">
-                  <span className="block text-sm font-bold tabular-nums">
+                  <span className="block font-mono text-base font-bold">
                     {displayMoney(p.from, currency, locale)}
                   </span>
                   <span className="muted block text-[0.65rem]">{t("landing.board.per")}</span>
@@ -69,7 +69,7 @@ export default function Catalogue({ data, t, currency, locale, settings }: Landi
                       className="surface-2 muted flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs transition-colors hover:text-[var(--text)]"
                     >
                       {c.name}
-                      <span className="tabular-nums opacity-60">{c.count}</span>
+                      <span className="font-mono opacity-60">{c.count}</span>
                     </Link>
                   </li>
                 ))}

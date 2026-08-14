@@ -36,18 +36,18 @@ export default function Proof({ data, t, locale, settings }: LandingProps) {
   return (
     <>
       <section className="container-page pt-12 pb-6 sm:pt-16">
-        <h1 className="max-w-2xl text-3xl font-bold tracking-tight sm:text-4xl">{t("landing.proof.title")}</h1>
-        <p className="muted mt-3 max-w-xl leading-relaxed">{t("landing.proof.sub")}</p>
+        <h1 className="max-w-3xl text-[2.4rem] leading-[1.05] font-extrabold tracking-[-0.03em] sm:text-6xl">{t("landing.proof.title")}</h1>
+        <p className="muted mt-5 max-w-xl text-lg leading-relaxed">{t("landing.proof.sub")}</p>
 
-        <div className="mt-8 flex flex-wrap gap-x-10 gap-y-4">
+        <div className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
           {[
             { k: t("landing.stat.orders"), v: data.completedCount },
             { k: t("landing.stat.services"), v: data.serviceCount },
             { k: t("landing.stat.users"), v: data.userCount },
           ].map((s) => (
             <div key={s.k}>
-              <p className="text-3xl font-bold tabular-nums">{count.format(s.v)}</p>
-              <p className="muted text-xs">{s.k}</p>
+              <p className="font-mono text-4xl leading-none font-bold">{count.format(s.v)}</p>
+              <p className="muted mt-2 text-xs">{s.k}</p>
             </div>
           ))}
         </div>
@@ -77,9 +77,9 @@ export default function Proof({ data, t, locale, settings }: LandingProps) {
                   )}
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-medium">{o.service}</span>
-                    <span className="muted block text-xs tabular-nums">+{count.format(o.quantity)}</span>
+                    <span className="muted block font-mono text-xs">+{count.format(o.quantity)}</span>
                   </span>
-                  <span className="muted shrink-0 text-xs tabular-nums">
+                  <span className="muted shrink-0 font-mono text-xs">
                     {o.seconds === null ? "" : elapsed(o.seconds)}
                   </span>
                 </li>

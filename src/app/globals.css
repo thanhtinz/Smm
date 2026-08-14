@@ -18,7 +18,14 @@
   --warning: #fbbf24;
   --danger: #f87171;
   --radius: 16px;
-  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-be-vietnam), "Segoe UI", system-ui, -apple-system, sans-serif;
+  /* Role faces. Not per-theme: a skin chooses its body font, but a price
+     column wants figures that line up whichever skin is running. */
+  --font-display: var(--font-playfair), Georgia, "Times New Roman", serif;
+  /* Be Vietnam Pro sits between the mono face and the system fallback on
+     purpose: JetBrains Mono has no ₫, and letting that one glyph land on
+     whatever the machine offers looks worse than a slightly wider dong sign. */
+  --font-mono: var(--font-jetbrains), var(--font-be-vietnam), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 @theme inline {
@@ -36,6 +43,8 @@
   --color-danger: var(--danger);
   --radius-card: var(--radius);
   --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-mono);
 }
 
 * {
