@@ -37,7 +37,7 @@ export default function Catalogue(props: LayoutProps) {
                 <PlatformMark platform={p} box={40} />
                 <div className="min-w-0 flex-1">
                   <h2 className="truncate font-semibold">
-                    <Link href={`/services?platform=${p.slug}`} className="hover:text-[var(--primary)]">
+                    <Link href={`/services/${p.slug}`} className="hover:text-[var(--primary)]">
                       {p.name}
                     </Link>
                   </h2>

@@ -77,6 +77,11 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
     profilePattern,
     postExample: String(form.get("postExample") ?? "").trim(),
     profileExample: String(form.get("profileExample") ?? "").trim(),
+    seoTitle: String(form.get("seoTitle") ?? "").trim(),
+    seoDescription: String(form.get("seoDescription") ?? "").trim(),
+    // HTML by the panel's own admin, the same author as every other string on
+    // the site — there is no untrusted author here.
+    seoBody: String(form.get("seoBody") ?? "").trim(),
   };
 
   if (id) {

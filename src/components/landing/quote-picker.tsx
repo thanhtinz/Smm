@@ -186,7 +186,7 @@ export default function QuotePicker({
           {labels.start}
           <Icon name="arrowRight" size={17} />
         </Link>
-        <Link href={`/services${platform ? `?platform=${platform.slug}` : ""}`} className="btn btn-ghost btn-lg">
+        <Link href={`/services${platform ? `/${platform.slug}` : ""}`} className="btn btn-ghost btn-lg">
           <Icon name="layers" size={17} />
           {labels.browse}
         </Link>

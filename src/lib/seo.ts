@@ -61,7 +61,7 @@ export async function publicUrls(): Promise<SitemapEntry[]> {
     { url: at("/services"), priority: 0.9 },
     // One address per platform, because that is the page a person searching
     // for "buff follow tiktok" should land on rather than the whole catalogue.
-    ...platforms.map((p) => ({ url: at(`/services?platform=${p.slug}`), priority: 0.8 })),
+    ...platforms.map((p) => ({ url: at(`/services/${p.slug}`), priority: 0.8 })),
     { url: at("/api-docs"), priority: 0.4 },
     ...pages.map((p) => ({ url: at(`/p/${p.slug}`), lastModified: p.updatedAt, priority: 0.5 })),
   ];

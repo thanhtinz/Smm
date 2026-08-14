@@ -64,7 +64,7 @@ export function PlatformStrip({ platforms, label }: { platforms: PlatformLine[];
         {platforms.map((p) => (
           <Link
             key={p.id}
-            href={`/services?platform=${p.slug}`}
+            href={`/services/${p.slug}`}
             className="flex items-center gap-2 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-sm font-medium transition-colors hover:border-[color-mix(in_srgb,var(--primary)_50%,transparent)]"
           >
             <PlatformMark platform={p} size={16} />
