@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import { displayMoney } from "@/lib/currency";
 import { requirePanel } from "@/lib/tenancy";
@@ -11,7 +12,8 @@ import { Icon } from "@/components/icons";
 export const metadata: Metadata = { title: "Child panels" };
 
 export default async function AdminPanelsPage() {
-  const { t, currency, locale } = await getAppContext();
+  const { t, currency, locale, timezone } = await getAppContext();
+  const dates = dateFormats(locale, timezone);
   const panel = await requirePanel();
 
   const [enabled, maxDepth, maxChildren] = await Promise.all([
@@ -37,11 +39,7 @@ export default async function AdminPanelsPage() {
     getSetting("panel.rentPrice"),
     getSetting("panel.rentPeriodDays"),
   ]);
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const fmtDate = { format: dates.day };
   const today = new Date();
   const owners = await db.user.findMany({
     where: { banned: false },

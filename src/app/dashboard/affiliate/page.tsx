@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import { displayMoney } from "@/lib/currency";
 import { ensureReferralCode } from "@/lib/affiliate";
@@ -15,7 +16,8 @@ export const metadata: Metadata = { title: "Affiliate" };
 export default async function AffiliatePage() {
   const ctx = await getAppContext();
   const user = ctx.user!;
-  const { t, currency, locale } = ctx;
+  const { t, currency, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const [enabled, percent, minWithdraw] = await Promise.all([
     getSetting("affiliate.enabled"),
@@ -48,12 +50,7 @@ export default async function AffiliatePage() {
   const available = earnings.filter((e) => e.status === "earned").reduce((n, e) => n + e.amount, 0);
   const lifetime = earnings.reduce((n, e) => n + e.amount, 0);
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">

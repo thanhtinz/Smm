@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
@@ -22,7 +23,8 @@ export default async function AdminStatisticsPage({
   searchParams: Promise<{ days?: string }>;
 }) {
   const params = await searchParams;
-  const { t, currency, locale } = await getAppContext();
+  const { t, currency, locale, timezone } = await getAppContext();
+  const dates = dateFormats(locale, timezone);
 
   const days = WINDOWS.includes(Number(params.days) as (typeof WINDOWS)[number]) ? Number(params.days) : 30;
   const since = new Date();
@@ -91,7 +93,7 @@ export default async function AdminStatisticsPage({
     if (b) b.users += 1;
   }
 
-  const short = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, { day: "2-digit", month: "2-digit" });
+  const short = { format: dates.stamp };
   const series = (pick: (b: Bucket) => number): TrendPoint[] =>
     [...buckets.entries()].map(([day, b]) => ({ day: short.format(new Date(`${day}T00:00:00`)), value: pick(b) }));
 

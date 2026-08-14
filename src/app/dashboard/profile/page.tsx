@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { SESSION_COOKIE } from "@/lib/auth";
 import { describeDevice } from "@/lib/devices";
 import { getAppContext } from "@/lib/context";
+import { TIMEZONES, dateFormats, describeZone } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import { otpauthUrl } from "@/lib/totp";
 import { STAFF_ROLES, twoFactorRequired, unusedRecoveryCount } from "@/lib/two-factor";
@@ -29,6 +30,15 @@ async function qrFor(secret: string): Promise<{ svg: string; uri: string }> {
 
 export default async function ProfilePage() {
   const ctx = await getAppContext();
+  const dates = dateFormats(ctx.locale, ctx.timezone);
+
+  // The account's own zone is offered even when it is not on the short list —
+  // an admin can set any name as the panel default.
+  const zoneOptions = [...new Set([...TIMEZONES, ctx.timezone])].map((z) => ({
+    value: z,
+    label: describeZone(z, ctx.locale),
+  }));
+
   const user = ctx.user!;
   const { t } = ctx;
 
@@ -37,11 +47,8 @@ export default async function ProfilePage() {
     select: { fullName: true, username: true, email: true, role: true, createdAt: true, totpEnabledAt: true },
   });
   const staff = STAFF_ROLES.has(fresh.role);
-  const day = new Intl.DateTimeFormat(ctx.locale === "vi" ? "vi-VN" : ctx.locale, { dateStyle: "medium" });
-  const stamp = new Intl.DateTimeFormat(ctx.locale === "vi" ? "vi-VN" : ctx.locale, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
+  const day = { format: dates.day };
+  const stamp = { format: dates.stamp };
 
   // Expired rows are swept lazily rather than on a schedule: they are only
   // ever read here, and a row past its date is not a sign-in anyone has.
@@ -92,14 +99,19 @@ export default async function ProfilePage() {
         locale={ctx.locale}
         currency={ctx.currency.code}
         theme={ctx.theme}
+        timezone={ctx.timezone}
+        zones={zoneOptions}
         allowLocale={Boolean(await getSetting("locale.allowUserLocale"))}
         allowCurrency={Boolean(await getSetting("currency.allowUserCurrency"))}
         allowTheme={Boolean(await getSetting("appearance.allowUserTheme"))}
+        allowTimezone={Boolean(await getSetting("locale.allowUserTimezone"))}
         labels={{
           title: t("profile.preferences"),
           language: t("common.language"),
           currency: t("common.currency"),
           theme: t("common.theme"),
+          timezone: t("profile.timezone"),
+          timezoneHint: t("profile.timezoneHint"),
           fixed: t("profile.preferencesFixed"),
         }}
       />

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import TicketThread from "@/components/tickets/ticket-thread";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
@@ -13,7 +14,8 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const { id } = await params;
   const ctx = await getAppContext();
   const user = ctx.user!;
-  const { t, locale } = ctx;
+  const { t, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const ticket = await db.ticket.findFirst({
     where: { id, userId: user.id },
@@ -21,12 +23,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   });
   if (!ticket) notFound();
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

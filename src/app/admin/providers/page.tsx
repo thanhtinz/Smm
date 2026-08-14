@@ -1,25 +1,22 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import ProviderManager from "@/components/admin/provider-manager";
 
 export const metadata: Metadata = { title: "Providers" };
 
 export default async function AdminProvidersPage() {
   const ctx = await getAppContext();
-  const { t, locale } = ctx;
+  const { t, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const providers = await db.provider.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { services: true } } },
   });
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">

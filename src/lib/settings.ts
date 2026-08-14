@@ -32,6 +32,8 @@ export const settingDefinitions = {
   // --- Localisation -------------------------------------------------------
   "locale.default": { group: "locale", type: "text", value: "vi" },
   "locale.allowUserLocale": { group: "locale", type: "boolean", value: true },
+  "locale.timezone": { group: "locale", type: "text", value: "Asia/Ho_Chi_Minh" },
+  "locale.allowUserTimezone": { group: "locale", type: "boolean", value: true },
   "currency.base": { group: "locale", type: "text", value: "VND" },
   "currency.autoUpdate": { group: "locale", type: "boolean", value: false },
   "currency.rateApiUrl": {

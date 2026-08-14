@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
 
@@ -16,7 +17,8 @@ export default async function AdminTicketsPage({
 }) {
   const params = await searchParams;
   const ctx = await getAppContext();
-  const { t, locale } = ctx;
+  const { t, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const status = STATUSES.includes(params.status ?? "") ? params.status : undefined;
   const [tickets, counts] = await Promise.all([
@@ -32,12 +34,7 @@ export default async function AdminTicketsPage({
     db.ticket.groupBy({ by: ["status"], _count: true }),
   ]);
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">

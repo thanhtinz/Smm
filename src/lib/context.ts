@@ -9,6 +9,7 @@ export const LOCALE_COOKIE = "nova_locale";
 export const CURRENCY_COOKIE = "nova_currency";
 export const THEME_COOKIE = "nova_theme";
 export const MODE_COOKIE = "nova_mode";
+export const TIMEZONE_COOKIE = "nova_tz";
 
 export type AppContext = {
   user: Awaited<ReturnType<typeof getCurrentUser>>;
@@ -20,9 +21,25 @@ export type AppContext = {
   currencies: CurrencyInfo[];
   theme: string;
   mode: "dark" | "light";
+  /** IANA name every date on the page is rendered in. */
+  timezone: string;
   themes: { slug: string; name: string; description: string }[];
   settings: Record<string, unknown>;
 };
+
+/**
+ * A name Intl actually knows. An unknown one throws at format time rather
+ * than when it was saved, which would take a page down long after the typo.
+ */
+function validTimezone(name: string): boolean {
+  if (!name) return false;
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: name });
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Resolution order for every preference: signed-in user profile, then cookie,
@@ -68,6 +85,12 @@ export async function getAppContext(): Promise<AppContext> {
     : (settings["appearance.defaultColorMode"] as string);
   const mode: "dark" | "light" = modeRaw === "light" ? "light" : "dark";
 
+  const allowTimezone = settings["locale.allowUserTimezone"] !== false;
+  const zoneCandidate = allowTimezone
+    ? user?.timezone || jar.get(TIMEZONE_COOKIE)?.value || (settings["locale.timezone"] as string)
+    : (settings["locale.timezone"] as string);
+  const timezone = validTimezone(zoneCandidate) ? zoneCandidate : "UTC";
+
   const [{ t }, currency] = await Promise.all([getTranslator(locale), resolveCurrency(currencyCode)]);
 
   return {
@@ -80,6 +103,7 @@ export async function getAppContext(): Promise<AppContext> {
     currencies,
     theme,
     mode,
+    timezone,
     themes: themeRows,
     settings,
   };

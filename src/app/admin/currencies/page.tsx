@@ -1,24 +1,21 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import CurrencyManager from "@/components/admin/currency-manager";
 import { getSetting } from "@/lib/settings";
 
 export const metadata: Metadata = { title: "Currencies" };
 
 export default async function AdminCurrenciesPage() {
-  const { t, locale } = await getAppContext();
+  const { t, locale, timezone } = await getAppContext();
+  const dates = dateFormats(locale, timezone);
   const [currencies, autoUpdate] = await Promise.all([
     db.currency.findMany({ orderBy: [{ position: "asc" }, { code: "asc" }] }),
     getSetting("currency.autoUpdate"),
   ]);
 
-  const fmtWhen = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtWhen = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">

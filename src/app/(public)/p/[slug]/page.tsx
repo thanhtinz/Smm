@@ -7,6 +7,9 @@ import { getCurrentPanel } from "@/lib/tenancy";
  * Static pages — terms, privacy, refund — edited from Admin → Pages and linked
  * from the footer. Each panel has its own set, so the same slug renders
  * different words depending on which panel is being served.
+ *
+ * Under /p/ rather than at the top level: a bare /:slug route would swallow
+ * every unmatched path, turning a typo or a future route into a page lookup.
  */
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   if (!(await getCurrentPanel())) return {};

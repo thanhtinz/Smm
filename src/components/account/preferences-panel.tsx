@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { setCurrency, setLocale, setTheme } from "@/app/actions/preferences";
+import { setCurrency, setLocale, setTheme, setTimezone } from "@/app/actions/preferences";
 import { Field } from "@/components/ui/field";
 
 /**
@@ -16,9 +16,12 @@ export default function PreferencesPanel({
   locale,
   currency,
   theme,
+  timezone,
+  zones,
   allowLocale,
   allowCurrency,
   allowTheme,
+  allowTimezone,
   labels,
 }: {
   languages: { code: string; nativeName: string; name: string }[];
@@ -27,14 +30,18 @@ export default function PreferencesPanel({
   locale: string;
   currency: string;
   theme: string;
+  timezone: string;
+  /** Pre-described on the server: the offsets need no client clock. */
+  zones: { value: string; label: string }[];
   /** Each is off when the panel pins that choice for everyone. */
   allowLocale: boolean;
   allowCurrency: boolean;
   allowTheme: boolean;
-  labels: Record<"title" | "language" | "currency" | "theme" | "fixed", string>;
+  allowTimezone: boolean;
+  labels: Record<"title" | "language" | "currency" | "theme" | "timezone" | "timezoneHint" | "fixed", string>;
 }) {
   const [pending, start] = useTransition();
-  const anything = allowLocale || allowCurrency || allowTheme;
+  const anything = allowLocale || allowCurrency || allowTheme || allowTimezone;
 
   return (
     <section className="card card-pad space-y-4">
@@ -76,6 +83,27 @@ export default function PreferencesPanel({
                 {currencies.map((c) => (
                   <option key={c.code} value={c.code}>
                     {c.code} {c.symbol} — {c.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+
+          {allowTimezone && (
+            // Every date on every page is rendered in this, so it belongs
+            // beside the other display choices rather than buried.
+            <Field name="timezone" label={labels.timezone} hint={labels.timezoneHint}>
+              <select
+                id="timezone"
+                name="timezone"
+                className="field"
+                value={timezone}
+                disabled={pending}
+                onChange={(e) => start(() => setTimezone(e.target.value))}
+              >
+                {zones.map((z) => (
+                  <option key={z.value} value={z.value}>
+                    {z.label}
                   </option>
                 ))}
               </select>

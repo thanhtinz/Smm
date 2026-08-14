@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import TicketThread from "@/components/tickets/ticket-thread";
 import StatusBadge from "@/components/ui/status-badge";
@@ -13,7 +14,8 @@ export const metadata: Metadata = { title: "Ticket" };
 export default async function AdminTicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ctx = await getAppContext();
-  const { t, locale, currency } = ctx;
+  const { t, locale, currency, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const ticket = await db.ticket.findUnique({
     where: { id },
@@ -24,12 +26,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
   });
   if (!ticket) notFound();
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">

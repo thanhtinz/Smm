@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import NewTicketForm from "@/components/tickets/new-ticket-form";
 import StatusBadge from "@/components/ui/status-badge";
@@ -12,7 +13,8 @@ export const metadata: Metadata = { title: "Support" };
 export default async function TicketsPage() {
   const ctx = await getAppContext();
   const user = ctx.user!;
-  const { t, locale } = ctx;
+  const { t, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const [enabled, categories, tickets] = await Promise.all([
     getSetting("support.enabled"),
@@ -24,12 +26,7 @@ export default async function TicketsPage() {
     }),
   ]);
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   const labels: Record<string, string> = {
     category: t("support.category"),

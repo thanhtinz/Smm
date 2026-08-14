@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import { ORDER_STATUSES } from "@/lib/orders";
 import OrderManager from "@/components/admin/order-manager";
@@ -18,7 +19,8 @@ export default async function AdminOrdersPage({
 }) {
   const params = await searchParams;
   const ctx = await getAppContext();
-  const { t, currency, locale } = ctx;
+  const { t, currency, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const status = ORDER_STATUSES.includes(params.status as never) ? params.status : undefined;
   const q = (params.q ?? "").trim();
@@ -50,14 +52,9 @@ export default async function AdminOrdersPage({
   ]);
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
   // An expiry is a day, so it is shown without a clock and with its year.
-  const fmtDay = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, { dateStyle: "medium" });
+  const fmtDay = { format: dates.day };
 
   const labels: Record<string, string> = {
     empty: t("common.none"),

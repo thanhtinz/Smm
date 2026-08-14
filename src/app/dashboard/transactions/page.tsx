@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats, type DateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import { Icon, type IconName } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
@@ -27,7 +28,8 @@ export default async function TransactionsPage({
   const params = await searchParams;
   const ctx = await getAppContext();
   const user = ctx.user!;
-  const { t, currency, locale } = ctx;
+  const { t, currency, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const types = ["deposit", "order", "refund", "bonus", "rent", "admin_credit", "admin_debit"];
   const type = types.includes(params.type ?? "") ? params.type : undefined;
@@ -111,7 +113,7 @@ export default async function TransactionsPage({
                       <td>
                         <StatusBadge status={r.status} label={t(`status.${r.status}`)} />
                       </td>
-                      <td className="muted text-xs">{formatDate(r.createdAt, locale)}</td>
+                      <td className="muted text-xs">{formatDate(r.createdAt, dates)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -194,12 +196,6 @@ function PageLink({ href, disabled, icon }: { href: string; disabled: boolean; i
   );
 }
 
-function formatDate(date: Date, locale: string) {
-  return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+function formatDate(date: Date, dates: DateFormats) {
+  return dates.full(date);
 }
