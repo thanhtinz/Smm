@@ -3,12 +3,17 @@
 import { useActionState } from "react";
 import { saveSettingsAction, type ActionResult } from "@/app/actions/admin/config";
 import { Field, TextInput } from "@/components/ui/field";
+import ImageUpload from "@/components/admin/image-upload";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
 
 export type SettingField = {
   /** From the dictionary. Blank falls back to a name derived from the key. */
   label?: string;
+  /** Only used by the image control, which has its own three strings. */
+  hint?: string;
+  uploadLabel?: string;
+  removeLabel?: string;
   key: string;
   type: string;
   options?: string[];
@@ -82,6 +87,19 @@ function SettingControl({ field, error }: { field: SettingField; error?: string 
         />
         {label}
       </label>
+    );
+  }
+
+  if (field.type === "image") {
+    return (
+      <ImageUpload
+        name={field.key}
+        value={String(field.value ?? "")}
+        label={label}
+        hint={field.hint ?? ""}
+        uploadLabel={field.uploadLabel ?? ""}
+        removeLabel={field.removeLabel ?? ""}
+      />
     );
   }
 

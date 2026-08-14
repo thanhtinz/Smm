@@ -10,3 +10,6 @@ prisma/dev.db-journal
 next-env.d.ts
 .tsbuildinfo
 *.tsbuildinfo
+
+# Uploaded images. Files belong to the running panel, not to the repository.
+/public/uploads
