@@ -43,7 +43,20 @@ if (login) {
   await page.goto(`${BASE}/login`, { waitUntil: "networkidle" });
   await page.fill('input[name="identifier"]', username);
   await page.fill('input[name="password"]', password);
-  await Promise.all([page.waitForURL(/dashboard|admin/, { timeout: 20000 }), page.click('button[type="submit"]')]);
+  await Promise.all([
+    page.waitForURL(/dashboard|admin|two-factor/, { timeout: 20000 }),
+    page.click('button[type="submit"]'),
+  ]);
+
+  // An account with two-factor on lands on the challenge instead; the code is
+  // derived here so a screenshot run needs no phone.
+  if (page.url().includes("/two-factor")) {
+    const secret = flag("totp", null);
+    if (!secret) throw new Error("This account has two-factor on — pass --totp=<secret>");
+    const { currentCode } = await import("../src/lib/totp.ts");
+    await page.fill('input[name="code"]', currentCode(secret));
+    await Promise.all([page.waitForURL(/dashboard|admin/, { timeout: 20000 }), page.click('button[type="submit"]')]);
+  }
 }
 
 await page.goto(`${BASE}${path}`, { waitUntil: "networkidle" });
