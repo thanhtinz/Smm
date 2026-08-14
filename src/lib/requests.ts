@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "./db";
 import { basePrisma } from "./db-base";
 import { logActivity } from "./auth";
+import { getSetting } from "./settings";
 import { nextPublicId } from "./ids";
 import { runAsPanel } from "./tenancy";
 import { requestProviderCancel, requestProviderRefill } from "./providers";
@@ -15,6 +16,56 @@ import { withSettled } from "./orders";
  * auto-approves has no reader at all. So this says what was wrong and leaves
  * the wording to each of them.
  */
+/** Refill only makes sense once delivery has finished or stalled. */
+const REFILLABLE = new Set(["completed", "partial"]);
+/** Cancel only makes sense before the provider has really started. */
+const CANCELLABLE = new Set(["pending", "processing"]);
+
+/**
+ * Raises a refill or cancel request for one order, or says why not.
+ *
+ * The web form and API v2 both come through here. They used to be one place
+ * because only the form existed; the API advertised `refill: true` on every
+ * service and had no action to match, so a reseller was told a thing the
+ * panel would not then do.
+ */
+export async function openRequest(
+  userId: string,
+  orderId: string,
+  type: "refill" | "cancel",
+): Promise<{ publicId: number } | Fault> {
+  const order = await db.order.findFirst({
+    where: { id: orderId, userId },
+    include: { service: { select: { refill: true, cancel: true } } },
+  });
+  if (!order) return { key: "err.orderGone" };
+
+  if (type === "refill") {
+    if (!order.service.refill) return { key: "err.noRefill" };
+    if (!REFILLABLE.has(order.status)) return { key: "err.refillState" };
+
+    const days = Number(await getSetting("order.refillWindowDays")) || 0;
+    if (days > 0 && order.updatedAt.getTime() < Date.now() - days * 864e5) {
+      return { key: "err.refillWindow", vars: { days } };
+    }
+  } else {
+    if (!(await getSetting("order.allowCancelRequests"))) return { key: "err.cancelDisabled" };
+    if (!order.service.cancel) return { key: "err.noCancel" };
+    if (!CANCELLABLE.has(order.status)) return { key: "err.cancelStarted" };
+  }
+
+  const open = await db.orderRequest.findFirst({
+    where: { orderId, type, status: { in: ["pending", "approved"] } },
+    select: { id: true },
+  });
+  if (open) return { key: "err.requestOpen" };
+
+  const publicId = await nextPublicId("request");
+  await db.orderRequest.create({ data: { publicId, orderId, userId, type } });
+  await logActivity(userId, `order.${type}.request`, `#${order.publicId}`);
+  return { publicId };
+}
+
 export type RequestOutcome = { ok?: true } | Fault;
 
 /**

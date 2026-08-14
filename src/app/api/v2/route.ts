@@ -15,6 +15,7 @@ import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { guardOrder } from "@/lib/order-guard";
 import { englishMessage } from "@/lib/fault";
+import { openRequest } from "@/lib/requests";
 import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
@@ -66,6 +67,12 @@ export async function POST(request: Request) {
       return status(user.id, params);
     case "orders":
       return statuses(user.id, params);
+    case "refill":
+      return raiseRequest(user.id, params, "refill");
+    case "cancel":
+      return raiseRequest(user.id, params, "cancel");
+    case "refill_status":
+      return refillStatus(user.id, params);
     default:
       return fail("Invalid action");
   }
@@ -278,6 +285,89 @@ async function status(userId: string, params: Record<string, unknown>) {
 
   const base = await getBaseCurrency();
   return NextResponse.json(orderPayload(order, base.code, base.decimals));
+}
+
+/**
+ * Refill and cancel, single or in a batch.
+ *
+ * The standard takes `order` for one and `orders` for many, and answers with
+ * an object for one and an array for many — the same shape client libraries
+ * already expect from other panels.
+ */
+async function raiseRequest(userId: string, params: Record<string, unknown>, type: "refill" | "cancel") {
+  const single = params.order !== undefined;
+  const ids = single
+    ? [Number(params.order)]
+    : String(params.orders ?? "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .slice(0, 100);
+
+  if (ids.length === 0 || ids.some((n) => !Number.isInteger(n))) return fail("Incorrect order ID");
+
+  const orders = await db.order.findMany({ where: { publicId: { in: ids }, userId }, select: { id: true, publicId: true } });
+  const byPublicId = new Map(orders.map((o) => [o.publicId, o.id]));
+
+  const results = [];
+  for (const publicId of ids) {
+    const orderId = byPublicId.get(publicId);
+    if (!orderId) {
+      results.push({ order: publicId, error: "Incorrect order ID" });
+      continue;
+    }
+    const outcome = await openRequest(userId, orderId, type);
+    results.push(
+      "key" in outcome
+        // English, like every other message here: a client reads it.
+        ? { order: publicId, error: englishMessage(outcome.key, outcome.vars) }
+        : { order: publicId, [type]: outcome.publicId },
+    );
+  }
+
+  if (!single) return NextResponse.json(results);
+  const only = results[0];
+  return "error" in only ? fail(String(only.error)) : NextResponse.json({ [type]: only[type] });
+}
+
+/** Where a refill got to, by the id the refill call handed back. */
+async function refillStatus(userId: string, params: Record<string, unknown>) {
+  const single = params.refill !== undefined;
+  const ids = single
+    ? [Number(params.refill)]
+    : String(params.refills ?? "")
+        .split(",")
+        .map((s) => Number(s.trim()))
+        .slice(0, 100);
+
+  if (ids.length === 0 || ids.some((n) => !Number.isInteger(n))) return fail("Incorrect refill ID");
+
+  const rows = await db.orderRequest.findMany({
+    where: { publicId: { in: ids }, userId, type: "refill" },
+    select: { publicId: true, status: true },
+  });
+  const found = new Map(rows.map((r) => [r.publicId, r.status]));
+
+  const label = (status: string | undefined) =>
+    status === undefined
+      ? undefined
+      : status === "completed"
+        ? "Completed"
+        : status === "rejected"
+          ? "Rejected"
+          : status === "approved"
+            ? "In progress"
+            : "Pending";
+
+  if (single) {
+    const status = label(found.get(ids[0]));
+    return status ? NextResponse.json({ status }) : fail("Incorrect refill ID");
+  }
+  return NextResponse.json(
+    ids.map((id) => {
+      const status = label(found.get(id));
+      return status ? { refill: id, status } : { refill: id, error: "Incorrect refill ID" };
+    }),
+  );
 }
 
 /** Batch status: comma-separated ids, keyed by id in the response. */
