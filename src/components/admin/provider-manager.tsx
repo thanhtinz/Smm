@@ -31,6 +31,19 @@ export type ProviderRow = {
   markupPercent: number;
   alertPercent: number;
   lowBalance: number;
+  /** How this one has actually been behaving, over the settings' window. */
+  health: {
+    taken: number;
+    completed: number;
+    partial: number;
+    failed: number;
+    running: number;
+    successRate: number | null;
+    speed: string;
+    spend: string;
+    /** The services going worst here, worst first. */
+    worst: { publicId: number; name: string; rate: number; settled: number }[];
+  };
 };
 
 export default function ProviderManager({ rows, labels }: { rows: ProviderRow[]; labels: Record<string, string> }) {
@@ -119,6 +132,8 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
                 />
                 <Row label={labels.markup} value={`${row.markupPercent}%`} />
               </dl>
+
+              <Health row={row} labels={labels} />
 
               <div className="mt-4 flex flex-wrap gap-1.5">
                 <button
@@ -314,6 +329,66 @@ function Row({ label, value }: { label: string; value: string }) {
     <div className="flex items-baseline justify-between gap-3">
       <dt className="muted text-[0.82rem]">{label}</dt>
       <dd className="shrink-0 font-medium tabular-nums">{value}</dd>
+    </div>
+  );
+}
+
+/**
+ * What the orders say about this provider. Nothing here is configured — it is
+ * read back from what actually happened, which is the point: a supplier that
+ * has quietly gone bad still looks fine in its own settings.
+ */
+function Health({ row, labels }: { row: ProviderRow; labels: Record<string, string> }) {
+  const h = row.health;
+  if (h.taken === 0) {
+    return (
+      <div className="mt-4 border-t border-[var(--border)] pt-3">
+        <p className="muted text-xs">{labels.healthNone}</p>
+      </div>
+    );
+  }
+
+  // Colour by how bad it is, not by a fixed scale: an operator scanning a
+  // page of providers should see the one worth opening.
+  const tone =
+    h.successRate === null ? "muted" : h.successRate >= 90 ? "success" : h.successRate >= 70 ? "warning" : "danger";
+
+  return (
+    <div className="mt-4 space-y-2 border-t border-[var(--border)] pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="muted text-[0.68rem] font-semibold tracking-widest uppercase">{labels.healthTitle}</span>
+        {h.successRate !== null && (
+          <span className={`badge badge-${tone === "muted" ? "muted" : tone}`}>{h.successRate}%</span>
+        )}
+      </div>
+
+      <dl className="space-y-2 text-sm">
+        <Row label={labels.healthTaken} value={String(h.taken)} />
+        <Row
+          label={labels.healthOutcome}
+          value={`${h.completed} / ${h.partial} / ${h.failed}${h.running ? ` (+${h.running})` : ""}`}
+        />
+        <Row label={labels.healthSpeed} value={h.speed} />
+        <Row label={labels.healthSpend} value={h.spend} />
+      </dl>
+
+      {h.worst.length > 0 && (
+        <details>
+          <summary className="muted cursor-pointer text-xs">{labels.healthWorst}</summary>
+          <ul className="mt-1.5 space-y-1">
+            {h.worst.map((s) => (
+              <li key={s.publicId} className="flex items-baseline justify-between gap-2 text-xs">
+                <span className="muted min-w-0 truncate">
+                  #{s.publicId} {s.name}
+                </span>
+                <span className="shrink-0 tabular-nums">
+                  {s.rate}% · {s.settled}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

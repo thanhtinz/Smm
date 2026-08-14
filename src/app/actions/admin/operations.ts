@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { creditDeposit } from "@/lib/payments/credit";
-import { ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
+import { withSettled, ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
 import type { ActionResult } from "./catalogue";
 import { notification } from "@/lib/notify";
 import { readerMessages } from "@/lib/context";
@@ -39,11 +39,11 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
 
       await tx.order.update({
         where: { id },
-        data: {
+        data: withSettled({
           status,
           note: note || order.note,
           ...(status === "completed" ? { remains: 0 } : {}),
-        },
+        }),
       });
 
       if (willRefund && !wasRefunded) {

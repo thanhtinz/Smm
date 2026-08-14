@@ -437,6 +437,10 @@ model Order {
   expiry          DateTime?
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
+  /// When the order stopped moving — completed, partial, cancelled, refunded.
+  /// updatedAt is not this: it changes whenever anything touches the row, so
+  /// "how long delivery took" measured from it would quietly drift.
+  settledAt       DateTime?
   requests        OrderRequest[]
 
   @@unique([panelId, publicId])

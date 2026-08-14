@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "./notify";
 import { routesFor } from "./routing";
+import { withSettled } from "./orders";
 
 /**
  * Client for upstream panels. They speak the same standard this panel exposes
@@ -335,9 +336,9 @@ export async function syncOrderStatuses(limit = 100) {
             : 0;
 
       if (refundable > 0) {
-        await settleRefund(order.id, order.userId, refundable, order.publicId, data);
+        await settleRefund(order.id, order.userId, refundable, order.publicId, withSettled(data));
       } else {
-        await db.order.update({ where: { id: order.id }, data });
+        await db.order.update({ where: { id: order.id }, data: withSettled(data) });
       }
       updated += 1;
     }

@@ -7,6 +7,7 @@ import { runAsPanel } from "./tenancy";
 import { requestProviderCancel, requestProviderRefill } from "./providers";
 import { notification, requestKey } from "./notify";
 import { englishMessage, type Fault } from "./fault";
+import { withSettled } from "./orders";
 
 /**
  * Refusals here are read three ways at once: shown to an admin, written into
@@ -126,7 +127,7 @@ export async function resolveRequest(
     const order = await tx.order.findUniqueOrThrow({ where: { id: request.orderId } });
     if (order.status === "canceled" || order.status === "refunded") return;
 
-    await tx.order.update({ where: { id: order.id }, data: { status: "canceled" } });
+    await tx.order.update({ where: { id: order.id }, data: withSettled({ status: "canceled" }) });
 
     const user = await tx.user.findUniqueOrThrow({
       where: { id: order.userId },

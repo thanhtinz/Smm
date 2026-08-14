@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import { dateFormats } from "@/lib/dates";
+import { dateFormats, formatDuration } from "@/lib/dates";
+import { displayMoney } from "@/lib/currency";
+import { getSetting } from "@/lib/settings";
+import { providerHealth, worstServices } from "@/lib/provider-health";
 import ProviderManager from "@/components/admin/provider-manager";
 
 export const metadata: Metadata = { title: "Providers" };
@@ -15,6 +18,16 @@ export default async function AdminProvidersPage() {
     orderBy: { name: "asc" },
     include: { _count: { select: { services: true } } },
   });
+
+  // Read back from the orders rather than from the providers' own settings: a
+  // supplier that has quietly gone bad still looks fine in its configuration.
+  const days = Number(await getSetting("provider.healthWindowDays")) || 30;
+  const health = await providerHealth(days);
+  const worst = new Map(
+    await Promise.all(
+      providers.map(async (p) => [p.id, await worstServices(p.id, days)] as const),
+    ),
+  );
 
   const fmtDate = { format: dates.stamp };
 
@@ -35,9 +48,27 @@ export default async function AdminProvidersPage() {
           markupPercent: p.markupPercent,
           alertPercent: p.alertPercent,
           lowBalance: p.lowBalance,
+          health: {
+            taken: health.get(p.id)?.taken ?? 0,
+            completed: health.get(p.id)?.completed ?? 0,
+            partial: health.get(p.id)?.partial ?? 0,
+            failed: health.get(p.id)?.failed ?? 0,
+            running: health.get(p.id)?.running ?? 0,
+            successRate: health.get(p.id)?.successRate ?? null,
+            speed: formatDuration(health.get(p.id)?.medianSeconds ?? null, t),
+            spend: displayMoney(health.get(p.id)?.spend ?? 0, ctx.currency, locale),
+            worst: worst.get(p.id) ?? [],
+          },
         }))}
         labels={{
           close: t("common.close"),
+          healthTitle: t("health.title"),
+          healthNone: t("health.none"),
+          healthTaken: t("health.taken"),
+          healthOutcome: t("health.outcome"),
+          healthSpeed: t("health.speed"),
+          healthSpend: t("health.spend"),
+          healthWorst: t("health.worst"),
           egName: t("eg.providerName"),
           title: t("admin.providers"),
           new: t("admin.new"),
