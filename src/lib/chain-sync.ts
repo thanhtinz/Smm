@@ -148,7 +148,12 @@ export async function propagateRequestDecisions(limit = 200) {
  *
  * Cron has no host to resolve a panel from, so each step names its panel.
  */
-export async function runSyncCycle() {
+export async function runSyncCycle(trigger = "cron") {
+  // Opened before any work and closed after it, so a cycle that dies halfway
+  // leaves a row with no finishedAt — which is the difference between "the
+  // scheduler stopped calling" and "the scheduler called and something broke".
+  const run = await basePrisma.syncRun.create({ data: { trigger } });
+
   const panels = await basePrisma.panel.findMany({
     where: { status: "active" },
     orderBy: { depth: "asc" },
@@ -196,6 +201,11 @@ export async function runSyncCycle() {
       .filter((r) => r.fault)
       .map((r) => `${r.provider}: ${englishMessage(r.fault!.key, r.fault!.vars)}`),
   );
+
+  await basePrisma.syncRun.update({
+    where: { id: run.id },
+    data: { finishedAt: new Date(), dispatched: sent, synced, mailed: mailed.sent, failures: failures.join("\n") },
+  });
 
   return {
     sent,

@@ -885,6 +885,29 @@ model InboxMessage {
   @@index([conversationId])
 }
 
+/// One turn of the scheduler.
+///
+/// Deliberately not panel-scoped: the cycle runs for every panel in one pass,
+/// and a cron request has no host to resolve a panel from. It is the record of
+/// the engine itself, not of anybody's shop.
+model SyncRun {
+  id         String    @id @default(cuid())
+  startedAt  DateTime  @default(now())
+  /// Null while a run is in flight, and left null if the process dies — which
+  /// is itself the signal that something went wrong mid-cycle.
+  finishedAt DateTime?
+  dispatched Int       @default(0)
+  synced     Int       @default(0)
+  mailed     Int       @default(0)
+  /// Everything the cycle complained about, one per line. Empty is the good case.
+  failures   String    @default("")
+  /// "cron" or the username who pressed the button, so a run nobody expected
+  /// can be traced to whoever caused it.
+  trigger    String    @default("cron")
+
+  @@index([startedAt])
+}
+
 model Panel {
   id       String  @id @default(cuid())
   slug     String  @unique

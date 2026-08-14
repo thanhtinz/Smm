@@ -99,6 +99,12 @@ export const settingDefinitions = {
   "order.autoApproveCancel": { group: "order", type: "boolean", value: false },
   "order.stuckAfterMinutes": { group: "order", type: "number", value: 0 },
 
+  // --- Scheduler ----------------------------------------------------------
+  // How long the panel waits before saying the scheduler has stopped. Zero
+  // switches the warning off for a deployment that runs the cycle by hand.
+  // Fifteen minutes is a few missed five-minute ticks, not one.
+  "sync.staleAfterMinutes": { group: "order", type: "number", value: 15 },
+
   // --- Wallet -------------------------------------------------------------
   "wallet.minDeposit": { group: "wallet", type: "number", value: 20000 },
   "wallet.maxDeposit": { group: "wallet", type: "number", value: 500000000 },
