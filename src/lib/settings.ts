@@ -50,7 +50,9 @@ export const settingDefinitions = {
   "order.minCharge": { group: "order", type: "number", value: 0 },
   "order.duplicateWindowMinutes": { group: "order", type: "number", value: 0 },
   "order.maxPerMinute": { group: "order", type: "number", value: 0 },
-  "order.autoSendToProvider": { group: "order", type: "boolean", value: false },
+  // On by default because that is what the panel has always done; turning it
+  // off holds the queue for an operator to send by hand.
+  "order.autoSendToProvider": { group: "order", type: "boolean", value: true },
   "order.refillWindowDays": { group: "order", type: "number", value: 30 },
   "order.allowCancelRequests": { group: "order", type: "boolean", value: true },
   "order.autoApproveRefill": { group: "order", type: "boolean", value: false },

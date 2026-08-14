@@ -81,6 +81,7 @@ export default async function AdminTransactionsPage({
           confirmApprove: t("admin.confirmApprove"),
           reason: t("admin.reason"),
           "status.pending": t("status.pending"),
+          "status.review": t("status.review"),
           "status.completed": t("status.completed"),
           "status.failed": t("status.failed"),
           "status.canceled": t("status.canceled"),

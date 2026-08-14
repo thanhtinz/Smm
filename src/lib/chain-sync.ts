@@ -3,6 +3,7 @@ import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
 import { settleRefund, dispatchPendingOrders, syncOrderStatuses } from "./providers";
 import { billPanelRent } from "./billing";
+import { getSetting } from "./settings";
 import { updateExchangeRates } from "./exchange";
 import { syncDueProviders } from "./provider-sync";
 import { runAutoDecisions } from "./auto-orders";
@@ -151,9 +152,14 @@ export async function runSyncCycle() {
   const failures: string[] = [];
 
   for (const panel of panels) {
-    const dispatched = await runAsPanel(panel.id, () => dispatchPendingOrders());
-    sent += dispatched.sent;
-    failures.push(...dispatched.failures.map((f) => `${panel.slug}: ${f}`));
+    // A panel can hold its queue for an operator to send by hand; the button
+    // in the admin area sends regardless, which is what makes that workable.
+    const auto = await runAsPanel(panel.id, () => getSetting("order.autoSendToProvider"));
+    if (auto) {
+      const dispatched = await runAsPanel(panel.id, () => dispatchPendingOrders());
+      sent += dispatched.sent;
+      failures.push(...dispatched.failures.map((f) => `${panel.slug}: ${f}`));
+    }
 
     const pulled = await runAsPanel(panel.id, () => syncOrderStatuses());
     synced += pulled.updated;

@@ -93,6 +93,6 @@ export async function handleCryptoWebhook(request: Request) {
     return NextResponse.json({ success: false, message: "Amount is lower than the invoice" }, { status: 202 });
   }
 
-  const result = await creditDeposit(txn.id, String(body.payment_id ?? ""));
+  const result = await creditDeposit(txn.id, String(body.payment_id ?? ""), { automatic: true });
   return NextResponse.json({ success: true, message: result });
 }

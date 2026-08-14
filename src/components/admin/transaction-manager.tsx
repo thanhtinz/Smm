@@ -19,7 +19,7 @@ export type AdminTxRow = {
   createdAt: string;
 };
 
-const STATUSES = ["pending", "completed", "failed", "canceled"];
+const STATUSES = ["pending", "review", "completed", "failed", "canceled"];
 
 export default function TransactionManager({
   rows,
@@ -103,7 +103,7 @@ export default function TransactionManager({
                     </td>
                     <td className="muted text-xs">{row.createdAt}</td>
                     <td>
-                      {row.status === "pending" ? (
+                      {row.status === "pending" || row.status === "review" ? (
                         <div className="flex justify-end gap-1">
                           <button
                             type="button"

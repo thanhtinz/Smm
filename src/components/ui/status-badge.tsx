@@ -9,6 +9,7 @@ const TONE: Record<string, { cls: string; icon: IconName }> = {
   canceled: { cls: "badge-danger", icon: "close" },
   refunded: { cls: "badge-warning", icon: "refresh" },
   failed: { cls: "badge-danger", icon: "alert" },
+  review: { cls: "badge-warning", icon: "eye" },
   open: { cls: "badge-info", icon: "ticket" },
   answered: { cls: "badge-success", icon: "send" },
   closed: { cls: "badge-muted", icon: "lock" },
