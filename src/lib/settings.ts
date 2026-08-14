@@ -52,6 +52,9 @@ export const settingDefinitions = {
   "order.autoSendToProvider": { group: "order", type: "boolean", value: false },
   "order.refillWindowDays": { group: "order", type: "number", value: 30 },
   "order.allowCancelRequests": { group: "order", type: "boolean", value: true },
+  "order.autoApproveRefill": { group: "order", type: "boolean", value: false },
+  "order.autoApproveCancel": { group: "order", type: "boolean", value: false },
+  "order.stuckAfterMinutes": { group: "order", type: "number", value: 0 },
 
   // --- Wallet -------------------------------------------------------------
   "wallet.minDeposit": { group: "wallet", type: "number", value: 20000 },

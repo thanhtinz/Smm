@@ -5,6 +5,7 @@ import { settleRefund, dispatchPendingOrders, syncOrderStatuses } from "./provid
 import { billPanelRent } from "./billing";
 import { updateExchangeRates } from "./exchange";
 import { syncDueProviders } from "./provider-sync";
+import { runAutoDecisions } from "./auto-orders";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -159,6 +160,11 @@ export async function runSyncCycle() {
     failures.push(...pulled.failures.map((f) => `${panel.slug}: ${f}`));
   }
 
+  // Before the chain pass, so a request approved here travels the same cycle
+  // rather than waiting for the next one.
+  const auto = await runAutoDecisions();
+  failures.push(...auto.failures);
+
   const chain = await propagateChainStatuses();
   const requests = await propagateRequestDecisions();
   const rent = await billPanelRent();
@@ -176,6 +182,7 @@ export async function runSyncCycle() {
     requests,
     rent,
     rates,
+    auto: { refills: auto.refills, cancels: auto.cancels, stuck: auto.stuck },
     catalogue: catalogue.map((r) => ({
       provider: r.provider,
       repriced: r.repriced,
