@@ -10,7 +10,7 @@ import {
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
-import { CopyButton } from "@/components/tools/shell";
+import CopyButton from "@/components/ui/copy-button";
 
 export type ChannelRow = {
   id: string;

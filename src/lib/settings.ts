@@ -49,15 +49,6 @@ export const settingDefinitions = {
     options: ["priceBoard", "orderFirst", "proof", "editorial", "catalogue"],
   },
 
-  // --- Free tools ---------------------------------------------------------
-  // The public tools hub. It is a door for traffic rather than part of the
-  // panel, so an operator who does not want one closes it here.
-  "tools.enabled": { group: "appearance", type: "boolean", value: true },
-  // Slugs to leave out, from src/lib/tools.ts. Stored as the exceptions so a
-  // tool shipped in a later version is on by default rather than staying
-  // invisible until every operator notices it and ticks a box.
-  "tools.disabled": { group: "appearance", type: "json", value: [] as string[] },
-
   // --- Localisation -------------------------------------------------------
   "locale.default": { group: "locale", type: "text", value: "vi" },
   "locale.allowUserLocale": { group: "locale", type: "boolean", value: true },
