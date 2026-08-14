@@ -37,6 +37,13 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             theme={ctx.theme}
             mode={ctx.mode}
             showTheme={false}
+            labels={{
+              language: t("common.language"),
+              currency: t("common.currency"),
+              theme: t("common.theme"),
+              display: t("profile.preferences"),
+              mode: t("common.appearance"),
+            }}
           />
         </div>
 
