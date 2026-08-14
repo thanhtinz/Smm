@@ -5,7 +5,7 @@ import { getSetting } from "@/lib/settings";
 import { panelBaseUrl } from "@/lib/tenancy";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "API" };
+export const metadata: Metadata = { title: "API", alternates: { canonical: "/api-docs" } };
 
 type Action = {
   action: string;

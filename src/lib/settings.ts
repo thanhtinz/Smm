@@ -49,6 +49,20 @@ export const settingDefinitions = {
     options: ["priceBoard", "orderFirst", "proof", "editorial", "catalogue"],
   },
 
+  // --- Search -------------------------------------------------------------
+  // Off while a panel is being set up: a half-built site is easier to keep
+  // out of an index than to get back out of one.
+  "seo.indexable": { group: "seo", type: "boolean", value: true },
+  // IndexNow is an open protocol with no account and no quota — the key is
+  // just a string this panel also serves at /<key>.txt, and that file is the
+  // whole of the authentication. Bing, Yandex, Seznam and Naver share
+  // submissions; Google does not take part.
+  "seo.indexNowKey": { group: "seo", type: "text", value: "" },
+  // Pasted from Search Console and Webmaster Tools when they ask for a meta
+  // tag rather than a DNS record.
+  "seo.googleVerification": { group: "seo", type: "text", value: "" },
+  "seo.bingVerification": { group: "seo", type: "text", value: "" },
+
   // --- Localisation -------------------------------------------------------
   "locale.default": { group: "locale", type: "text", value: "vi" },
   "locale.allowUserLocale": { group: "locale", type: "boolean", value: true },

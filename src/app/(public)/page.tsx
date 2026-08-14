@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
 import { landingData, LANDING_LAYOUTS, type LandingLayout } from "@/lib/landing";
@@ -7,6 +8,10 @@ import Proof from "@/components/landing/proof";
 import Editorial from "@/components/landing/editorial";
 import Catalogue from "@/components/landing/catalogue";
 import type { LayoutProps } from "@/components/landing/types";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return { alternates: { canonical: "/" } };
+}
 
 /**
  * Five landings, chosen in admin.
