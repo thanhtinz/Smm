@@ -7,6 +7,7 @@ import { nextPublicId } from "@/lib/ids";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
 import { readerMessages } from "@/lib/context";
 import { LINK_TARGETS, isValidPattern, parseHosts } from "@/lib/links";
+import { syncPrimaryRoutes } from "@/lib/routing";
 
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
@@ -215,6 +216,14 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     ? await db.service.update({ where: { id }, data })
     : await db.service.create({ data: { ...data, publicId: await nextPublicId("service") } });
   await logActivity(admin.id, id ? "admin.service.update" : "admin.service.create", name);
+
+  // The form still edits a first choice and a backup, so saving one writes the
+  // route it means. Dispatch then reads the route list and nothing else.
+  await syncPrimaryRoutes(
+    service.id,
+    { providerId: data.providerId, providerServiceId: data.providerServiceId, cost: data.providerRate },
+    { providerId: data.backupProviderId, providerServiceId: data.backupProviderServiceId },
+  );
 
   // Per-tier prices are edited alongside the price they override, so they are
   // saved with the service rather than from a separate screen. A blank field

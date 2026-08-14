@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "./notify";
+import { routesFor } from "./routing";
 
 /**
  * Client for upstream panels. They speak the same standard this panel exposes
@@ -193,35 +194,43 @@ export function normaliseStatus(raw: string | undefined): string | null {
  */
 export async function dispatchPendingOrders(limit = 25) {
   const orders = await db.order.findMany({
-    where: { status: "pending", providerOrderId: "", service: { providerId: { not: null } } },
+    where: {
+      status: "pending",
+      providerOrderId: "",
+      // A service supplied only through routes has no provider of its own,
+      // and would otherwise never be picked up.
+      service: { OR: [{ providerId: { not: null } }, { routes: { some: { enabled: true } } }] },
+    },
     orderBy: { createdAt: "asc" },
     take: limit,
     include: { service: { include: { provider: true, backupProvider: true } } },
   });
 
+  // Read once rather than per order: a batch of 25 tends to share providers.
+  const providersById = new Map(
+    (await db.provider.findMany()).map((p) => [p.id, p] as const),
+  );
+
   let sent = 0;
   const failures: string[] = [];
 
   for (const order of orders) {
-    // Primary first, then the backup. A provider that is switched off counts
-    // as a refusal, which is the point of naming a second one.
-    const routes = [
-      { provider: order.service.provider, serviceId: order.service.providerServiceId, backup: false },
-      {
-        provider: order.service.backupProvider,
-        serviceId: order.service.backupProviderServiceId,
-        backup: true,
-      },
-    ].filter((r) => r.provider?.enabled && r.serviceId);
+    // Cheapest first, and a provider that is off or out of funds is dropped
+    // rather than tried: it would refuse, and the customer would wait for the
+    // round trip to find that out.
+    const routes = (await routesFor(order.service)).filter((r) => !r.skipped);
 
     if (routes.length === 0) continue;
 
     const refusals: string[] = [];
     let placed = false;
+    const first = routes[0];
 
     for (const route of routes) {
-      const result = await placeProviderOrder(route.provider!, {
-        service: route.serviceId,
+      const provider = providersById.get(route.providerId);
+      if (!provider) continue;
+      const result = await placeProviderOrder(provider, {
+        service: route.providerServiceId,
         link: order.link,
         quantity: order.quantity,
         comments: order.comments,
@@ -235,7 +244,7 @@ export async function dispatchPendingOrders(limit = 25) {
       });
 
       if (!result.ok) {
-        refusals.push(`${route.provider!.name}: ${result.error}`);
+        refusals.push(`${route.providerName}: ${result.error}`);
         continue;
       }
 
@@ -244,10 +253,11 @@ export async function dispatchPendingOrders(limit = 25) {
         data: {
           providerOrderId: String(result.data.order),
           // Remembered so status, refill and cancel go back to whoever took
-          // it, not to whichever provider the service points at later.
-          providerId: route.provider!.id,
+          // it, not to whichever provider is cheapest later.
+          providerId: route.providerId,
           status: "processing",
-          note: route.backup ? `Sent to the backup provider ${route.provider!.name}` : "",
+          // Silent when it went to the cheapest route, which is the norm.
+          note: route === first ? "" : `Sent to ${route.providerName} after ${first.providerName} refused`,
         },
       });
       sent += 1;

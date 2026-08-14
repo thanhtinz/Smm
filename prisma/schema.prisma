@@ -326,6 +326,7 @@ model Provider {
   lowBalance     Float     @default(0)
   services       Service[]
   backupFor      Service[] @relation("BackupServices")
+  routes         ServiceRoute[]
   orders         Order[]
   createdAt      DateTime  @default(now())
 
@@ -375,6 +376,7 @@ model Service {
   enabled                 Boolean     @default(true)
   position                Int         @default(0)
   orders                  Order[]
+  routes                  ServiceRoute[]
   tierPrices              TierPrice[]
   createdAt               DateTime    @default(now())
 
@@ -778,6 +780,7 @@ model Panel {
   platforms      Platform[]         @relation("PanelPlatforms")
   categories     Category[]         @relation("PanelCategories")
   providers      Provider[]         @relation("PanelProviders")
+  serviceRoutes  ServiceRoute[]     @relation("PanelServiceRoutes")
   services       Service[]          @relation("PanelServices")
   orders         Order[]            @relation("PanelOrders")
   orderRequests  OrderRequest[]     @relation("PanelOrderRequests")
@@ -819,4 +822,34 @@ model PanelDomain {
   createdAt   DateTime @default(now())
 
   @@index([panelId])
+}
+
+/// Every provider that can fulfil one service.
+///
+/// A service used to name exactly two: a first choice and a backup, tried in
+/// that order whatever they cost. Suppliers do not hold a price still, so the
+/// fixed order was a standing instruction to overpay. These are tried cheapest
+/// first instead, skipping any provider that is off or out of funds.
+///
+/// The service's own provider and backup are written here as routes too, so
+/// dispatch has one list to read rather than three places to look.
+model ServiceRoute {
+  id                String   @id @default(cuid())
+  panelId           String   @default("")
+  panel             Panel    @relation("PanelServiceRoutes", fields: [panelId], references: [id], onDelete: Cascade)
+  serviceId         String
+  service           Service  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  providerId        String
+  provider          Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  /// The id this service goes by at that provider.
+  providerServiceId String
+  /// Cost per 1000 there, in the base currency. Refreshed by the catalogue sync.
+  cost              Float    @default(0)
+  enabled           Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([serviceId, providerId])
+  @@index([panelId])
+  @@index([serviceId])
 }
