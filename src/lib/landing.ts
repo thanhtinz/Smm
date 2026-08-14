@@ -23,6 +23,10 @@ export type PlatformLine = {
   from: number;
   services: number;
   categories: { id: string; name: string; count: number }[];
+  /** True when at least one service here can be topped back up after a drop. */
+  refill: boolean;
+  /** Services here whose page states an average delivery time. */
+  timed: number;
 };
 
 /** One row the order-first layout's picker can land on. */
@@ -69,10 +73,12 @@ export type LandingData = {
   /** Written by the operator in admin. Empty leaves the section off the page. */
   quotes: Quote[];
   questions: Question[];
+  /** Whatever this panel actually accepts, in the operator's own words. */
+  payments: { id: string; name: string; icon: string }[];
 };
 
 export async function landingData(user: Parameters<typeof resolveTier>[0]): Promise<LandingData> {
-  const [platforms, services, userCount, orderCount, completedCount, recentRows, quotes, questions] =
+  const [platforms, services, userCount, orderCount, completedCount, recentRows, quotes, questions, payments] =
     await Promise.all([
       db.platform.findMany({
         where: { visible: true },
@@ -89,6 +95,8 @@ export async function landingData(user: Parameters<typeof resolveTier>[0]): Prom
           min: true,
           max: true,
           categoryId: true,
+          refill: true,
+          averageTime: true,
           category: { select: { platformId: true } },
         },
       }),
@@ -115,6 +123,11 @@ export async function landingData(user: Parameters<typeof resolveTier>[0]): Prom
         orderBy: [{ position: "asc" }, { question: "asc" }],
         select: { id: true, question: true, answer: true },
       }),
+      db.paymentMethod.findMany({
+        where: { enabled: true },
+        orderBy: { position: "asc" },
+        select: { id: true, name: true, icon: true },
+      }),
     ]);
 
   // Priced for the reader's tier, so the landing page and the catalogue agree.
@@ -135,6 +148,11 @@ export async function landingData(user: Parameters<typeof resolveTier>[0]): Prom
       color: p.color,
       from: mine.length ? Math.min(...mine.map(rateOf)) : 0,
       services: mine.length,
+      // Read straight off the services, because a refill guarantee is what
+      // this market checks before it looks at the price. averageTime is free
+      // text an operator writes ("1-2 giờ"), so it is counted, not compared.
+      refill: mine.some((s) => s.refill),
+      timed: mine.filter((s) => s.averageTime.trim()).length,
       categories: p.categories
         .map((c) => ({ id: c.id, name: c.name, count: byCategory.get(c.id) ?? 0 }))
         .filter((c) => c.count > 0),
@@ -169,5 +187,6 @@ export async function landingData(user: Parameters<typeof resolveTier>[0]): Prom
     })),
     quotes,
     questions,
+    payments,
   };
 }

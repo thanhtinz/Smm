@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { displayMoney } from "@/lib/currency";
 import QuotePicker from "./quote-picker";
-import { ClosingCta, Faqs, Pills, PlatformStrip, Quotes, StatTiles, Steps } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, Pills, PlatformStrip, Quotes, StatTiles, Steps } from "./sections";
 import type { LayoutProps } from "./types";
 
 /**
@@ -87,6 +87,7 @@ export default function OrderFirst(props: LayoutProps) {
       <PlatformStrip platforms={data.platforms} label={t("landing.hero.platforms")} />
       <StatTiles data={data} t={t} />
       <Steps t={t} />
+      <PaymentStrip payments={data.payments} title={t("landing.pay.title")} note={t("landing.pay.note")} />
       <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
       <Faqs questions={data.questions} title={t("landing.faq.title")} />
       <ClosingCta t={t} settings={settings} />

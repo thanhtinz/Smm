@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import { displayMoney } from "@/lib/currency";
 import Hero from "./hero";
-import { ClosingCta, Faqs, PlatformStrip, Quotes, StatTiles } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, PlatformStrip, QualityTags, Quotes, StatTiles, rateLabel } from "./sections";
 import type { LayoutProps } from "./types";
 
 /**
@@ -17,6 +16,7 @@ import type { LayoutProps } from "./types";
  */
 export default function Catalogue(props: LayoutProps) {
   const { data, t, currency, locale } = props;
+  const rate = (n: number) => rateLabel(n, currency, locale, props.settings, t);
   return (
     <>
       <Hero {...props} />
@@ -46,16 +46,18 @@ export default function Catalogue(props: LayoutProps) {
                   </p>
                 </div>
                 <span className="shrink-0 text-right">
-                  <span className="block font-mono text-base font-bold">
-                    {displayMoney(p.from, currency, locale)}
-                  </span>
-                  <span className="muted block text-[0.65rem]">{t("landing.board.per")}</span>
+                  <span className="block font-mono text-base font-bold">{rate(p.from).amount}</span>
+                  <span className="muted block text-[0.65rem]">{rate(p.from).unit}</span>
                 </span>
               </div>
 
               {/* Categories are the level people actually shop at, so they
                   are links in their own right rather than a summary line. */}
-              <ul className="mt-4 flex flex-wrap gap-1.5">
+              <span className="mt-3 flex">
+                <QualityTags platform={p} t={t} />
+              </span>
+
+              <ul className="mt-3 flex flex-wrap gap-1.5">
                 {p.categories.map((c) => (
                   <li key={c.id}>
                     <Link
@@ -74,6 +76,7 @@ export default function Catalogue(props: LayoutProps) {
       </section>
 
       <StatTiles data={data} t={t} />
+      <PaymentStrip payments={data.payments} title={t("landing.pay.title")} note={t("landing.pay.note")} />
       <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
       <Faqs questions={data.questions} title={t("landing.faq.title")} />
       <ClosingCta t={t} settings={props.settings} />
