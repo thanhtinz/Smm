@@ -11,11 +11,24 @@ import { getCurrentPanel } from "@/lib/tenancy";
  * Under /p/ rather than at the top level: a bare /:slug route would swallow
  * every unmatched path, turning a typo or a future route into a page lookup.
  */
+/** First 155 readable characters of admin-written HTML. */
+function summarise(html: string): string {
+  const text = html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return text.length > 155 ? `${text.slice(0, 155).trimEnd()}…` : text;
+}
+
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   if (!(await getCurrentPanel())) return {};
   const { slug } = await params;
-  const page = await db.page.findFirst({ where: { slug, published: true }, select: { title: true } });
-  return { title: page?.title ?? "Not found" };
+  const page = await db.page.findFirst({ where: { slug, published: true }, select: { title: true, body: true } });
+  if (!page) return { title: "Not found" };
+  return {
+    title: page.title,
+    // The opening of the page itself, with its markup taken off — a search
+    // result that repeats the site's tagline on every page says nothing.
+    description: summarise(page.body),
+    alternates: { canonical: `/p/${slug}` },
+  };
 }
 
 export default async function StaticPage({ params }: { params: Promise<{ slug: string }> }) {

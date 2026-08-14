@@ -4,7 +4,8 @@ import "./globals.css";
 import ThemeStyles from "@/components/theme-styles";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
-import { getCurrentPanel } from "@/lib/tenancy";
+import { isIndexable } from "@/lib/seo";
+import { getCurrentPanel, panelBaseUrl } from "@/lib/tenancy";
 
 /**
  * The panel's faces.
@@ -43,16 +44,31 @@ const fontVars = `${bodyFont.variable} ${displayFont.variable} ${monoFont.variab
 
 export async function generateMetadata(): Promise<Metadata> {
   if (!(await getCurrentPanel())) return { title: "Not found" };
-  const [name, tagline, description, favicon] = await Promise.all([
+  const [name, tagline, description, favicon, indexable, google, bing, base] = await Promise.all([
     getSetting("site.name"),
     getSetting("site.tagline"),
     getSetting("site.description"),
     getSetting("site.faviconUrl"),
+    isIndexable(),
+    getSetting("seo.googleVerification"),
+    getSetting("seo.bingVerification"),
+    panelBaseUrl(),
   ]);
 
   return {
+    // Every relative URL below and in every page resolves against the panel's
+    // own hostname, which is the only way canonicals work on a multi-tenant
+    // deployment.
+    metadataBase: new URL(base),
     title: { default: [name, tagline].filter(Boolean).join(" · "), template: `%s · ${name}` },
     description: description as string,
+    // The operator's switch reaches the pages themselves, not just robots.txt:
+    // a page already in an index leaves faster for noindex than for a rule it
+    // is no longer allowed to fetch.
+    ...(indexable ? {} : { robots: { index: false, follow: false } }),
+    ...(google || bing
+      ? { verification: { ...(google ? { google: google as string } : {}), ...(bing ? { other: { "msvalidate.01": bing as string } } : {}) } }
+      : {}),
     // Only when one is set — Next falls back to /favicon.ico otherwise, and
     // an empty icons entry would suppress that.
     ...(favicon ? { icons: { icon: favicon as string } } : {}),

@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import type { ActionResult } from "./catalogue";
 import { readerMessages } from "@/lib/context";
+import { pingIndexNow } from "@/lib/seo";
 
 export type { ActionResult };
 
@@ -53,6 +54,11 @@ export async function savePageAction(_prev: ActionResult, form: FormData): Promi
   if (id) await db.page.update({ where: { id }, data });
   else await db.page.create({ data });
 
+  // Told to the IndexNow engines rather than waited on: a published page that
+  // takes a fortnight to be crawled is a page nobody reads. Unpublishing is
+  // worth submitting too — the engines recheck and drop it.
+  await pingIndexNow([`/p/${slug}`]);
+
   await logActivity(admin.id, id ? "admin.page.update" : "admin.page.create", `${title} (/p/${slug})`);
   revalidatePages();
   return { ok: true };
@@ -77,6 +83,7 @@ export async function setPagePublishedAction(id: string, published: boolean): Pr
   if (!row) return { error: t("adm.pageMissing") };
 
   await db.page.update({ where: { id }, data: { published } });
+  await pingIndexNow([`/p/${row.slug}`]);
   await logActivity(admin.id, "admin.page.toggle", `${row.title} ${published ? "on" : "off"}`);
   revalidatePages();
   return { ok: true };

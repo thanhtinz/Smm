@@ -8,7 +8,19 @@ import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import ServiceSearch from "@/components/services/service-search";
 
-export const metadata: Metadata = { title: "Services" };
+/**
+ * The catalogue is one page filtered by a query string, so every platform
+ * would otherwise be a separate URL claiming the same content. The canonical
+ * keeps the filtered views pointing at the one page that owns it.
+ */
+export async function generateMetadata({ searchParams }: { searchParams: Promise<Search> }): Promise<Metadata> {
+  const { platform } = await searchParams;
+  const { t } = await getAppContext();
+  return {
+    title: t("nav.services"),
+    alternates: { canonical: platform ? `/services?platform=${platform}` : "/services" },
+  };
+}
 
 type Search = { platform?: string; category?: string; q?: string };
 
