@@ -28,17 +28,6 @@ export type NotifyInput = {
   href?: string;
 };
 
-/**
- * A string in English, whatever the reader's language.
- *
- * Two callers want this. The stored notification fallback below, and the API,
- * whose messages are read by a reseller's client code rather than by a person
- * — translating those would break every integration.
- */
-export function englishMessage(key: string, vars?: Record<string, string | number>): string {
-  return english(key, (vars ?? {}) as NotifyParams);
-}
-
 /** English, for the stored fallback. */
 function english(key: string, params: NotifyParams): string {
   const dict = en as unknown as Record<string, string>;

@@ -150,7 +150,7 @@ export default async function DepositPage({ params }: { params: Promise<{ id: st
       {instruction?.kind === "unconfigured" && (
         <div className="alert alert-danger" role="alert">
           <Icon name="alert" size={16} />
-          <span>{instruction.message}</span>
+          <span>{t(instruction.key)}</span>
         </div>
       )}
 

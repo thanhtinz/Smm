@@ -5,6 +5,7 @@ import { nextPublicId } from "./ids";
 import { currentPanelId, runAsPanel } from "./tenancy";
 import { fetchProviderBalance, fetchProviderServices } from "./providers";
 import { notifications, type Alert } from "./notify";
+import type { Fault } from "./fault";
 
 /**
  * Keeping the catalogue in step with a provider.
@@ -27,7 +28,8 @@ export type SyncReport = {
       event and its values, not a sentence: an admin reads them in whichever
       language they picked. */
   alerts: Alert[];
-  error?: string;
+  /** Why nothing was synced, for the caller to word. */
+  fault?: Fault;
 };
 
 /** Sell price from cost, for services following their provider. */
@@ -62,8 +64,8 @@ export async function syncProviderCatalogue(
   };
 
   const result = await fetchProviderServices(provider);
-  if (!result.ok) return { ...report, error: result.error };
-  if (!Array.isArray(result.data)) return { ...report, error: "Provider did not return a service list" };
+  if (!result.ok) return { ...report, fault: { key: "adm.providerCallFailed", vars: { detail: result.error } } };
+  if (!Array.isArray(result.data)) return { ...report, fault: { key: "adm.providerNoList" } };
 
   const upstream = new Map<string, Record<string, unknown>>();
   for (const row of result.data.slice(0, 5000)) {
@@ -73,7 +75,7 @@ export async function syncProviderCatalogue(
   if (upstream.size === 0) {
     // An empty list is far more often a broken key than a provider that has
     // stopped selling, and acting on it would take the whole catalogue down.
-    return { ...report, error: "Provider returned an empty service list" };
+    return { ...report, fault: { key: "adm.providerEmptyList" } };
   }
 
   const ours = await db.service.findMany({ where: { providerId: provider.id } });

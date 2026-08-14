@@ -38,7 +38,7 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
   if (maxOpen > 0) {
     const open = await db.ticket.count({ where: { userId: user.id, status: { in: OPEN_STATUSES } } });
     if (open >= maxOpen) {
-      return { error: `You already have ${open} open tickets. Please wait for a reply before opening another.` };
+      return { error: t("err.ticketsOpen", { count: open }) };
     }
   }
 

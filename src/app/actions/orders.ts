@@ -130,7 +130,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const charge = calculateCharge(rate, totalQuantity);
   const minCharge = Number(await getSetting("order.minCharge")) || 0;
   if (charge < minCharge) {
-    return { fieldErrors: { quantity: `The minimum order value is ${minCharge.toLocaleString()}` } };
+    return { fieldErrors: { quantity: t("err.minCharge", { amount: minCharge.toLocaleString() }) } };
   }
 
   // On a child panel the same order has to be bought from the panel above.
@@ -306,7 +306,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
         line,
         raw,
         ok: false,
-        message: `Quantity must be ${service.min.toLocaleString()}–${service.max.toLocaleString()}`,
+        message: t("err.massQuantity", { min: service.min.toLocaleString(), max: service.max.toLocaleString() }),
       });
       return;
     }

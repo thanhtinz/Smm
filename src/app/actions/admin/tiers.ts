@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import type { ActionResult } from "./catalogue";
+import { readerMessages } from "@/lib/context";
 
 export type { ActionResult };
 
@@ -30,21 +31,22 @@ function revalidatePricing() {
 }
 
 export async function saveTierAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
-  if (!name) return { fieldErrors: { name: "Enter a name" } };
+  if (!name) return { fieldErrors: { name: t("adm.nameRequired") } };
 
   const slug = slugify(String(form.get("slug") ?? "").trim() || name);
-  if (!slug) return { fieldErrors: { slug: "Enter a slug" } };
+  if (!slug) return { fieldErrors: { slug: t("adm.slugRequired") } };
 
   const clash = await db.userTier.findFirst({ where: { slug, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { slug: "That slug is already used" } };
+  if (clash) return { fieldErrors: { slug: t("adm.slugTaken") } };
 
   const discountPercent = num(form, "discountPercent");
   if (discountPercent < 0 || discountPercent >= 100) {
-    return { fieldErrors: { discountPercent: "Use a discount between 0 and 99" } };
+    return { fieldErrors: { discountPercent: t("adm.discountRange") } };
   }
 
   const isDefault = form.get("isDefault") === "on";
@@ -73,9 +75,10 @@ export async function saveTierAction(_prev: ActionResult, form: FormData): Promi
 }
 
 export async function deleteTierAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const tier = await db.userTier.findUnique({ where: { id } });
-  if (!tier) return { error: "Tier not found" };
+  if (!tier) return { error: t("adm.tierMissing") };
 
   // Customers fall back to the spend ladder rather than losing their account.
   await db.user.updateMany({ where: { tierId: id }, data: { tierId: null } });
@@ -88,13 +91,14 @@ export async function deleteTierAction(id: string): Promise<ActionResult> {
 
 /** Moves one customer onto a tier by hand, or back onto the spend ladder. */
 export async function setUserTierAction(userId: string, tierId: string | null): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const user = await db.user.findUnique({ where: { id: userId } });
-  if (!user) return { error: "User not found" };
+  if (!user) return { error: t("adm.userMissing") };
 
   if (tierId) {
     const tier = await db.userTier.findUnique({ where: { id: tierId } });
-    if (!tier) return { error: "Tier not found" };
+    if (!tier) return { error: t("adm.tierMissing") };
   }
 
   await db.user.update({ where: { id: userId }, data: { tierId } });

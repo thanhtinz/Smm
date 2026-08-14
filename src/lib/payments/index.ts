@@ -17,7 +17,9 @@ export type DepositInstruction =
   | { kind: "transfer"; bankName: string; accountNumber: string; accountName: string; reference: string; qrPayload?: string }
   | { kind: "redirect"; url: string }
   | { kind: "manual"; instructions: string; reference: string }
-  | { kind: "unconfigured"; message: string };
+  // Why the gateway could not be reached — worded by the wallet page, which
+  // knows the customer's language. A driver does not.
+  | { kind: "unconfigured"; key: string };
 
 export type Driver = {
   key: string;
@@ -83,7 +85,7 @@ export const drivers: Record<string, Driver> = {
         headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" },
         body: "grant_type=client_credentials",
       });
-      if (!tokenRes.ok) return { kind: "unconfigured", message: "PayPal rejected the configured credentials." };
+      if (!tokenRes.ok) return { kind: "unconfigured", key: "err.payPaypalAuth" };
       const { access_token } = (await tokenRes.json()) as { access_token: string };
 
       const orderRes = await fetch(`${base}/v2/checkout/orders`, {
@@ -104,10 +106,10 @@ export const drivers: Record<string, Driver> = {
           },
         }),
       });
-      if (!orderRes.ok) return { kind: "unconfigured", message: "PayPal could not create the order." };
+      if (!orderRes.ok) return { kind: "unconfigured", key: "err.payPaypalOrder" };
       const order = (await orderRes.json()) as { links?: { rel: string; href: string }[] };
       const approve = order.links?.find((l) => l.rel === "approve" || l.rel === "payer-action");
-      if (!approve) return { kind: "unconfigured", message: "PayPal did not return an approval link." };
+      if (!approve) return { kind: "unconfigured", key: "err.payPaypalLink" };
       return { kind: "redirect", url: approve.href };
     },
   },
@@ -148,11 +150,11 @@ export const drivers: Record<string, Driver> = {
       });
 
       if (!res.ok) {
-        return { kind: "unconfigured", message: "The crypto gateway rejected the request. Check the API key." };
+        return { kind: "unconfigured", key: "err.payCryptoAuth" };
       }
 
       const data = (await res.json()) as { invoice_url?: string };
-      if (!data.invoice_url) return { kind: "unconfigured", message: "The crypto gateway returned no invoice." };
+      if (!data.invoice_url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
       return { kind: "redirect", url: data.invoice_url };
     },
   },
@@ -189,9 +191,9 @@ export const drivers: Record<string, Driver> = {
         },
         body,
       });
-      if (!res.ok) return { kind: "unconfigured", message: "Stripe rejected the configured credentials." };
+      if (!res.ok) return { kind: "unconfigured", key: "err.payStripeAuth" };
       const session = (await res.json()) as { url?: string };
-      if (!session.url) return { kind: "unconfigured", message: "Stripe did not return a checkout URL." };
+      if (!session.url) return { kind: "unconfigured", key: "err.payStripeLink" };
       return { kind: "redirect", url: session.url };
     },
   },

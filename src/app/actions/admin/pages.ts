@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import type { ActionResult } from "./catalogue";
+import { readerMessages } from "@/lib/context";
 
 export type { ActionResult };
 
@@ -25,17 +26,18 @@ function revalidatePages() {
 }
 
 export async function savePageAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const title = String(form.get("title") ?? "").trim();
-  if (!title) return { fieldErrors: { title: "Enter a title" } };
+  if (!title) return { fieldErrors: { title: t("adm.titleRequired") } };
 
   const slug = slugify(String(form.get("slug") ?? "").trim() || title);
-  if (!slug) return { fieldErrors: { slug: "Enter a slug" } };
+  if (!slug) return { fieldErrors: { slug: t("adm.slugRequired") } };
 
   const clash = await db.page.findFirst({ where: { slug, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
-  if (clash) return { fieldErrors: { slug: "That address is already used" } };
+  if (clash) return { fieldErrors: { slug: t("adm.addressTaken") } };
 
   const data = {
     slug,
@@ -57,9 +59,10 @@ export async function savePageAction(_prev: ActionResult, form: FormData): Promi
 }
 
 export async function deletePageAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const row = await db.page.findFirst({ where: { id } });
-  if (!row) return { error: "Page not found" };
+  if (!row) return { error: t("adm.pageMissing") };
 
   await db.page.delete({ where: { id } });
   await logActivity(admin.id, "admin.page.delete", row.title);
@@ -68,9 +71,10 @@ export async function deletePageAction(id: string): Promise<ActionResult> {
 }
 
 export async function setPagePublishedAction(id: string, published: boolean): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const row = await db.page.findFirst({ where: { id } });
-  if (!row) return { error: "Page not found" };
+  if (!row) return { error: t("adm.pageMissing") };
 
   await db.page.update({ where: { id }, data: { published } });
   await logActivity(admin.id, "admin.page.toggle", `${row.title} ${published ? "on" : "off"}`);

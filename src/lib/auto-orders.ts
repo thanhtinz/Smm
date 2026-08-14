@@ -4,6 +4,7 @@ import { getSetting } from "./settings";
 import { runAsPanel } from "./tenancy";
 import { settleRefund } from "./providers";
 import { resolveRequest } from "./requests";
+import { englishMessage } from "./fault";
 
 /**
  * The decisions a panel can make without an operator at the keyboard.
@@ -62,7 +63,8 @@ async function autoResolveOne(
     if (days > 0 && order.updatedAt.getTime() < Date.now() - days * 864e5) return;
 
     const outcome = await resolveRequest(request.id, "approved", "Approved automatically");
-    if (outcome.error) report.failures.push(`refill #${request.publicId}: ${outcome.error}`);
+    // A cron pass has no reader, so its report is written in English.
+    if ("key" in outcome) report.failures.push(`refill #${request.publicId}: ${englishMessage(outcome.key, outcome.vars)}`);
     else report.refills += 1;
     return;
   }
@@ -71,7 +73,7 @@ async function autoResolveOne(
   if (!(await nothingSpentYet(request.orderId))) return;
 
   const outcome = await resolveRequest(request.id, "approved", "Approved automatically");
-  if (outcome.error) report.failures.push(`cancel #${request.publicId}: ${outcome.error}`);
+  if ("key" in outcome) report.failures.push(`cancel #${request.publicId}: ${englishMessage(outcome.key, outcome.vars)}`);
   else report.cancels += 1;
 }
 

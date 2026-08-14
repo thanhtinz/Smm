@@ -8,6 +8,7 @@ import { creditDeposit } from "@/lib/payments/credit";
 import { ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
 import type { ActionResult } from "./catalogue";
 import { notification } from "@/lib/notify";
+import { readerMessages } from "@/lib/context";
 
 export type { ActionResult };
 
@@ -20,8 +21,9 @@ const REFUNDING = new Set(["canceled", "refunded"]);
  * same time cannot both issue a refund.
  */
 export async function setOrderStatusAction(id: string, status: string, note = ""): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
-  if (!ORDER_STATUSES.includes(status as never)) return { error: "Unknown status" };
+  if (!ORDER_STATUSES.includes(status as never)) return { error: t("adm.unknownStatus") };
 
   // Ids come from the counter table on its own connection, so they are
   // allocated before the transaction opens rather than inside it.
@@ -75,7 +77,7 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
       }
     });
   } catch {
-    return { error: "That order could not be updated." };
+    return { error: t("adm.orderFailed") };
   }
 
   await logActivity(admin.id, "admin.order.status", `${id} -> ${status}`);
@@ -99,26 +101,27 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
  * chain disagree with reality.
  */
 export async function updateOrderAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
   const order = await db.order.findUnique({ where: { id } });
-  if (!order) return { error: "Order not found" };
+  if (!order) return { error: t("adm.orderMissing") };
 
   const link = String(form.get("link") ?? "").trim();
-  if (!isValidOrderLink(link)) return { fieldErrors: { link: "Enter a valid http or https link" } };
+  if (!isValidOrderLink(link)) return { fieldErrors: { link: t("adm.linkRequired") } };
 
   const startCount = Number(String(form.get("startCount") ?? "").trim());
   if (!Number.isInteger(startCount) || startCount < 0) {
-    return { fieldErrors: { startCount: "Enter a whole number, zero or more" } };
+    return { fieldErrors: { startCount: t("adm.wholeNumber") } };
   }
 
   const remains = Number(String(form.get("remains") ?? "").trim());
   if (!Number.isInteger(remains) || remains < 0) {
-    return { fieldErrors: { remains: "Enter a whole number, zero or more" } };
+    return { fieldErrors: { remains: t("adm.wholeNumber") } };
   }
   if (remains > order.quantity) {
-    return { fieldErrors: { remains: `Cannot exceed the ordered quantity of ${order.quantity.toLocaleString()}` } };
+    return { fieldErrors: { remains: t("adm.remainsMax", { quantity: order.quantity.toLocaleString() }) } };
   }
 
   const changes: string[] = [];
@@ -136,6 +139,7 @@ export async function updateOrderAction(_prev: ActionResult, form: FormData): Pr
 }
 
 export async function adjustBalanceAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
 
   const userId = String(form.get("userId") ?? "");
@@ -143,7 +147,7 @@ export async function adjustBalanceAction(_prev: ActionResult, form: FormData): 
   const note = String(form.get("note") ?? "").trim();
 
   if (!Number.isFinite(amount) || amount === 0) {
-    return { fieldErrors: { amount: "Enter a non-zero amount" } };
+    return { fieldErrors: { amount: t("adm.amountNonZero") } };
   }
 
   const publicId = await nextPublicId("transaction");
@@ -179,9 +183,9 @@ export async function adjustBalanceAction(_prev: ActionResult, form: FormData): 
     });
   } catch (e) {
     if (e instanceof Error && e.message === "NEGATIVE") {
-      return { fieldErrors: { amount: "That would take the balance below zero" } };
+      return { fieldErrors: { amount: t("adm.balanceNegative") } };
     }
-    return { error: "The balance could not be adjusted." };
+    return { error: t("adm.balanceFailed") };
   }
 
   await logActivity(admin.id, "admin.balance.adjust", `${userId} ${amount}`);
@@ -190,11 +194,12 @@ export async function adjustBalanceAction(_prev: ActionResult, form: FormData): 
 }
 
 export async function setUserRoleAction(userId: string, role: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
-  if (!["user", "support", "admin"].includes(role)) return { error: "Unknown role" };
+  if (!["user", "support", "admin"].includes(role)) return { error: t("adm.unknownRole") };
 
   if (userId === admin.id && role !== "admin") {
-    return { error: "You cannot remove your own admin role." };
+    return { error: t("adm.noSelfDemote") };
   }
 
   await db.user.update({ where: { id: userId }, data: { role } });
@@ -204,8 +209,9 @@ export async function setUserRoleAction(userId: string, role: string): Promise<A
 }
 
 export async function setUserBanAction(userId: string, banned: boolean, reason = ""): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
-  if (userId === admin.id) return { error: "You cannot suspend your own account." };
+  if (userId === admin.id) return { error: t("adm.noSelfSuspend") };
 
   await db.user.update({ where: { id: userId }, data: { banned, banReason: banned ? reason : "" } });
   // A suspended user keeps no live sessions.
@@ -219,9 +225,10 @@ export async function setUserBanAction(userId: string, banned: boolean, reason =
 // ------------------------------------------------------------- transactions
 
 export async function approveTransactionAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const result = await creditDeposit(id);
-  if (result === "missing") return { error: "That deposit no longer exists." };
+  if (result === "missing") return { error: t("adm.depositMissing") };
 
   await logActivity(admin.id, "admin.deposit.approve", id);
   revalidatePath("/admin/transactions");
@@ -229,12 +236,13 @@ export async function approveTransactionAction(id: string): Promise<ActionResult
 }
 
 export async function rejectTransactionAction(id: string, note = ""): Promise<ActionResult> {
+  const t = await readerMessages();
   const admin = await requireAdmin();
   const updated = await db.transaction.updateMany({
     where: { id, status: { in: ["pending", "review"] } },
     data: { status: "failed", note: note || "Rejected by admin" },
   });
-  if (updated.count === 0) return { error: "Only a deposit that has not been credited can be rejected." };
+  if (updated.count === 0) return { error: t("adm.depositRejectable") };
 
   await logActivity(admin.id, "admin.deposit.reject", id);
   revalidatePath("/admin/transactions");
