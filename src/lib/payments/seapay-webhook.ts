@@ -66,7 +66,7 @@ export async function handleSePayWebhook(request: Request) {
     return NextResponse.json({ success: false, message: "Amount is lower than the deposit" }, { status: 202 });
   }
 
-  const result = await creditDeposit(txn.id, String(payload.id ?? payload.referenceCode ?? ""));
+  const result = await creditDeposit(txn.id, String(payload.id ?? payload.referenceCode ?? ""), { automatic: true });
   return NextResponse.json({ success: true, message: result });
 }
 

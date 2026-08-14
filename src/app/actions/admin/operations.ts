@@ -229,10 +229,10 @@ export async function approveTransactionAction(id: string): Promise<ActionResult
 export async function rejectTransactionAction(id: string, note = ""): Promise<ActionResult> {
   const admin = await requireAdmin();
   const updated = await db.transaction.updateMany({
-    where: { id, status: "pending" },
+    where: { id, status: { in: ["pending", "review"] } },
     data: { status: "failed", note: note || "Rejected by admin" },
   });
-  if (updated.count === 0) return { error: "Only a pending deposit can be rejected." };
+  if (updated.count === 0) return { error: "Only a deposit that has not been credited can be rejected." };
 
   await logActivity(admin.id, "admin.deposit.reject", id);
   revalidatePath("/admin/transactions");
