@@ -7,6 +7,8 @@ import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
 
 export type SettingField = {
+  /** From the dictionary. Blank falls back to a name derived from the key. */
+  label?: string;
   key: string;
   type: string;
   options?: string[];
@@ -65,7 +67,9 @@ export default function SettingsForm({
 }
 
 function SettingControl({ field, error }: { field: SettingField; error?: string }) {
-  const label = humanise(field.key);
+  // Named on the server where the dictionary lives; the derived name is what
+  // a setting nobody has named yet still shows.
+  const label = field.label || humanise(field.key);
 
   if (field.type === "boolean") {
     return (
