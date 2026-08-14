@@ -2,6 +2,7 @@ import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
+import { notification } from "./notify";
 
 /** Short, unambiguous codes — no O/0 or I/1 confusion when typed by hand. */
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -78,13 +79,12 @@ export async function payReferralCommission(transactionId: string): Promise<numb
   }
 
   await db.notification.create({
-    data: {
+    data: notification({
       userId: referrerId,
-      title: "Referral commission earned",
-      body: "One of your referrals topped up their balance.",
+      key: "affiliate.commission",
       level: "success",
       href: "/dashboard/affiliate",
-    },
+    }),
   });
 
   return amount;

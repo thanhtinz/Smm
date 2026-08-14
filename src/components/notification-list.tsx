@@ -138,7 +138,7 @@ function Row({ item, unreadLabel }: { item: NotificationRow; unreadLabel: string
           {item.title}
           {!item.read && <span className="sr-only"> — {unreadLabel}</span>}
         </span>
-        <span className="muted mt-0.5 block text-sm">{item.body}</span>
+        <span className="muted whitespace-pre-line mt-0.5 block text-sm">{item.body}</span>
         <span className="muted mt-1.5 block text-xs">{item.when}</span>
       </span>
       {item.href && (

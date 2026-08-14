@@ -5,6 +5,7 @@ import { logActivity } from "./auth";
 import { nextPublicId } from "./ids";
 import { runAsPanel } from "./tenancy";
 import { requestProviderCancel, requestProviderRefill } from "./providers";
+import { notification, requestKey } from "./notify";
 
 export type RequestOutcome = { error?: string; ok?: true };
 
@@ -158,13 +159,13 @@ export async function resolveRequest(
   }
 
   await db.notification.create({
-    data: {
+    data: notification({
       userId: request.userId,
-      title: `${request.type === "refill" ? "Refill" : "Cancellation"} request ${decision}`,
-      body: note || `Order #${request.order.publicId}`,
+      key: requestKey(request.type, decision),
+      params: { orderId: request.order.publicId, ...(note ? { note } : {}) },
       level: decision === "rejected" ? "warning" : "success",
       href: "/dashboard/orders",
-    },
+    }),
   });
 
   await logActivity(actorId, `${actorId ? "admin" : "auto"}.request.${decision}`, `${request.type} #${request.publicId}`);

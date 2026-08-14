@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
+import { notification } from "@/lib/notify";
 
 export type TicketState = {
   error?: string;
@@ -85,13 +86,12 @@ export async function replyTicketAction(_prev: TicketState, form: FormData): Pro
 
   if (isStaff && ticket.userId !== user.id) {
     await db.notification.create({
-      data: {
+      data: notification({
         userId: ticket.userId,
-        title: `Reply on ticket #${ticket.publicId}`,
-        body: ticket.subject,
-        level: "info",
+        key: "ticket.reply",
+        params: { id: ticket.publicId, subject: ticket.subject },
         href: `/dashboard/tickets/${ticket.id}`,
-      },
+      }),
     });
   }
 

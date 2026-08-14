@@ -10,6 +10,7 @@ import { findReferrerByCode } from "@/lib/affiliate";
 import { verifyCaptcha } from "@/lib/captcha";
 import { sendVerificationEmail, verificationRequired } from "@/lib/verification";
 import { startPendingLogin, twoFactorActive } from "@/lib/two-factor";
+import { notification } from "@/lib/notify";
 
 export type FormState = {
   error?: string;
@@ -173,13 +174,7 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   }
 
   await db.notification.create({
-    data: {
-      userId: user.id,
-      title: "Welcome aboard",
-      body: "Your account is ready. Top up your balance to place your first order.",
-      level: "success",
-      href: "/dashboard/wallet",
-    },
+    data: notification({ userId: user.id, key: "welcome", level: "success", href: "/dashboard/wallet" }),
   });
 
   await logActivity(user.id, "register");

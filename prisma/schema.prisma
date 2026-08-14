@@ -560,6 +560,12 @@ model Notification {
   panel     Panel    @relation("PanelNotifications", fields: [panelId], references: [id], onDelete: Cascade)
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // What happened, and the values its sentence needs. The reader's language
+  // decides the words, so they are not stored — see src/lib/notify.ts.
+  key       String   @default("")
+  params    String   @default("{}")
+  // The English rendering, kept as written. It is what rows created before
+  // keys existed still show, and what an operator reads in the database.
   title     String
   body      String
   level     String   @default("info") // info | success | warning | danger

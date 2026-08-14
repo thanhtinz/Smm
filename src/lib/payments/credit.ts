@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { payReferralCommission } from "@/lib/affiliate";
+import { notification, notifications } from "../notify";
 
 /**
  * Marks a pending deposit completed and moves the money.
@@ -38,13 +39,13 @@ export async function creditDeposit(
       },
     });
     await tx.notification.create({
-      data: {
+      data: notification({
         userId: txn.userId,
-        title: "Balance topped up",
-        body: `Deposit #${txn.publicId} has been credited to your account.`,
+        key: "deposit.credited",
+        params: { id: txn.publicId },
         level: "success",
         href: "/dashboard/transactions",
-      },
+      }),
     });
 
     return "credited";
@@ -76,13 +77,12 @@ async function holdForReview(transactionId: string, reference?: string): Promise
   const admins = await db.user.findMany({ where: { role: "admin", banned: false }, select: { id: true } });
   if (admins.length) {
     await db.notification.createMany({
-      data: admins.map((a) => ({
-        userId: a.id,
-        title: `Deposit #${txn.publicId} is waiting for approval`,
-        body: "The payment arrived. Approve it to credit the balance.",
+      data: notifications(admins.map((a) => a.id), {
+        key: "deposit.pending",
+        params: { id: txn.publicId },
         level: "warning",
         href: "/admin/transactions",
-      })),
+      }),
     });
   }
 

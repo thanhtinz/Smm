@@ -7,6 +7,7 @@ import { getSetting } from "./settings";
 import { updateExchangeRates } from "./exchange";
 import { syncDueProviders } from "./provider-sync";
 import { runAutoDecisions } from "./auto-orders";
+import { notification, requestKey } from "./notify";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -108,7 +109,10 @@ export async function propagateRequestDecisions(limit = 200) {
     );
 
     for (const upstream of resolved) {
-      const downstream = await basePrisma.orderRequest.findUnique({ where: { id: upstream.sourceRequestId } });
+      const downstream = await basePrisma.orderRequest.findUnique({
+        where: { id: upstream.sourceRequestId },
+        include: { order: { select: { publicId: true } } },
+      });
       if (!downstream || downstream.status === upstream.status) continue;
       if (downstream.status === "rejected" || downstream.status === "completed") continue;
 
@@ -118,13 +122,13 @@ export async function propagateRequestDecisions(limit = 200) {
           data: { status: upstream.status, note: upstream.note },
         });
         await db.notification.create({
-          data: {
+          data: notification({
             userId: downstream.userId,
-            title: `${downstream.type === "refill" ? "Refill" : "Cancellation"} request ${upstream.status}`,
-            body: upstream.note || "",
+            key: requestKey(downstream.type, upstream.status),
+            params: { orderId: downstream.order.publicId, ...(upstream.note ? { note: upstream.note } : {}) },
             level: upstream.status === "rejected" ? "warning" : "success",
             href: "/dashboard/orders",
-          },
+          }),
         });
       });
 
