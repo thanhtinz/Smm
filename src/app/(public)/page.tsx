@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
@@ -39,15 +40,18 @@ export default async function LandingPage() {
     { icon: "rocket" as IconName, title: t("landing.howto.3.title"), body: t("landing.howto.3.body") },
   ];
 
-  return (
+  const heroBlock = (
     <>
-      {/* ------------------------------------------------------------ hero */}
+{/* ------------------------------------------------------------ hero */}
       <section className="relative overflow-hidden">
         <div className="container-page grid items-center gap-14 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:py-28">
           <div>
+            {/* A panel that set its own tagline says that here rather than
+                the shared line from the dictionary — it is the one piece of
+                the hero a child panel brands without touching translations. */}
             <span className="badge badge-info">
               <Icon name="star" size={13} />
-              {t("landing.badge")}
+              {(settings["site.tagline"] as string) || t("landing.badge")}
             </span>
             <h1 className="mt-5 text-4xl leading-[1.08] font-bold tracking-tight sm:text-5xl lg:text-6xl">
               {t("landing.headline")}
@@ -101,8 +105,12 @@ export default async function LandingPage() {
           </div>
         </div>
       </section>
+    </>
+  );
 
-      {/* ----------------------------------------------------------- stats */}
+  const statsBlock = (
+    <>
+{/* ----------------------------------------------------------- stats */}
       <section className="container-page">
         <div className="card grid divide-y divide-[var(--border)] sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4">
           {stats.map((s, i) => (
@@ -116,8 +124,12 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
+    </>
+  );
 
-      {/* -------------------------------------------------------- features */}
+  const featuresBlock = (
+    <>
+{/* -------------------------------------------------------- features */}
       <section className="container-page py-20">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("landing.features.title")}</h2>
@@ -136,8 +148,12 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
+    </>
+  );
 
-      {/* ------------------------------------------------------- platforms */}
+  const platformsBlock = (
+    <>
+{/* ------------------------------------------------------- platforms */}
       <section className="container-page">
         <h2 className="text-center text-2xl font-bold tracking-tight">{t("landing.platforms.title")}</h2>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -153,8 +169,12 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
+    </>
+  );
 
-      {/* ----------------------------------------------------------- steps */}
+  const stepsBlock = (
+    <>
+{/* ----------------------------------------------------------- steps */}
       <section className="container-page py-20">
         <h2 className="text-center text-3xl font-bold tracking-tight">{t("landing.howto.title")}</h2>
         <div className="mt-12 grid gap-5 md:grid-cols-3">
@@ -170,8 +190,12 @@ export default async function LandingPage() {
           ))}
         </div>
       </section>
+    </>
+  );
 
-      {/* ------------------------------------------------------- final cta */}
+  const ctaBlock = (
+    <>
+{/* ------------------------------------------------------- final cta */}
       <section className="container-page">
         <div className="card card-pad glow relative overflow-hidden px-8 py-14 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">{t("landing.cta.final.title")}</h2>
@@ -182,6 +206,38 @@ export default async function LandingPage() {
           </Link>
         </div>
       </section>
+    </>
+  );
+
+  const blocks = {
+    hero: heroBlock,
+    stats: statsBlock,
+    features: featuresBlock,
+    platforms: platformsBlock,
+    steps: stepsBlock,
+    cta: ctaBlock,
+  };
+
+  /**
+   * What each layout puts on the page, in order.
+   *
+   * Editorial leads with what the panel actually sells and leaves the sales
+   * copy until after; minimal keeps the parts a returning customer needs and
+   * drops the rest. Anything unknown falls back to the full page.
+   */
+  const LAYOUTS: Record<string, (keyof typeof blocks)[]> = {
+    spotlight: ["hero", "stats", "features", "platforms", "steps", "cta"],
+    editorial: ["hero", "platforms", "features", "stats", "steps", "cta"],
+    minimal: ["hero", "platforms", "cta"],
+  };
+  const layout = String(settings["appearance.landingLayout"] ?? "spotlight");
+  const order = LAYOUTS[layout] ?? LAYOUTS.spotlight;
+
+  return (
+    <>
+      {order.map((name) => (
+        <Fragment key={name}>{blocks[name]}</Fragment>
+      ))}
     </>
   );
 }

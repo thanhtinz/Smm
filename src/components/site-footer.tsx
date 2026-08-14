@@ -24,7 +24,7 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
     <footer className="mt-24 border-t border-[var(--border)]">
       <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
         <div>
-          <Logo text={settings["site.logoText"] as string} />
+          <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} />
           <p className="muted mt-4 max-w-xs text-sm leading-relaxed">{settings["site.description"] as string}</p>
           {socials.length > 0 && (
             <div className="mt-5 flex gap-2">
