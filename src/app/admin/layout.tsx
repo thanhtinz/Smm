@@ -5,7 +5,9 @@ import { guardPanel } from "@/lib/tenancy";
 import PanelSuspended from "@/components/panel-suspended";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
-import { twoFactorRequired } from "@/lib/two-factor";
+import { headers } from "next/headers";
+import { twoFactorRequired, STAFF_ROLES } from "@/lib/two-factor";
+import { PATHNAME_HEADER } from "@/lib/panel-host";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
@@ -13,7 +15,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   const ctx = await getAppContext();
   if (!ctx.user) redirect("/login");
-  if (ctx.user.role !== "admin") redirect("/dashboard");
+  if (!STAFF_ROLES.has(ctx.user.role)) redirect("/dashboard");
+
+  // None of the 24 admin pages guards itself — they all rely on this layout —
+  // so letting the support role in at all means saying exactly where it may
+  // go. The support desk, and nothing else: settings, providers, payment
+  // credentials and the user list stay with the admin.
+  const isAdmin = ctx.user.role === "admin";
+  const path = (await headers()).get(PATHNAME_HEADER) ?? "";
+  if (!isAdmin && !path.startsWith("/admin/tickets")) redirect("/admin/tickets");
 
   // Enforced but not yet set up: the admin area stays closed until it is, and
   // the profile page is where the setup lives.
@@ -49,7 +59,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     { href: "/admin/settings", label: t("admin.settings"), icon: "settings" },
   ];
 
-  const groups: NavGroup[] = [
+  // Support only reaches the desk, so it is the only thing they are offered.
+  // A nav full of links that redirect is worse than a short nav.
+  const groups: NavGroup[] = isAdmin
+    ? adminGroups()
+    : [
+        { title: t("admin.operations"), items: [{ href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" }] },
+        { title: t("nav.account"), items: [{ href: "/dashboard", label: t("dash.title"), icon: "dashboard", exact: true }] },
+      ];
+
+  function adminGroups(): NavGroup[] {
+    return [
     {
       title: "Overview",
       items: [
@@ -84,15 +104,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       title: t("nav.account"),
       items: [{ href: "/dashboard", label: t("dash.title"), icon: "dashboard", exact: true }],
     },
-  ];
+    ];
+  }
 
-  const primaryMobile: NavItem[] = [
-    { href: "/admin", label: t("admin.overview"), icon: "chart", exact: true },
-    { href: "/admin/services", label: t("admin.services"), icon: "package" },
-    { href: "/admin/orders", label: t("dash.orders"), icon: "list" },
-    { href: "/admin/users", label: t("admin.users"), icon: "users" },
-    { href: "/admin/settings", label: t("admin.settings"), icon: "settings" },
-  ];
+  const primaryMobile: NavItem[] = isAdmin
+    ? [
+        { href: "/admin", label: t("admin.overview"), icon: "chart", exact: true },
+        { href: "/admin/services", label: t("admin.services"), icon: "package" },
+        { href: "/admin/orders", label: t("dash.orders"), icon: "list" },
+        { href: "/admin/users", label: t("admin.users"), icon: "users" },
+        { href: "/admin/settings", label: t("admin.settings"), icon: "settings" },
+      ]
+    : [
+        { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
+        { href: "/dashboard", label: t("dash.title"), icon: "dashboard", exact: true },
+      ];
 
   return (
     <AppShell ctx={ctx} groups={groups} primaryMobile={primaryMobile} title={t("admin.title")}>
