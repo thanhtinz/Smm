@@ -39,7 +39,7 @@ async function nothingSpentYet(orderId: string): Promise<boolean> {
     select: { status: true, providerOrderId: true },
   });
   if (!order || order.providerOrderId) return false;
-  if (order.status !== "pending") return false;
+  if (order.status !== "pending" && order.status !== "held") return false;
 
   const upstream = await basePrisma.order.count({ where: { sourceOrderId: orderId } });
   return upstream === 0;

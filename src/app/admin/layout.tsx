@@ -33,6 +33,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const isRoot = panel.parentId === null;
   const childPanelsOn = Boolean(await getSetting("panel.childrenEnabled"));
   const openRequests = await db.orderRequest.count({ where: { status: "pending" } });
+  // Held orders are paid for and going nowhere until somebody looks, so the
+  // count belongs where it will be seen rather than behind a filter tab.
+  const heldOrders = await db.order.count({ where: { status: "held" } });
 
   // A child panel buys from its parent and nowhere else, so it has no upstream
   // providers to configure. Its own catalogue is still its own to manage.
@@ -85,11 +88,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     {
       title: t("admin.operations"),
       items: [
-        { href: "/admin/orders", label: t("dash.orders"), icon: "list" },
+        { href: "/admin/orders", label: t("dash.orders"), icon: "list", badge: heldOrders || undefined },
         { href: "/admin/requests", label: t("request.title"), icon: "refresh", badge: openRequests || undefined },
         { href: "/admin/transactions", label: t("wallet.history"), icon: "creditCard" },
         { href: "/admin/users", label: t("admin.users"), icon: "users" },
         { href: "/admin/tiers", label: t("tier.title"), icon: "trending" },
+        { href: "/admin/blocklist", label: t("block.title"), icon: "shield" },
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
         { href: "/admin/inbox", label: t("inbox.title"), icon: "mail" },
         { href: "/admin/announcements", label: t("announcement.title"), icon: "megaphone" },

@@ -90,7 +90,7 @@ const API_TYPE_NAMES: Record<string, string> = {
 };
 
 /** Only what the priced actions need from the key's owner. */
-type ApiCaller = { id: string; tierId: string | null; spent: number };
+type ApiCaller = { id: string; username: string; tierId: string | null; spent: number };
 
 // ------------------------------------------------------------------ actions
 
@@ -197,16 +197,20 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     if (!Number.isInteger(interval) || interval < 1) return fail("Incorrect interval");
   }
 
-  const guarded = await guardOrder(userId, service.id, link);
-  // The API answers in English whatever the account's own language is: these
-  // strings are read by a reseller's client code, not by a person.
-  if (guarded) return fail(englishMessage(guarded.key, guarded.vars));
-
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   const rate = await priceService(await resolveTier(user), service);
   const charge = calculateCharge(rate, totalQuantity);
 
-  const plan = await planUpstream(service, totalQuantity);
+  const guarded = await guardOrder(userId, service.id, link, 1, { username: user.username, charge });
+  // The API answers in English whatever the account's own language is: these
+  // strings are read by a reseller's client code, not by a person.
+  if (guarded && "block" in guarded) return fail(englishMessage(guarded.block.key, guarded.block.vars));
+  // A held order still gets an id and still answers `status`, which reports
+  // it as Pending — a reseller polling has nothing to do differently, and the
+  // panel does not owe them the reason it is looking at the order by hand.
+  const holdReason = guarded?.hold ?? "";
+
+  const plan = holdReason ? { hops: [] } : await planUpstream(service, totalQuantity);
   if ("error" in plan) {
     await logActivity(userId, "order.chain.blocked", plan.detail);
     return fail(plan.error);
@@ -228,7 +232,8 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           quantity: totalQuantity,
           charge,
           remains: totalQuantity,
-          status: "pending",
+          status: holdReason ? "held" : "pending",
+          holdReason,
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
@@ -412,6 +417,10 @@ function orderPayload(
 
 /** The standard uses title-case status names. */
 const STATUS_LABEL: Record<string, string> = {
+  // Held is deliberately reported as Pending: the standard has no word for
+  // it, a reseller can do nothing about it, and inventing one would break
+  // client code that switches on this string.
+  held: "Pending",
   pending: "Pending",
   processing: "Processing",
   inprogress: "In progress",

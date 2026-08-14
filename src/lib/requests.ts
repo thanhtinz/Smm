@@ -18,8 +18,12 @@ import { withSettled, recordOrderStep } from "./orders";
  */
 /** Refill only makes sense once delivery has finished or stalled. */
 const REFILLABLE = new Set(["completed", "partial"]);
-/** Cancel only makes sense before the provider has really started. */
-const CANCELLABLE = new Set(["pending", "processing"]);
+/**
+ * Cancel only makes sense before the provider has really started. A held
+ * order is the cleanest case of all — nothing was sent anywhere, so there is
+ * only money to hand back.
+ */
+const CANCELLABLE = new Set(["held", "pending", "processing"]);
 
 /**
  * Raises a refill or cancel request for one order, or says why not.

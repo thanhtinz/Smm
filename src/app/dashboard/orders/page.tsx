@@ -7,7 +7,7 @@ import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import OrderActions from "@/components/orders/order-actions";
-import { ORDER_STATUSES } from "@/lib/orders";
+import { CUSTOMER_ORDER_STATUSES, customerStatus } from "@/lib/orders";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -24,7 +24,7 @@ export default async function OrdersPage({
   const { t, currency, locale, timezone } = ctx;
   const dates = dateFormats(locale, timezone);
 
-  const status = ORDER_STATUSES.includes(params.status as never) ? params.status : undefined;
+  const status = CUSTOMER_ORDER_STATUSES.includes(params.status as never) ? params.status : undefined;
   const q = (params.q ?? "").trim();
   const page = Math.max(1, Number(params.page) || 1);
 
@@ -33,7 +33,7 @@ export default async function OrdersPage({
   const asId = Number(q.replace(/^#/, ""));
   const where = {
     userId: user.id,
-    ...(status ? { status } : {}),
+    ...(status ? { status: status === "pending" ? { in: ["pending", "held"] } : status } : {}),
     ...(q
       ? {
           OR: [
@@ -59,7 +59,10 @@ export default async function OrdersPage({
     db.order.groupBy({ by: ["status"], where: { userId: user.id }, _count: true }),
   ]);
 
-  const countFor = (s: string) => counts.find((c) => c.status === s)?._count ?? 0;
+  const countFor = (s: string) =>
+    counts
+      .filter((c) => customerStatus(c.status) === s)
+      .reduce((n, c) => n + c._count, 0);
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const requestLabels = {
@@ -118,7 +121,7 @@ export default async function OrdersPage({
             label={t("common.all")}
             count={counts.reduce((n, c) => n + c._count, 0)}
           />
-          {ORDER_STATUSES.map((s) => (
+          {CUSTOMER_ORDER_STATUSES.map((s) => (
             <Tab
               key={s}
               href={buildQuery(s, q, 1)}
@@ -191,7 +194,7 @@ export default async function OrdersPage({
                       <td className="text-right tabular-nums">{o.quantity.toLocaleString()}</td>
                       <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                       <td>
-                        <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
+                        <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
                       </td>
                       <td className="muted text-xs">{formatDate(o.createdAt, dates)}</td>
                       <td>
@@ -218,7 +221,7 @@ export default async function OrdersPage({
                     <Link href={`/dashboard/orders/${o.publicId}`} className="font-mono text-xs hover:text-[var(--primary)]">
                       #{o.publicId}
                     </Link>
-                    <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
+                    <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
                   </div>
                   <Link href={`/dashboard/orders/${o.publicId}`} className="mt-1.5 block text-sm font-medium">
                     {o.service.name}

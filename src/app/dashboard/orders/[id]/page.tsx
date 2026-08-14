@@ -8,7 +8,7 @@ import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import OrderTimeline from "@/components/orders/order-timeline";
-import { ORDER_STATUSES } from "@/lib/orders";
+import { ORDER_STATUSES, customerStatus } from "@/lib/orders";
 import OrderActions from "@/components/orders/order-actions";
 
 export const metadata: Metadata = { title: "Order" };
@@ -51,7 +51,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   };
   for (const s of ORDER_STATUSES) timelineLabels[`status.${s}`] = t(`status.${s}`);
 
-  const reported = order.status !== "pending" && (order.remains > 0 || order.status === "completed");
+  // Held reads as pending to the customer, here as everywhere else.
+  const shown = customerStatus(order.status);
+  const reported = shown !== "pending" && (order.remains > 0 || shown === "completed");
   const delivered = order.status === "completed" ? order.quantity : Math.max(0, order.quantity - order.remains);
   const percent = reported && order.quantity > 0 ? Math.min(100, Math.round((delivered / order.quantity) * 100)) : null;
 
@@ -91,7 +93,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             <p className="muted font-mono text-xs">#{order.publicId}</p>
             <h2 className="mt-1 text-xl font-bold tracking-tight">{order.service.name}</h2>
           </div>
-          <StatusBadge status={order.status} label={t(`status.${order.status}`)} />
+          <StatusBadge status={shown} label={t(`status.${shown}`)} />
         </div>
 
         {percent !== null && (
@@ -152,7 +154,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             order={{
               orderId: order.id,
               canRefill: order.service.refill && ["completed", "partial"].includes(order.status),
-              canCancel: order.service.cancel && ["pending", "processing"].includes(order.status),
+              canCancel: order.service.cancel && ["pending", "processing"].includes(shown),
               openRequest: order.requests.find((r) => ["pending", "approved"].includes(r.status))?.type ?? null,
             }}
             labels={{

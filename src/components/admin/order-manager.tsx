@@ -5,6 +5,7 @@ import {
   setOrderStatusAction,
   updateOrderAction,
   orderStepsAction,
+  releaseOrderAction,
   type ActionResult,
 } from "@/app/actions/admin/operations";
 import { Field, TextInput } from "@/components/ui/field";
@@ -32,8 +33,12 @@ export type AdminOrderRow = {
   subscription: { posts: number; minPerPost: number; maxPerPost: number; delay: number; expiry: string } | null;
   /** Set when this order was bought on behalf of a panel below. */
   fromChild: boolean;
+  /** Why an abuse rule stopped this order. Empty unless status is "held". */
+  holdReason: string;
 };
 
+// "held" is absent on purpose: an operator releases or refuses a held order,
+// they do not push an order into review by hand.
 const STATUSES = ["pending", "processing", "inprogress", "completed", "partial", "canceled", "refunded"];
 
 export default function OrderManager({
@@ -59,6 +64,16 @@ export default function OrderManager({
     setBusy(row.id);
     start(async () => {
       const result = await setOrderStatusAction(row.id, status);
+      if (result.error) setError(result.error);
+      setBusy("");
+    });
+  };
+
+  const release = (row: AdminOrderRow) => {
+    setError("");
+    setBusy(row.id);
+    start(async () => {
+      const result = await releaseOrderAction(row.id);
       if (result.error) setError(result.error);
       setBusy("");
     });
@@ -110,22 +125,51 @@ export default function OrderManager({
                     <td className="text-right tabular-nums">{row.quantity.toLocaleString()}</td>
                     <td className="text-right tabular-nums">{money[row.id]}</td>
                     <td>
-                      <label htmlFor={`status-${row.id}`} className="sr-only">
-                        {labels.status}
-                      </label>
-                      <select
-                        id={`status-${row.id}`}
-                        value={row.status}
-                        disabled={pending && busy === row.id}
-                        onChange={(e) => change(row, e.target.value)}
-                        className="field py-1.5 text-xs"
-                      >
-                        {STATUSES.map((s) => (
-                          <option key={s} value={s}>
-                            {labels[`status.${s}`]}
-                          </option>
-                        ))}
-                      </select>
+                      {row.status === "held" ? (
+                        // A held order gets a decision, not a dropdown: the
+                        // reason it stopped is the whole point, and it does
+                        // not fit in a select.
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => release(row)}
+                            disabled={pending && busy === row.id}
+                            className="btn btn-primary btn-sm"
+                          >
+                            <Icon name="check" size={14} />
+                            {labels.release}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => change(row, "canceled")}
+                            disabled={pending && busy === row.id}
+                            className="btn btn-ghost btn-sm"
+                            aria-label={labels.refuse}
+                            title={labels.refuse}
+                          >
+                            <Icon name="close" size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <label htmlFor={`status-${row.id}`} className="sr-only">
+                            {labels.status}
+                          </label>
+                          <select
+                            id={`status-${row.id}`}
+                            value={row.status}
+                            disabled={pending && busy === row.id}
+                            onChange={(e) => change(row, e.target.value)}
+                            className="field py-1.5 text-xs"
+                          >
+                            {STATUSES.map((s) => (
+                              <option key={s} value={s}>
+                                {labels[`status.${s}`]}
+                              </option>
+                            ))}
+                          </select>
+                        </>
+                      )}
                     </td>
                     <td className="muted text-xs">{row.createdAt}</td>
                     <td>
@@ -193,6 +237,15 @@ function OrderDrawer({
         )}
 
         <input type="hidden" name="id" value={row.id} />
+
+        {/* First thing in the drawer, because on a held order it is the only
+            thing the operator opened it to read. */}
+        {row.status === "held" && row.holdReason && (
+          <div className="alert alert-warning" role="status">
+            <Icon name="alert" size={16} />
+            <span>{row.holdReason}</span>
+          </div>
+        )}
 
         <dl className="card card-pad space-y-2 text-sm">
           <Row label={labels.user} value={row.username} />
