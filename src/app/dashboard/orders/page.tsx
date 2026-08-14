@@ -16,7 +16,7 @@ const PAGE_SIZE = 25;
 export default async function OrdersPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; page?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
 }) {
   const params = await searchParams;
   const ctx = await getAppContext();
@@ -25,9 +25,25 @@ export default async function OrdersPage({
   const dates = dateFormats(locale, timezone);
 
   const status = ORDER_STATUSES.includes(params.status as never) ? params.status : undefined;
+  const q = (params.q ?? "").trim();
   const page = Math.max(1, Number(params.page) || 1);
 
-  const where = { userId: user.id, ...(status ? { status } : {}) };
+  // An order number is what a customer quotes in a ticket, so "1042" and
+  // "#1042" both have to find it; the rest is a plain contains.
+  const asId = Number(q.replace(/^#/, ""));
+  const where = {
+    userId: user.id,
+    ...(status ? { status } : {}),
+    ...(q
+      ? {
+          OR: [
+            ...(Number.isInteger(asId) && asId > 0 ? [{ publicId: asId }] : []),
+            { link: { contains: q } },
+            { service: { name: { contains: q } } },
+          ],
+        }
+      : {}),
+  };
   const [orders, total, counts] = await Promise.all([
     db.order.findMany({
       where,
@@ -63,13 +79,42 @@ export default async function OrdersPage({
         </Link>
       </div>
 
+      <form className="flex flex-wrap gap-2">
+        {status && <input type="hidden" name="status" value={status} />}
+        <div className="relative min-w-56 flex-1">
+          <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+            <Icon name="search" size={16} />
+          </span>
+          <label htmlFor="q" className="sr-only">
+            {t("order.search")}
+          </label>
+          <input
+            id="q"
+            name="q"
+            type="search"
+            defaultValue={q}
+            placeholder={t("order.search")}
+            className="field pl-11"
+          />
+        </div>
+        <button type="submit" className="btn btn-ghost">
+          <Icon name="filter" size={15} />
+          {t("common.search")}
+        </button>
+      </form>
+
       <div className="scroll-x -mx-1 px-1">
         <div className="flex gap-2 pb-1">
-          <Tab href="/dashboard/orders" active={!status} label={t("common.all")} count={counts.reduce((n, c) => n + c._count, 0)} />
+          <Tab
+            href={buildQuery(undefined, q, 1)}
+            active={!status}
+            label={t("common.all")}
+            count={counts.reduce((n, c) => n + c._count, 0)}
+          />
           {ORDER_STATUSES.map((s) => (
             <Tab
               key={s}
-              href={`/dashboard/orders?status=${s}`}
+              href={buildQuery(s, q, 1)}
               active={status === s}
               label={t(`status.${s}`)}
               count={countFor(s)}
@@ -199,7 +244,7 @@ export default async function OrdersPage({
       {totalPages > 1 && (
         <nav className="flex items-center justify-between" aria-label="Pagination">
           <PageLink
-            href={buildPage(status, page - 1)}
+            href={buildQuery(status, q, page - 1)}
             disabled={page <= 1}
             icon="chevronLeft"
             label={t("common.all")}
@@ -208,7 +253,7 @@ export default async function OrdersPage({
             {page} / {totalPages}
           </span>
           <PageLink
-            href={buildPage(status, page + 1)}
+            href={buildQuery(status, q, page + 1)}
             disabled={page >= totalPages}
             icon="chevronRight"
             label={t("common.all")}
@@ -220,9 +265,10 @@ export default async function OrdersPage({
   );
 }
 
-function buildPage(status: string | undefined, page: number) {
+function buildQuery(status: string | undefined, q: string, page: number) {
   const sp = new URLSearchParams();
   if (status) sp.set("status", status);
+  if (q) sp.set("q", q);
   if (page > 1) sp.set("page", String(page));
   const qs = sp.toString();
   return qs ? `/dashboard/orders?${qs}` : "/dashboard/orders";
