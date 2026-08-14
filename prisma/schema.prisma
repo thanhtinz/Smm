@@ -302,6 +302,17 @@ model Provider {
   balance    Float     @default(0)
   currency   String    @default("USD")
   lastSyncAt DateTime?
+  /// Included in the scheduled catalogue sync rather than only imported by hand.
+  autoSync       Boolean @default(false)
+  syncEveryHours Int     @default(12)
+  /// What the sell price is derived from when a service follows the provider.
+  markupPercent  Float   @default(60)
+  /// A provider price moving more than this in one sync is reported rather
+  /// than applied quietly. Zero reports nothing.
+  alertPercent   Float   @default(25)
+  /// Below this the provider is nearly out of funds and orders will start
+  /// bouncing. Zero switches the warning off.
+  lowBalance     Float   @default(0)
   services   Service[]
   createdAt  DateTime  @default(now())
 
@@ -326,6 +337,13 @@ model Service {
   type              String      @default("default") // default | custom_comments | drip_feed | subscription
   rate              Float // price per 1000, in base currency
   providerRate      Float       @default(0)
+  /// Cleared to pin a hand-set price against the provider sync, the same way
+  /// a currency pins its rate. Set means the sell price is the provider's
+  /// cost plus the provider's markup, recalculated on every sync.
+  autoPrice         Boolean     @default(false)
+  /// Set when the provider stopped listing this service. The row is kept —
+  /// orders reference it — but it is taken off sale until it comes back.
+  missingSince      DateTime?
   min               Int         @default(10)
   max               Int         @default(100000)
   refill            Boolean     @default(false)

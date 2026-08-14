@@ -183,6 +183,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     refill: bool(form, "refill"),
     cancel: bool(form, "cancel"),
     dripfeed: bool(form, "dripfeed"),
+    autoPrice: bool(form, "autoPrice"),
     averageTime: String(form.get("averageTime") ?? "").trim(),
     enabled: bool(form, "enabled"),
     position: num(form, "position"),

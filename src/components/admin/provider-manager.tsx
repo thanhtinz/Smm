@@ -5,6 +5,7 @@ import {
   deleteProviderAction,
   dispatchOrdersAction,
   importProviderServicesAction,
+  syncProviderPricesAction,
   refreshProviderBalanceAction,
   saveProviderAction,
   syncStatusesAction,
@@ -25,6 +26,11 @@ export type ProviderRow = {
   enabled: boolean;
   serviceCount: number;
   lastSyncAt: string;
+  autoSync: boolean;
+  syncEveryHours: number;
+  markupPercent: number;
+  alertPercent: number;
+  lowBalance: number;
 };
 
 export default function ProviderManager({ rows, labels }: { rows: ProviderRow[]; labels: Record<string, string> }) {
@@ -32,7 +38,6 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
   const [pending, start] = useTransition();
-  const [markup, setMarkup] = useState("60");
 
   const close = () => {
     setEditing(null);
@@ -104,6 +109,15 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
                 <Row label={labels.balance} value={`${row.balance.toLocaleString()} ${row.currency}`} />
                 <Row label={labels.services} value={String(row.serviceCount)} />
                 <Row label={labels.lastSync} value={row.lastSyncAt || "—"} />
+                <Row
+                  label={labels.autoSync}
+                  value={
+                    row.autoSync
+                      ? labels.autoSyncEvery.replace("{hours}", String(row.syncEveryHours))
+                      : labels.off
+                  }
+                />
+                <Row label={labels.markup} value={`${row.markupPercent}%`} />
               </dl>
 
               <div className="mt-4 flex flex-wrap gap-1.5">
@@ -118,7 +132,16 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
                 </button>
                 <button
                   type="button"
-                  onClick={() => run(() => importProviderServicesAction(row.id, Number(markup)))}
+                  onClick={() => run(() => syncProviderPricesAction(row.id))}
+                  disabled={pending}
+                  className="btn btn-ghost btn-sm"
+                >
+                  <Icon name="refresh" size={14} />
+                  {labels.syncPrices}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => run(() => importProviderServicesAction(row.id))}
                   disabled={pending}
                   className="btn btn-ghost btn-sm"
                 >
@@ -141,20 +164,6 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
               </div>
             </article>
           ))}
-        </div>
-      )}
-
-      {rows.length > 0 && (
-        <div className="card card-pad">
-          <Field name="markup" label={labels.markup} hint={labels.markupHint}>
-            <TextInput
-              name="markup"
-              type="number"
-              value={markup}
-              onChange={(e) => setMarkup(e.target.value)}
-              hint={labels.markupHint}
-            />
-          </Field>
         </div>
       )}
 
@@ -229,6 +238,57 @@ function ProviderForm({
       <Field name="currency" label={labels.currency}>
         <TextInput name="currency" defaultValue={row?.currency ?? "USD"} maxLength={3} placeholder="USD" />
       </Field>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field name="markupPercent" label={labels.markup} hint={labels.markupHint}>
+          <TextInput
+            name="markupPercent"
+            type="number"
+            step="any"
+            defaultValue={String(row?.markupPercent ?? 60)}
+            hint={labels.markupHint}
+          />
+        </Field>
+        <Field name="syncEveryHours" label={labels.syncEvery} hint={labels.syncEveryHint}>
+          <TextInput
+            name="syncEveryHours"
+            type="number"
+            min={1}
+            defaultValue={String(row?.syncEveryHours ?? 12)}
+            hint={labels.syncEveryHint}
+          />
+        </Field>
+        <Field name="alertPercent" label={labels.alert} hint={labels.alertHint}>
+          <TextInput
+            name="alertPercent"
+            type="number"
+            step="any"
+            min={0}
+            defaultValue={String(row?.alertPercent ?? 25)}
+            hint={labels.alertHint}
+          />
+        </Field>
+        <Field name="lowBalance" label={labels.lowBalance} hint={labels.lowBalanceHint}>
+          <TextInput
+            name="lowBalance"
+            type="number"
+            step="any"
+            min={0}
+            defaultValue={String(row?.lowBalance ?? 0)}
+            hint={labels.lowBalanceHint}
+          />
+        </Field>
+      </div>
+
+      <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+        <input
+          type="checkbox"
+          name="autoSync"
+          defaultChecked={row?.autoSync ?? false}
+          className="h-4 w-4 accent-[var(--primary)]"
+        />
+        {labels.autoSyncOn}
+      </label>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm">
         <input type="checkbox" name="enabled" defaultChecked={row?.enabled ?? true} className="h-4 w-4 accent-[var(--primary)]" />

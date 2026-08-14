@@ -3,9 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
-import { nextPublicId } from "@/lib/ids";
-import { currentPanelId } from "@/lib/tenancy";
-import { dispatchPendingOrders, fetchProviderBalance, fetchProviderServices, syncOrderStatuses } from "@/lib/providers";
+import { dispatchPendingOrders, fetchProviderBalance, syncOrderStatuses } from "@/lib/providers";
+import { syncProviderCatalogue, type SyncReport } from "@/lib/provider-sync";
 import type { ActionResult } from "./catalogue";
 
 export type { ActionResult };
@@ -31,11 +30,21 @@ export async function saveProviderAction(_prev: ActionResult, form: FormData): P
   // Blank means "keep the stored key" so other fields can be edited safely.
   if (!id && !apiKey) return { fieldErrors: { apiKey: "Enter the API key" } };
 
+  const number = (key: string, fallback: number) => {
+    const value = Number(String(form.get(key) ?? "").trim());
+    return Number.isFinite(value) ? value : fallback;
+  };
+
   const data = {
     name,
     apiUrl,
     currency: String(form.get("currency") ?? "USD").trim().toUpperCase() || "USD",
     enabled: form.get("enabled") === "on",
+    autoSync: form.get("autoSync") === "on",
+    syncEveryHours: Math.max(1, Math.round(number("syncEveryHours", 12))),
+    markupPercent: number("markupPercent", 60),
+    alertPercent: Math.max(0, number("alertPercent", 25)),
+    lowBalance: Math.max(0, number("lowBalance", 0)),
     ...(apiKey ? { apiKey } : {}),
   };
 
@@ -77,90 +86,52 @@ export async function refreshProviderBalanceAction(id: string): Promise<SyncResu
 }
 
 /**
- * Imports the provider's catalogue. Existing mappings are updated in place;
- * new services land disabled with a markup applied, so nothing goes on sale
- * before an operator has looked at it.
+ * The manual pull, from the admin area. Same engine as the scheduled run,
+ * with new services turned on: asking for an import is asking for the rows.
  */
-export async function importProviderServicesAction(id: string, markupPercent: number): Promise<SyncResult> {
+export async function importProviderServicesAction(id: string): Promise<SyncResult> {
   const admin = await requireAdmin();
   const provider = await db.provider.findUnique({ where: { id } });
   if (!provider) return { error: "Provider not found" };
 
-  const result = await fetchProviderServices(provider);
-  if (!result.ok) return { error: result.error };
-  if (!Array.isArray(result.data)) return { error: "Provider did not return a service list" };
+  const report = await syncProviderCatalogue(provider, { importNew: true });
+  if (report.error) return { error: report.error };
 
-  const markup = 1 + (Number.isFinite(markupPercent) ? markupPercent : 0) / 100;
-
-  // Everything imported from one provider lands under a single platform and
-  // per-provider-category buckets, which an operator can then reorganise.
-  const platformSlug = `provider-${provider.id.slice(0, 8)}`;
-  const platform = await db.platform.upsert({
-    where: { panelId_slug: { panelId: await currentPanelId(), slug: platformSlug } },
-    create: { slug: platformSlug, name: provider.name, icon: "server", visible: false, position: 99 },
-    update: {},
-  });
-
-  const existing = await db.service.findMany({
-    where: { providerId: provider.id },
-    select: { id: true, providerServiceId: true },
-  });
-  const known = new Map(existing.map((s) => [s.providerServiceId, s.id]));
-
-  let created = 0;
-  let updated = 0;
-
-  for (const row of result.data.slice(0, 2000)) {
-    const providerServiceId = String(row.service ?? "").trim();
-    if (!providerServiceId) continue;
-
-    const providerRate = Number(row.rate) || 0;
-    const min = Math.max(1, Number(row.min) || 1);
-    const max = Math.max(min, Number(row.max) || min);
-    const name = String(row.name ?? providerServiceId).slice(0, 250);
-
-    const known_id = known.get(providerServiceId);
-    if (known_id) {
-      // Only upstream-owned fields are refreshed; the operator's own price
-      // and visibility choices survive a re-import.
-      await db.service.update({
-        where: { id: known_id },
-        data: { providerRate, min, max, refill: Boolean(row.refill), cancel: Boolean(row.cancel), dripfeed: Boolean(row.dripfeed) },
-      });
-      updated += 1;
-      continue;
-    }
-
-    const categoryName = String(row.category ?? "Imported").slice(0, 120);
-    const category =
-      (await db.category.findFirst({ where: { name: categoryName, platformId: platform.id } })) ??
-      (await db.category.create({ data: { name: categoryName, platformId: platform.id, visible: false } }));
-
-    await db.service.create({
-      data: {
-        publicId: await nextPublicId("service"),
-        categoryId: category.id,
-        providerId: provider.id,
-        providerServiceId,
-        name,
-        rate: Math.round(providerRate * markup),
-        providerRate,
-        min,
-        max,
-        refill: Boolean(row.refill),
-        cancel: Boolean(row.cancel),
-        dripfeed: Boolean(row.dripfeed),
-        enabled: false,
-      },
-    });
-    created += 1;
-  }
-
-  await db.provider.update({ where: { id }, data: { lastSyncAt: new Date() } });
-  await logActivity(admin.id, "admin.provider.import", `${provider.name}: +${created} ~${updated}`);
+  await logActivity(
+    admin.id,
+    "admin.provider.import",
+    `${provider.name}: +${report.created} ~${report.updated} price ${report.repriced}`,
+  );
   revalidatePath("/admin/providers");
   revalidatePath("/admin/services");
-  return { ok: true, message: `${created} new, ${updated} updated` };
+  return { ok: true, message: summarise(report) };
+}
+
+/** Refreshes prices without taking on anything new. */
+export async function syncProviderPricesAction(id: string): Promise<SyncResult> {
+  const admin = await requireAdmin();
+  const provider = await db.provider.findUnique({ where: { id } });
+  if (!provider) return { error: "Provider not found" };
+
+  const report = await syncProviderCatalogue(provider);
+  if (report.error) return { error: report.error };
+
+  await logActivity(admin.id, "admin.provider.sync.prices", `${provider.name}: ${report.repriced} repriced`);
+  revalidatePath("/admin/providers");
+  revalidatePath("/admin/services");
+  return { ok: true, message: summarise(report) };
+}
+
+function summarise(report: SyncReport): string {
+  const parts = [
+    report.created ? `${report.created} new` : "",
+    `${report.updated} checked`,
+    report.repriced ? `${report.repriced} repriced` : "",
+    report.missing ? `${report.missing} delisted` : "",
+    report.returned ? `${report.returned} back` : "",
+    report.alerts.length ? `${report.alerts.length} to review` : "",
+  ];
+  return parts.filter(Boolean).join(", ");
 }
 
 export async function dispatchOrdersAction(): Promise<SyncResult> {

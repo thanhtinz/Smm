@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     updated: result.synced,
     chain: result.chain,
     requests: result.requests,
+    catalogue: result.catalogue,
     rent: result.rent,
     rates: result.rates,
     failures: result.failures,
