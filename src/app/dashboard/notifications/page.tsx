@@ -57,6 +57,7 @@ export default async function NotificationsPage({
           clearRead: t("notify.clearRead"),
           confirmClear: t("notify.confirmClear"),
           unread: t("notify.unread"),
+          pagination: t("common.pagination"),
           prev: t("common.prev"),
           next: t("common.next"),
         }}

@@ -81,6 +81,7 @@ export default async function AdminPaymentMethodsPage() {
           };
         })}
         labels={{
+          close: t("common.close"),
           title: t("admin.paymentMethods"),
           configure: t("admin.configure"),
           configured: t("admin.configured"),

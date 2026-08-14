@@ -90,7 +90,7 @@ export default function PaymentMethodManager({
         ))}
       </div>
 
-      <EntityDrawer open={editing !== null} title={editing?.name ?? ""} onClose={() => setEditing(null)}>
+      <EntityDrawer closeLabel={labels.close} open={editing !== null} title={editing?.name ?? ""} onClose={() => setEditing(null)}>
         {editing && (
           <MethodForm
             key={editing.id}

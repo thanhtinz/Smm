@@ -232,7 +232,7 @@ function CreateDrawer({
   }, [state.ok, onClose]);
 
   return (
-    <EntityDrawer open title={labels.new} onClose={onClose}>
+    <EntityDrawer closeLabel={labels.close} open title={labels.new} onClose={onClose}>
       <form action={action} className="space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">
@@ -307,7 +307,7 @@ function DomainDrawer({
   };
 
   return (
-    <EntityDrawer open title={`${labels.domains} · ${panel.name}`} onClose={onClose}>
+    <EntityDrawer closeLabel={labels.close} open title={`${labels.domains} · ${panel.name}`} onClose={onClose}>
       <div className="space-y-4">
         {(error || state.error) && (
           <div className="alert alert-danger" role="alert">
@@ -394,7 +394,7 @@ function RentDrawer({
   const [state, action] = useActionState<ActionResult, FormData>(setPanelRentAction, {});
 
   return (
-    <EntityDrawer open title={`${labels.rent} · ${panel.name}`} onClose={onClose}>
+    <EntityDrawer closeLabel={labels.close} open title={`${labels.rent} · ${panel.name}`} onClose={onClose}>
       <form action={action} className="space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">
@@ -446,7 +446,7 @@ function ResetDrawer({
   const [state, action] = useActionState<ActionResult, FormData>(resetChildAdminAction, {});
 
   return (
-    <EntityDrawer open title={`${labels.resetAdmin} · ${panel.name}`} onClose={onClose}>
+    <EntityDrawer closeLabel={labels.close} open title={`${labels.resetAdmin} · ${panel.name}`} onClose={onClose}>
       <form action={action} className="space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">

@@ -152,6 +152,7 @@ export default function ThemeManager({ rows, labels }: { rows: ThemeRow[]; label
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.name}` : labels.new}
         onClose={close}
@@ -209,7 +210,7 @@ function ThemeForm({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field name="name" label={labels.name} error={state.fieldErrors?.name} required>
-          <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder="Aurora" />
+          <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder={labels.egName} />
         </Field>
         <Field name="slug" label={labels.slug} error={state.fieldErrors?.slug} required>
           <TextInput name="slug" defaultValue={row?.slug} error={state.fieldErrors?.slug} placeholder="aurora" />

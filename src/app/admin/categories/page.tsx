@@ -30,6 +30,8 @@ export default async function AdminCategoriesPage() {
         }))}
         platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
         labels={{
+          close: t("common.close"),
+          egName: t("eg.categoryName"),
           title: t("admin.categories"),
           new: t("admin.new"),
           edit: t("admin.edit"),

@@ -28,6 +28,9 @@ export default async function AdminPlatformsPage() {
           categoryCount: p._count.categories,
         }))}
         labels={{
+          close: t("common.close"),
+          egName: t("eg.platformName"),
+          searchIcons: t("common.searchIcons"),
           title: t("admin.platforms"),
           new: t("admin.new"),
           edit: t("admin.edit"),

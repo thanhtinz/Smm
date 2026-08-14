@@ -273,6 +273,7 @@ export default function ServiceManager({
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.name}` : labels.new}
         onClose={close}

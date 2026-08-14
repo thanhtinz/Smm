@@ -25,6 +25,7 @@ export default async function AdminPagesPage() {
           updatedAt: dates.full(p.updatedAt),
         }))}
         labels={{
+          close: t("common.close"),
           title: t("page.title"),
           new: t("page.new"),
           empty: t("page.empty"),

@@ -13,11 +13,14 @@ export default function EntityDrawer({
   title,
   onClose,
   children,
+  closeLabel,
 }: {
   open: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  /** Named by the caller: a client component has no dictionary of its own. */
+  closeLabel: string;
 }) {
   useEffect(() => {
     if (!open) return;
@@ -37,7 +40,7 @@ export default function EntityDrawer({
     <div className="fixed inset-0 z-[120] flex justify-end">
       <button
         type="button"
-        aria-label="Close"
+        aria-label={closeLabel}
         onClick={onClose}
         className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
       />
@@ -49,7 +52,7 @@ export default function EntityDrawer({
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
           <h2 className="font-semibold">{title}</h2>
-          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" aria-label="Close">
+          <button type="button" onClick={onClose} className="btn btn-ghost btn-sm" aria-label={closeLabel}>
             <Icon name="close" size={16} />
           </button>
         </header>

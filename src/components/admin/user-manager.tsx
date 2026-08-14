@@ -184,6 +184,7 @@ export default function UserManager({
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={adjusting !== null}
         title={`${labels.adjustBalance} — ${adjusting?.username ?? ""}`}
         onClose={() => setAdjusting(null)}

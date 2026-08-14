@@ -25,6 +25,7 @@ export default async function AdminAnnouncementsPage() {
           createdAt: fmt.format(a.createdAt),
         }))}
         labels={{
+          close: t("common.close"),
           title: t("announcement.title"),
           new: t("announcement.new"),
           empty: t("announcement.empty"),

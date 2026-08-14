@@ -48,7 +48,7 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
           <FooterLink href={`mailto:${settings["site.supportEmail"]}`}>{settings["site.supportEmail"] as string}</FooterLink>
         </FooterCol>
 
-        <FooterCol title="Legal">
+        <FooterCol title={t("nav.legal")}>
           {pages.map((p) => (
             <FooterLink key={p.slug} href={`/p/${p.slug}`}>
               {p.title}
@@ -64,7 +64,7 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
           </span>
           <span className="flex items-center gap-1.5">
             <Icon name="shield" size={14} />
-            Secure payments
+            {t("footer.secure")}
           </span>
         </div>
       </div>

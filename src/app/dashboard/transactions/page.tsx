@@ -145,7 +145,7 @@ export default async function TransactionsPage({
       </div>
 
       {totalPages > 1 && (
-        <nav className="flex items-center justify-between" aria-label="Pagination">
+        <nav className="flex items-center justify-between" aria-label={t("common.pagination")}>
           <PageLink href={buildPage(type, page - 1)} disabled={page <= 1} icon="chevronLeft" />
           <span className="muted text-sm tabular-nums">
             {page} / {totalPages}

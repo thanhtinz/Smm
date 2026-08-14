@@ -120,6 +120,7 @@ export default function PlatformManager({ rows, labels }: { rows: PlatformRow[];
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.name}` : labels.new}
         onClose={close}
@@ -157,7 +158,7 @@ function PlatformForm({
       )}
 
       <Field name="name" label={labels.name} error={state.fieldErrors?.name} required>
-        <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder="Instagram" />
+        <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder={labels.egName} />
       </Field>
 
       <Field
@@ -178,7 +179,13 @@ function PlatformForm({
         removeLabel={labels.remove}
       />
 
-      <IconPicker name="icon" value={row?.icon ?? "globe"} color={row?.color} label={labels.iconFallback} />
+      <IconPicker
+        name="icon"
+        value={row?.icon ?? "globe"}
+        color={row?.color}
+        label={labels.iconFallback}
+        searchLabel={labels.searchIcons}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Field name="color" label={labels.color}>

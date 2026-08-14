@@ -126,7 +126,7 @@ export default async function ApiDocsPage() {
                 <ul className="space-y-1.5 text-sm">
                   <li className="flex gap-3">
                     <code className="shrink-0 font-mono text-xs">key</code>
-                    <span className="muted">API key</span>
+                    <span className="muted">{t("api.key")}</span>
                   </li>
                   <li className="flex gap-3">
                     <code className="shrink-0 font-mono text-xs">action</code>

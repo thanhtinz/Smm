@@ -141,7 +141,7 @@ function AnnouncementDrawer({
   }, [state.ok, onClose]);
 
   return (
-    <EntityDrawer open title={row ? labels.edit : labels.new} onClose={onClose}>
+    <EntityDrawer closeLabel={labels.close} open title={row ? labels.edit : labels.new} onClose={onClose}>
       <form action={action} className="space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">

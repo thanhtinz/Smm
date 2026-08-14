@@ -95,6 +95,7 @@ export default async function AdminServicesPage() {
           locale: ctx.locale,
         }}
         labels={{
+          close: t("common.close"),
           title: t("admin.services"),
           new: t("admin.new"),
           edit: t("admin.edit"),

@@ -37,6 +37,8 @@ export default async function AdminProvidersPage() {
           lowBalance: p.lowBalance,
         }))}
         labels={{
+          close: t("common.close"),
+          egName: t("eg.providerName"),
           title: t("admin.providers"),
           new: t("admin.new"),
           edit: t("admin.edit"),

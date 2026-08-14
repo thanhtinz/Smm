@@ -84,6 +84,7 @@ export default async function AdminUsersPage({
           tierName: autoTier(u.spent)?.name ?? "",
         }))}
         labels={{
+          close: t("common.close"),
           empty: t("common.none"),
           user: t("auth.username"),
           balance: t("admin.balance"),
