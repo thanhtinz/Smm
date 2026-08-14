@@ -460,6 +460,7 @@ model Order {
   /// "how long delivery took" measured from it would quietly drift.
   settledAt       DateTime?
   requests        OrderRequest[]
+  events          OrderEvent[]
 
   @@unique([panelId, publicId])
   @@index([userId])
@@ -606,6 +607,37 @@ model TicketMessage {
   createdAt DateTime @default(now())
 
   @@index([ticketId])
+  @@index([panelId])
+}
+
+/// One step in an order's life.
+///
+/// Written wherever a status is decided, never derived. "It never started" is
+/// otherwise one person's word against another's, and a refill decision rests
+/// on when delivery began and from what count — neither of which the order row
+/// remembers once it has moved on.
+model OrderEvent {
+  id         String   @id @default(cuid())
+  panelId    String   @default("")
+  panel      Panel    @relation("PanelOrderEvents", fields: [panelId], references: [id], onDelete: Cascade)
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Empty on the first event, which is the order being created.
+  from       String   @default("")
+  to         String
+  /// The counts as they stood at this step, so a drop can be read off the
+  /// timeline rather than inferred from the current row.
+  startCount Int      @default(0)
+  remains    Int      @default(0)
+  /// "customer", "provider", "chain", "system", or a staff username. What
+  /// moved it, in the words the reader needs rather than a class name.
+  actor      String   @default("system")
+  /// Free text the deciding code wanted on the record — which provider
+  /// refused, why it was cancelled.
+  note       String   @default("")
+  createdAt  DateTime @default(now())
+
+  @@index([orderId, createdAt])
   @@index([panelId])
 }
 
@@ -971,6 +1003,7 @@ model Panel {
   channels       Channel[]          @relation("PanelChannels")
   conversations  Conversation[]     @relation("PanelConversations")
   inboxMessages  InboxMessage[]     @relation("PanelInboxMessages")
+  orderEvents    OrderEvent[]       @relation("PanelOrderEvents")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
   createdAt      DateTime           @default(now())

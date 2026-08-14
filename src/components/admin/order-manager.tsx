@@ -1,10 +1,16 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
-import { setOrderStatusAction, updateOrderAction, type ActionResult } from "@/app/actions/admin/operations";
+import {
+  setOrderStatusAction,
+  updateOrderAction,
+  orderStepsAction,
+  type ActionResult,
+} from "@/app/actions/admin/operations";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
+import OrderTimeline, { type Step } from "@/components/orders/order-timeline";
 import { Icon } from "@/components/icons";
 
 export type AdminOrderRow = {
@@ -164,6 +170,18 @@ function OrderDrawer({
     if (state.ok) onClose();
   }, [state.ok, onClose]);
 
+  // Fetched when the drawer opens rather than shipped with the list.
+  const [timeline, setTimeline] = useState<{ steps: Step[]; createdAt: string } | null>(null);
+  useEffect(() => {
+    let live = true;
+    orderStepsAction(row.id).then((result) => {
+      if (live && !result.error) setTimeline({ steps: result.steps, createdAt: result.createdAt });
+    });
+    return () => {
+      live = false;
+    };
+  }, [row.id]);
+
   return (
     <EntityDrawer closeLabel={labels.close} open title={`#${row.publicId} · ${row.serviceName}`} onClose={onClose}>
       <form action={action} className="space-y-4">
@@ -243,6 +261,15 @@ function OrderDrawer({
           {labels.save}
         </SubmitButton>
       </form>
+
+      {timeline && (
+        <section className="mt-6 border-t border-[var(--border)] pt-5">
+          <h3 className="font-semibold">{labels.timeline}</h3>
+          <div className="mt-4">
+            <OrderTimeline steps={timeline.steps} createdAt={timeline.createdAt} labels={labels} />
+          </div>
+        </section>
+      )}
     </EntityDrawer>
   );
 }

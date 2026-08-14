@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "./notify";
 import { routesFor } from "./routing";
-import { withSettled } from "./orders";
+import { withSettled, recordOrderStep } from "./orders";
 
 /**
  * Client for upstream panels. They speak the same standard this panel exposes
@@ -249,9 +249,7 @@ export async function dispatchPendingOrders(limit = 25) {
         continue;
       }
 
-      await db.order.update({
-        where: { id: order.id },
-        data: {
+      const dispatched = {
           providerOrderId: String(result.data.order),
           // Remembered so status, refill and cancel go back to whoever took
           // it, not to whichever provider is cheapest later.
@@ -259,8 +257,9 @@ export async function dispatchPendingOrders(limit = 25) {
           status: "processing",
           // Silent when it went to the cheapest route, which is the norm.
           note: route === first ? "" : `Sent to ${route.providerName} after ${first.providerName} refused`,
-        },
-      });
+      };
+      await db.order.update({ where: { id: order.id }, data: dispatched });
+      await recordOrderStep(db, order, dispatched, route.providerName);
       sent += 1;
       placed = true;
       break;
@@ -340,6 +339,7 @@ export async function syncOrderStatuses(limit = 100) {
       } else {
         await db.order.update({ where: { id: order.id }, data: withSettled(data) });
       }
+      await recordOrderStep(db, order, data, provider.name);
       updated += 1;
     }
   }
