@@ -267,6 +267,17 @@ model Platform {
   icon       String     @default("globe") // svg icon key, used when image is empty
   image      String     @default("") // /api/media/<id> or an external URL
   color      String     @default("#6366f1")
+  /// What a link to this platform looks like, so an order can be refused at
+  /// the form rather than by the provider an hour later. All three are edited
+  /// in admin; a blank one simply switches that check off.
+  /// Hostnames that belong here, comma separated: "instagram.com, instagr.am".
+  hosts          String @default("")
+  /// Regular expressions matched against the URL path.
+  postPattern    String @default("")
+  profilePattern String @default("")
+  /// Shown to the customer as the shape to copy.
+  postExample    String @default("")
+  profileExample String @default("")
   visible    Boolean    @default(true)
   position   Int        @default(0)
   categories Category[]
@@ -341,7 +352,11 @@ model Service {
   sourceServiceId         String      @default("")
   name                    String
   description             String      @default("")
-  type                    String      @default("default") // default | custom_comments | drip_feed | subscription
+  type                    String      @default("default") // default | custom_comments | subscription
+  /// What the link has to point at: a single post, or the account itself.
+  /// Likes belong on a post, followers belong on a profile, and sending one
+  /// where the other was meant is the most common way an order fails.
+  target                  String      @default("post") // post | profile
   rate                    Float // price per 1000, in base currency
   providerRate            Float       @default(0)
   /// Cleared to pin a hand-set price against the provider sync, the same way

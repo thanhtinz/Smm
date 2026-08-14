@@ -30,8 +30,8 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
   const body = String(form.get("body") ?? "").trim();
 
   const fieldErrors: Record<string, string> = {};
-  if (subject.length < 4) fieldErrors.subject = "Give the ticket a subject";
-  if (body.length < 10) fieldErrors.body = "Describe the problem in a little more detail";
+  if (subject.length < 4) fieldErrors.subject = t("err.subjectRequired");
+  if (body.length < 10) fieldErrors.body = t("err.bodyShort");
   if (Object.keys(fieldErrors).length) return { fieldErrors };
 
   const maxOpen = Number(await getSetting("support.maxOpenTickets")) || 0;

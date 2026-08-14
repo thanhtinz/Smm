@@ -65,6 +65,7 @@ export default async function AdminServicesPage() {
           tierPrices: Object.fromEntries(s.tierPrices.map((t) => [t.tierId, String(t.rate)])),
           autoPrice: s.autoPrice,
           type: s.type,
+          target: s.target,
           rate: s.rate,
           providerRate: s.providerRate,
           min: s.min,
@@ -96,6 +97,10 @@ export default async function AdminServicesPage() {
         }}
         labels={{
           close: t("common.close"),
+          target: t("link.target"),
+          targetHint: t("link.targetHint"),
+          targetPost: t("link.target.post"),
+          targetProfile: t("link.target.profile"),
           title: t("admin.services"),
           new: t("admin.new"),
           edit: t("admin.edit"),

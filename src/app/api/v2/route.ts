@@ -15,6 +15,7 @@ import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { guardOrder } from "@/lib/order-guard";
 import { englishMessage } from "@/lib/fault";
+import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
@@ -128,7 +129,10 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   const serviceId = Number(params.service);
   if (!Number.isInteger(serviceId)) return fail("Incorrect service ID");
 
-  const service = await db.service.findFirst({ where: { publicId: serviceId, enabled: true } });
+  const service = await db.service.findFirst({
+    where: { publicId: serviceId, enabled: true },
+    include: { category: { select: { platform: { select: LINK_RULES } } } },
+  });
   if (!service) return fail("Incorrect service ID");
 
   // A subscription is addressed by username over a run of future posts, so it
@@ -141,7 +145,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   if (service.type === "subscription") {
     const parsed = parseSubscription(
       {
-        username: String(params.username ?? ""),
+        username: extractUsername(String(params.username ?? "")),
         posts: String(params.posts ?? ""),
         min: String(params.min ?? ""),
         max: String(params.max ?? ""),
@@ -166,7 +170,12 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     comments = commentLines(String(params.comments ?? ""));
     quantity = comments.length > 0 ? comments.length : Number(params.quantity);
 
-    if (!link || !isValidOrderLink(link)) return fail("Incorrect link");
+    // The reason is spelled out rather than the standard's bare "Incorrect
+    // link": a reseller integrating against this needs to know which of the
+    // two shapes the service wanted. Still English — a client reads it.
+    const wrong = checkLink(link, service.target, service.category.platform);
+    if (wrong) return fail(englishMessage(wrong.key, wrong.vars));
+    link = normaliseLink(link);
     if (!Number.isInteger(quantity) || quantity <= 0) return fail("Incorrect quantity");
     if (service.type === "custom_comments" && comments.length === 0) return fail("Incorrect comments");
     if (quantity < service.min || quantity > service.max) return fail("Incorrect quantity");

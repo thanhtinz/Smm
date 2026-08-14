@@ -6,6 +6,7 @@ import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
 import { readerMessages } from "@/lib/context";
+import { LINK_TARGETS, isValidPattern, parseHosts } from "@/lib/links";
 
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
@@ -55,6 +56,13 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
   const clash = await db.platform.findFirst({ where: { slug, ...(id ? { NOT: { id } } : {}) }, select: { id: true } });
   if (clash) return { fieldErrors: { slug: t("adm.slugTaken") } };
 
+  // A pattern that does not compile would be a check that silently never
+  // matches, so it is refused here rather than swallowed at order time.
+  const postPattern = String(form.get("postPattern") ?? "").trim();
+  const profilePattern = String(form.get("profilePattern") ?? "").trim();
+  if (!isValidPattern(postPattern)) return { fieldErrors: { postPattern: t("link.badPattern") } };
+  if (!isValidPattern(profilePattern)) return { fieldErrors: { profilePattern: t("link.badPattern") } };
+
   const data = {
     name,
     slug,
@@ -63,6 +71,11 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
     color: String(form.get("color") ?? "#6366f1"),
     visible: bool(form, "visible"),
     position: num(form, "position"),
+    hosts: parseHosts(String(form.get("hosts") ?? "")).join(", "),
+    postPattern,
+    profilePattern,
+    postExample: String(form.get("postExample") ?? "").trim(),
+    profileExample: String(form.get("profileExample") ?? "").trim(),
   };
 
   if (id) {
@@ -184,6 +197,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     backupProviderServiceId: String(form.get("backupProviderServiceId") ?? "").trim(),
     description: String(form.get("description") ?? "").trim(),
     type: SERVICE_TYPES.has(String(form.get("type"))) ? String(form.get("type")) : "default",
+    target: LINK_TARGETS.includes(String(form.get("target")) as never) ? String(form.get("target")) : "post",
     rate,
     providerRate: num(form, "providerRate"),
     min: Math.round(min),

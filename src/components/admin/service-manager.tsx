@@ -28,6 +28,7 @@ export type ServiceRow = {
   /** Set when the sell price follows the provider's cost plus its markup. */
   autoPrice: boolean;
   type: string;
+  target: string;
   rate: number;
   providerRate: number;
   min: number;
@@ -374,6 +375,15 @@ function ServiceForm({
           <option value="default">{labels.typeDefault}</option>
           <option value="custom_comments">{labels.typeCustomComments}</option>
           <option value="subscription">{labels.typeSubscription}</option>
+        </select>
+      </Field>
+
+      {/* Which of the platform's two shapes this service's link must be. A
+          subscription is addressed by username, so it has no say here. */}
+      <Field name="target" label={labels.target} hint={labels.targetHint}>
+        <select id="target" name="target" className="field" defaultValue={row?.target ?? "post"}>
+          <option value="post">{labels.targetPost}</option>
+          <option value="profile">{labels.targetProfile}</option>
         </select>
       </Field>
 
