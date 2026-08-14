@@ -88,6 +88,30 @@ export default async function ApiDocsPage() {
         "100003": { error: "Incorrect order ID" },
       },
     },
+    {
+      action: "refill",
+      summary: "Ask for a refill. Only on services whose list entry says refill: true.",
+      params: [
+        ["order", "Order id — for one"],
+        ["orders", "Comma-separated order ids — for several"],
+      ],
+      response: { refill: 4001 },
+    },
+    {
+      action: "refill_status",
+      summary: "Where a refill got to, by the id refill handed back.",
+      params: [
+        ["refill", "Refill id — for one"],
+        ["refills", "Comma-separated refill ids — for several"],
+      ],
+      response: { status: "In progress" },
+    },
+    {
+      action: "cancel",
+      summary: "Ask to cancel. Only on services whose list entry says cancel: true, and only before delivery has really started.",
+      params: [["orders", "Comma-separated order ids"]],
+      response: [{ order: 100007, cancel: 4002 }],
+    },
   ];
 
   return (
