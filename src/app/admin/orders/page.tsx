@@ -26,11 +26,14 @@ export default async function AdminOrdersPage({
   const q = (params.q ?? "").trim();
   const page = Math.max(1, Number(params.page) || 1);
 
+  // Support quotes an order by its number, so "1042" and "#1042" both find it.
+  const asId = Number(q.replace(/^#/, ""));
   const where = {
     ...(status ? { status } : {}),
     ...(q
       ? {
           OR: [
+            ...(Number.isInteger(asId) && asId > 0 ? [{ publicId: asId }] : []),
             { link: { contains: q } },
             { service: { name: { contains: q } } },
             { user: { username: { contains: q } } },
@@ -99,7 +102,7 @@ export default async function AdminOrdersPage({
           <label htmlFor="q" className="sr-only">
             {t("common.search")}
           </label>
-          <input id="q" name="q" type="search" defaultValue={q} placeholder={t("common.search")} className="field pl-11" />
+          <input id="q" name="q" type="search" defaultValue={q} placeholder={t("order.search")} className="field pl-11" />
         </div>
         <button type="submit" className="btn btn-ghost">
           <Icon name="filter" size={15} />
@@ -109,11 +112,11 @@ export default async function AdminOrdersPage({
 
       <div className="scroll-x -mx-1 px-1">
         <div className="flex gap-2 pb-1">
-          <Tab href="/admin/orders" active={!status} label={t("common.all")} count={counts.reduce((n, c) => n + c._count, 0)} />
+          <Tab href={buildPage(undefined, q, 1)} active={!status} label={t("common.all")} count={counts.reduce((n, c) => n + c._count, 0)} />
           {ORDER_STATUSES.map((s) => (
             <Tab
               key={s}
-              href={`/admin/orders?status=${s}`}
+              href={buildPage(s, q, 1)}
               active={status === s}
               label={t(`status.${s}`)}
               count={counts.find((c) => c.status === s)?._count ?? 0}
