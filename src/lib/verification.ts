@@ -3,6 +3,7 @@ import { db } from "./db";
 import { getSetting } from "./settings";
 import { panelBaseUrl } from "./tenancy";
 import { mailConfigured, mailTemplate, sendMail } from "./mail";
+import { getTranslator } from "./i18n";
 
 /**
  * Email address verification.
@@ -16,7 +17,13 @@ export async function verificationRequired(): Promise<boolean> {
   return Boolean(await getSetting("auth.requireEmailVerification")) && (await mailConfigured());
 }
 
-export async function sendVerificationEmail(user: { id: string; email: string; username: string }): Promise<boolean> {
+export async function sendVerificationEmail(user: {
+  id: string;
+  email: string;
+  username: string;
+  /** Blank on an account that has not chosen one; the panel default then. */
+  locale?: string;
+}): Promise<boolean> {
   const token = randomBytes(32).toString("hex");
 
   // One live link at a time, so an older mail cannot be used after a newer
@@ -32,14 +39,19 @@ export async function sendVerificationEmail(user: { id: string; email: string; u
   const url = `${await panelBaseUrl()}/verify-email?token=${token}`;
   const site = String(await getSetting("site.name"));
 
+  // The account's own language: this arrives in an inbox, where the panel's
+  // language picker is not to hand.
+  const { t } = await getTranslator(user.locale || String(await getSetting("locale.default")));
+  const body = t("mail.verify.body", { user: user.username });
+
   const result = await sendMail({
     to: user.email,
-    subject: `Confirm your email for ${site}`,
-    text: `Hello ${user.username},\n\nConfirm this address to finish setting up your account. The link is good for 24 hours.\n\n${url}`,
+    subject: t("mail.verify.subject", { site }),
+    text: `${body}\n\n${url}`,
     html: mailTemplate({
-      title: "Confirm your email",
-      body: `Hello ${user.username}, confirm this address to finish setting up your account. The link is good for 24 hours.`,
-      action: { label: "Confirm my email", url },
+      title: t("mail.verify.title"),
+      body,
+      action: { label: t("mail.verify.action"), url },
     }),
   });
 

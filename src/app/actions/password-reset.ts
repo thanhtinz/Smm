@@ -9,6 +9,7 @@ import { panelBaseUrl } from "@/lib/tenancy";
 import { mailConfigured, mailTemplate, sendMail } from "@/lib/mail";
 import { verifyCaptcha } from "@/lib/captcha";
 import { readerMessages } from "@/lib/context";
+import { getTranslator } from "@/lib/i18n";
 
 export type ResetState = { error?: string; sent?: true; fieldErrors?: Record<string, string> };
 
@@ -56,14 +57,17 @@ export async function requestPasswordResetAction(_prev: ResetState, form: FormDa
 
     const url = `${await panelBaseUrl()}/reset-password?token=${token}`;
     const site = String(await getSetting("site.name"));
+    const { t: mail } = await getTranslator(user.locale || String(await getSetting("locale.default")));
+    const body = mail("mail.reset.body", { minutes });
+
     await sendMail({
       to: user.email,
-      subject: `Reset your ${site} password`,
-      text: `Open this link to set a new password. It expires in ${minutes} minutes.\n\n${url}\n\nIf you did not ask for this, nothing has changed and you can ignore this email.`,
+      subject: mail("mail.reset.subject", { site }),
+      text: `${body}\n\n${url}`,
       html: mailTemplate({
-        title: "Set a new password",
-        body: `This link expires in ${minutes} minutes. If you did not ask for it, nothing has changed and you can ignore this email.`,
-        action: { label: "Set a new password", url },
+        title: mail("mail.reset.title"),
+        body,
+        action: { label: mail("mail.reset.action"), url },
       }),
     });
 

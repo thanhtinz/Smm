@@ -116,6 +116,13 @@ export const settingDefinitions = {
   "mail.fromName": { group: "mail", type: "text", value: "" },
   "mail.fromAddress": { group: "mail", type: "text", value: "" },
   "mail.resetWindowMinutes": { group: "mail", type: "number", value: 60 },
+  // Which notifications are also worth an email. Off by default: a panel that
+  // has just configured SMTP should not start mailing its whole customer base
+  // because someone flipped one switch.
+  "mail.onOrder": { group: "mail", type: "boolean", value: false },
+  "mail.onWallet": { group: "mail", type: "boolean", value: false },
+  "mail.onSupport": { group: "mail", type: "boolean", value: false },
+  "mail.onAdmin": { group: "mail", type: "boolean", value: false },
 
   // --- Support ------------------------------------------------------------
   "support.enabled": { group: "support", type: "boolean", value: true },

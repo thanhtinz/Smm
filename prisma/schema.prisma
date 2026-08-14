@@ -592,6 +592,10 @@ model Notification {
   level     String   @default("info") // info | success | warning | danger
   read      Boolean  @default(false)
   href      String   @default("")
+  /// When this was also sent as email. Kept on the row rather than sent at
+  /// write time: notifications are written inside money transactions, and a
+  /// mail server being slow must not hold one open or roll one back.
+  mailedAt  DateTime?
   createdAt DateTime @default(now())
 
   @@index([userId])
