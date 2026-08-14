@@ -684,6 +684,9 @@ export const en = {
   "request.status.completed": "Completed",
   "order.cancelPending": "Cancellation requested",
   "common.yes": "Yes",
+  "common.export": "Export CSV",
+  "common.exportAll": "Export everything",
+
   "common.no": "No",
 
   "status.pending": "Pending",
@@ -1675,6 +1678,9 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "request.status.completed": "Hoàn tất",
   "order.cancelPending": "Đã gửi yêu cầu huỷ",
   "common.yes": "Có",
+  "common.export": "Xuất CSV",
+  "common.exportAll": "Xuất toàn bộ",
+
   "common.no": "Không",
 
   "status.pending": "Chờ xử lý",

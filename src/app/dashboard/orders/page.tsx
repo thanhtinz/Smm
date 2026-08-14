@@ -73,10 +73,17 @@ export default async function OrdersPage({
     <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">{t("dash.orders")}</h2>
-        <Link href="/dashboard/new-order" className="btn btn-primary btn-sm">
-          <Icon name="plus" size={15} />
-          {t("dash.newOrder")}
-        </Link>
+        <div className="flex gap-2">
+          {/* Carries the status filter, so the file matches what is on screen. */}
+          <a href={`/api/export/orders${status ? `?status=${status}` : ""}`} className="btn btn-ghost btn-sm">
+            <Icon name="download" size={15} />
+            {t("common.export")}
+          </a>
+          <Link href="/dashboard/new-order" className="btn btn-primary btn-sm">
+            <Icon name="plus" size={15} />
+            {t("dash.newOrder")}
+          </Link>
+        </div>
       </div>
 
       <form className="flex flex-wrap gap-2">

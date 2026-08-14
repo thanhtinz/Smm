@@ -4,6 +4,7 @@ import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import TransactionManager from "@/components/admin/transaction-manager";
+import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = { title: "Transactions" };
 
@@ -42,7 +43,13 @@ export default async function AdminTransactionsPage({
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">{t("wallet.history")}</h2>
+        <a href={`/api/export/transactions?all=1${status ? `&type=${status}` : ""}`} className="btn btn-ghost btn-sm">
+          <Icon name="download" size={15} />
+          {t("common.exportAll")}
+        </a>
+      </div>
         {pendingCount > 0 && <span className="badge badge-warning">{pendingCount}</span>}
       </div>
 

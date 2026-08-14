@@ -53,6 +53,17 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
     <div className="container-page py-12">
       <h1 className="text-center text-3xl font-bold tracking-tight sm:text-4xl">{t("nav.services")}</h1>
 
+      {/* Signed in only: the file is priced for whoever downloads it, and a
+          visitor has no tier to price it for. */}
+      {ctx.user && (
+        <div className="mt-4 flex justify-center">
+          <a href="/api/export/services" className="btn btn-ghost btn-sm">
+            <Icon name="download" size={15} />
+            {t("common.export")}
+          </a>
+        </div>
+      )}
+
       {/* --------------------------------------------------------- filters */}
       <div className="mt-9 space-y-4">
         <ServiceSearch placeholder={t("common.search")} defaultValue={query} />
