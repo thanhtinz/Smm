@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { db } from "./db";
 import { currentPanelId } from "./tenancy";
 
@@ -190,45 +191,48 @@ export type SettingKey = keyof typeof settingDefinitions;
 type SettingValue<K extends SettingKey> = (typeof settingDefinitions)[K]["value"];
 
 /**
- * Keyed by panel: settings are the one piece of reference data every panel
- * holds its own copy of, and a process-wide cache would hand one panel's
- * branding to another.
+ * Read once per request, per panel.
+ *
+ * This used to be a module-level Map with a five-second TTL, cleared by
+ * `invalidateSettings` after every write. It did not work: in Next the server
+ * action and the render that follows it do not always share a module
+ * instance, so the clear landed on one copy of the Map while the page read
+ * the other. Every setting an operator changed took up to five seconds to
+ * appear, and the panel spent that time telling them their change had saved.
+ *
+ * React's `cache` is per request instead of per process. It still collapses
+ * the several reads a single page makes into one query, and a write is
+ * visible on the very next request because there is no copy left to be stale.
+ * The same pattern the panel already uses for resolving the panel itself.
  */
-const cache = new Map<string, { at: number; map: Map<string, unknown> }>();
-const TTL = 5_000;
-
-async function load(): Promise<Map<string, unknown>> {
-  const panelId = await currentPanelId();
-  const hit = cache.get(panelId);
-  if (hit && Date.now() - hit.at < TTL) return hit.map;
-
+const load = cache(async (panelId: string): Promise<Map<string, unknown>> => {
+  void panelId; // The key: one entry per panel, never shared between them.
   const rows = await db.setting.findMany();
   const map = new Map<string, unknown>();
   for (const row of rows) {
     try {
       map.set(row.key, JSON.parse(row.value));
     } catch {
+      // A value written before it had a JSON shape is still a value.
       map.set(row.key, row.value);
     }
   }
-  cache.set(panelId, { at: Date.now(), map });
   return map;
-}
+});
 
-/** Drops one panel's entry, or all of them when there is no panel in context. */
-export function invalidateSettings(panelId?: string) {
-  if (panelId) cache.delete(panelId);
-  else cache.clear();
+/** Every read goes through the panel in context, so nothing crosses panels. */
+async function settingsMap(): Promise<Map<string, unknown>> {
+  return load(await currentPanelId());
 }
 
 export async function getSetting<K extends SettingKey>(key: K): Promise<SettingValue<K>> {
-  const map = await load();
+  const map = await settingsMap();
   if (map.has(key)) return map.get(key) as SettingValue<K>;
   return settingDefinitions[key].value as SettingValue<K>;
 }
 
 export async function getSettings(): Promise<Record<SettingKey, unknown>> {
-  const map = await load();
+  const map = await settingsMap();
   const out = {} as Record<string, unknown>;
   for (const [key, def] of Object.entries(settingDefinitions)) {
     out[key] = map.has(key) ? map.get(key) : def.value;
@@ -244,7 +248,6 @@ export async function setSetting(key: string, value: unknown) {
     create: { key, value: JSON.stringify(value), group },
     update: { value: JSON.stringify(value), group },
   });
-  invalidateSettings(panelId);
 }
 
 export async function setSettings(entries: Record<string, unknown>) {

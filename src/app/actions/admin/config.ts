@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, requireRootAdmin, logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
-import { invalidateSettings, setSetting, settingDefinitions } from "@/lib/settings";
+import { setSetting, settingDefinitions } from "@/lib/settings";
 import { invalidateCurrencies } from "@/lib/currency";
 import { updateExchangeRates } from "@/lib/exchange";
 import { invalidateDictionaries } from "@/lib/i18n";
@@ -70,7 +70,6 @@ export async function saveSettingsAction(_prev: ActionResult, form: FormData): P
   }
 
   await logActivity(admin.id, "admin.settings.update", keys.join(","));
-  invalidateSettings();
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -200,7 +199,6 @@ export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
   await setSetting("currency.base", target.code);
   await logActivity(admin.id, "admin.currency.base", target.code);
   invalidateCurrencies();
-  invalidateSettings();
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -426,7 +424,6 @@ export async function setDefaultThemeAction(id: string): Promise<ActionResult> {
   }
 
   await logActivity(admin.id, "admin.theme.default", theme.slug);
-  invalidateSettings();
   revalidatePath("/", "layout");
   return { ok: true };
 }
