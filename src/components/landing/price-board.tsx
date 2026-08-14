@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import { displayMoney } from "@/lib/currency";
-import type { LandingProps } from "./types";
+import Hero from "./hero";
+import { ClosingCta, Faqs, PlatformStrip, Quotes, StatTiles, Steps } from "./sections";
+import type { LayoutProps } from "./types";
 
 /**
  * The price board.
@@ -17,34 +19,17 @@ import type { LandingProps } from "./types";
  * reading a word. Each row carries its platform's own colour, which is the
  * only decoration on the page and the thing that makes it scannable.
  */
-export default function PriceBoard({ data, t, currency, locale, settings }: LandingProps) {
+export default function PriceBoard(props: LayoutProps) {
+  const { data, t, currency, locale } = props;
   const cheapest = [...data.platforms].sort((a, b) => a.from - b.from);
   const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
 
   return (
     <>
-      <section className="container-page pt-14 pb-10 sm:pt-20">
-        <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-          <div className="max-w-2xl">
-            <h1 className="text-[2.4rem] leading-[1.05] font-extrabold tracking-[-0.03em] sm:text-6xl">
-              {t("landing.board.title")}
-            </h1>
-            <p className="muted mt-5 text-lg leading-relaxed">{t("landing.board.sub")}</p>
-          </div>
+      <Hero {...props} />
+      <PlatformStrip platforms={data.platforms} label={t("landing.hero.platforms")} />
 
-          {/* The cheapest rate anywhere on the panel, stated once and large.
-              It is the number the visitor is scanning for anyway. */}
-          <div className="shrink-0">
-            <p className="muted text-xs font-semibold tracking-[0.18em] uppercase">{t("landing.board.from")}</p>
-            <p className="mt-2 font-mono text-5xl leading-none font-bold text-[var(--primary)] sm:text-6xl">
-              {displayMoney(data.from, currency, locale)}
-            </p>
-            <p className="muted mt-2 text-sm">{t("landing.board.per")}</p>
-          </div>
-        </div>
-      </section>
-
-      <section className="container-page">
+      <section className="container-page pt-14">
         {/* A board, not a table element: each row is a link into the
             catalogue already filtered to that platform. */}
         <div className="overflow-hidden rounded-[var(--radius)] border border-[var(--border)]">
@@ -102,36 +87,11 @@ export default function PriceBoard({ data, t, currency, locale, settings }: Land
         <p className="muted mt-4 text-sm">{t("landing.board.note")}</p>
       </section>
 
-      <section className="container-page py-16">
-        <div className="grid gap-8 sm:grid-cols-3">
-          {[
-            { icon: "zap" as const, title: t("landing.trust.speed"), body: t("landing.trust.speedBody") },
-            { icon: "refresh" as const, title: t("landing.trust.refill"), body: t("landing.trust.refillBody") },
-            { icon: "creditCard" as const, title: t("landing.trust.pay"), body: t("landing.trust.payBody") },
-          ].map((f) => (
-            <article key={f.title}>
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[color-mix(in_srgb,var(--primary)_14%,transparent)] text-[var(--primary)]">
-                <Icon name={f.icon} size={21} />
-              </span>
-              <h2 className="mt-4 text-lg font-bold tracking-tight">{f.title}</h2>
-              <p className="muted mt-2 leading-relaxed">{f.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="container-page pb-20">
-        <div className="flex flex-wrap items-center justify-between gap-5 rounded-[var(--radius)] border border-[var(--border)] bg-[var(--surface)] px-8 py-9">
-          <div>
-            <h2 className="text-2xl font-extrabold tracking-[-0.02em]">{t("landing.cta.final.title")}</h2>
-            <p className="muted mt-1.5">{settings["site.supportEmail"] as string}</p>
-          </div>
-          <Link href="/register" className="btn btn-primary btn-lg">
-            {t("landing.cta.primary")}
-            <Icon name="arrowRight" size={17} />
-          </Link>
-        </div>
-      </section>
+      <StatTiles data={data} t={t} />
+      <Steps t={t} />
+      <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
+      <Faqs questions={data.questions} title={t("landing.faq.title")} />
+      <ClosingCta t={t} settings={props.settings} />
     </>
   );
 }

@@ -44,6 +44,17 @@ export type RecentDelivery = {
   seconds: number | null;
 };
 
+export type Quote = {
+  id: string;
+  name: string;
+  role: string;
+  body: string;
+  rating: number;
+  avatar: string;
+};
+
+export type Question = { id: string; question: string; answer: string };
+
 export type LandingData = {
   platforms: PlatformLine[];
   /** Cheapest anywhere, for the one-line price claim. */
@@ -55,46 +66,56 @@ export type LandingData = {
   recent: RecentDelivery[];
   /** Every sellable service, priced, for the layout that quotes on the page. */
   picks: PickableService[];
+  /** Written by the operator in admin. Empty leaves the section off the page. */
+  quotes: Quote[];
+  questions: Question[];
 };
 
 export async function landingData(user: Parameters<typeof resolveTier>[0]): Promise<LandingData> {
-  const [platforms, services, userCount, orderCount, completedCount, recentRows] = await Promise.all([
-    db.platform.findMany({
-      where: { visible: true },
-      orderBy: { position: "asc" },
-      include: { categories: { orderBy: { position: "asc" }, select: { id: true, name: true } } },
-    }),
-    db.service.findMany({
-      where: { enabled: true },
-      orderBy: [{ position: "asc" }, { rate: "asc" }],
-      select: {
-        id: true,
-        name: true,
-        rate: true,
-        min: true,
-        max: true,
-        categoryId: true,
-        category: { select: { platformId: true } },
-      },
-    }),
-    db.user.count(),
-    db.order.count(),
-    db.order.count({ where: { status: "completed" } }),
-    // Anonymised on purpose: what a visitor needs is evidence that orders
-    // finish, not who placed them.
-    db.order.findMany({
-      where: { status: "completed" },
-      orderBy: { settledAt: "desc" },
-      take: 8,
-      select: {
-        id: true,
-        quantity: true,
-        createdAt: true,
-        settledAt: true,
-        service: { select: { name: true, category: { select: { platformId: true } } } },
-      },
-    }),
-  ]);
+  const [platforms, services, userCount, orderCount, completedCount, recentRows, quotes, questions] =
+    await Promise.all([
+      db.platform.findMany({
+        where: { visible: true },
+        orderBy: { position: "asc" },
+        include: { categories: { orderBy: { position: "asc" }, select: { id: true, name: true } } },
+      }),
+      db.service.findMany({
+        where: { enabled: true },
+        orderBy: [{ position: "asc" }, { rate: "asc" }],
+        select: {
+          id: true,
+          name: true,
+          rate: true,
+          min: true,
+          max: true,
+          categoryId: true,
+          category: { select: { platformId: true } },
+        },
+      }),
+      db.user.count(),
+      db.order.count(),
+      db.order.count({ where: { status: "completed" } }),
+      // Anonymised on purpose: what a visitor needs is evidence that orders
+      // finish, not who placed them.
+      db.order.findMany({
+        where: { status: "completed" },
+        orderBy: { settledAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          quantity: true,
+          createdAt: true,
+          settledAt: true,
+          service: { select: { name: true, category: { select: { platformId: true } } } },
+        },
+      }),
+      db.testimonial.findMany({ where: { visible: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
+      db.faq.findMany({
+        where: { visible: true },
+        orderBy: [{ position: "asc" }, { question: "asc" }],
+        select: { id: true, question: true, answer: true },
+      }),
+    ]);
 
   // Priced for the reader's tier, so the landing page and the catalogue agree.
   const rates = await priceServices(await resolveTier(user), services);
@@ -146,5 +167,7 @@ export async function landingData(user: Parameters<typeof resolveTier>[0]): Prom
       min: s.min,
       max: s.max,
     })),
+    quotes,
+    questions,
   };
 }

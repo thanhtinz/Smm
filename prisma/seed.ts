@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { builtinThemes } from "../src/lib/themes";
 import { bundledDictionaries } from "../src/lib/dictionaries";
+import { settingDefinitions } from "../src/lib/settings";
 
 const db = new PrismaClient();
 
@@ -462,6 +463,79 @@ async function main() {
       create: { ...p, panelId: PANEL },
       update: {},
     });
+  }
+
+  // --- Landing FAQ --------------------------------------------------------
+  // Starter questions, because these four are asked of every panel in this
+  // market. They are meant to be edited from Admin → Home page, not kept, and
+  // they are written in whatever language the panel defaults to so the home
+  // page does not open in two languages at once.
+  //
+  // Nothing seeds the quotes table: inventing customers would be inventing
+  // social proof, and the landing page leaves that section out when empty.
+  // A setting only has a row once someone has changed it, so the registry's
+  // default is the answer for a panel nobody has configured yet.
+  const stored = await db.setting.findUnique({
+    where: { panelId_key: { panelId: PANEL, key: "locale.default" } },
+  });
+  const locale = stored ? JSON.parse(stored.value) : settingDefinitions["locale.default"].value;
+  const inVietnamese = locale === "vi";
+
+  const faqs = inVietnamese
+    ? [
+        {
+          question: "Đơn bao lâu thì bắt đầu chạy?",
+          answer:
+            "Phần lớn dịch vụ bắt đầu trong vài phút sau khi đơn sang nhà cung cấp. Mỗi dịch vụ đều ghi thời gian trung bình của riêng nó ngay trên form đặt đơn.",
+          position: 0,
+        },
+        {
+          question: "Bị tụt thì sao?",
+          answer:
+            "Dịch vụ nào có bảo hành thì mở đơn ra và bấm yêu cầu bù, phần hụt sẽ được thêm lại. Dịch vụ không có bảo hành thì chỉ giao một lần.",
+          position: 1,
+        },
+        {
+          question: "Nạp tiền bằng cách nào?",
+          answer:
+            "Vào mục Ví tiền. Có chuyển khoản ngân hàng, thẻ và crypto, tuỳ theo panel này bật cổng nào.",
+          position: 2,
+        },
+        {
+          question: "Có huỷ đơn được không?",
+          answer:
+            "Đơn còn đang chờ hoặc đang chạy thì gửi yêu cầu huỷ được. Phần đã giao sẽ được hoàn lại theo đúng tỉ lệ.",
+          position: 3,
+        },
+      ]
+    : [
+        {
+          question: "How long does an order take to start?",
+          answer:
+            "Most services start within minutes of the order reaching the provider. Each service lists its own average time on the order form.",
+          position: 0,
+        },
+        {
+          question: "What happens if the count drops?",
+          answer:
+            "Services marked with refill can be topped back up: open the order and ask for a refill. Services without it are delivered once.",
+          position: 1,
+        },
+        {
+          question: "How do I add balance?",
+          answer: "From Wallet. Bank transfer, card and crypto are available depending on what this panel has enabled.",
+          position: 2,
+        },
+        {
+          question: "Can I cancel an order?",
+          answer:
+            "While an order is still pending or processing you can request a cancellation. Anything already delivered is refunded pro rata.",
+          position: 3,
+        },
+      ];
+  for (const f of faqs) {
+    const exists = await db.faq.findFirst({ where: { panelId: PANEL, question: f.question } });
+    if (!exists) await db.faq.create({ data: { ...f, panelId: PANEL } });
   }
 
   console.log("Seed complete.");

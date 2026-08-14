@@ -2,7 +2,9 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import { displayMoney } from "@/lib/currency";
-import type { LandingProps } from "./types";
+import Hero from "./hero";
+import { ClosingCta, Faqs, PlatformStrip, Quotes, StatTiles } from "./sections";
+import type { LayoutProps } from "./types";
 
 /**
  * Catalogue.
@@ -13,26 +15,18 @@ import type { LandingProps } from "./types";
  * headline to find it, and the one who does not can see the whole shop at
  * once.
  */
-export default function Catalogue({ data, t, currency, locale, settings }: LandingProps) {
+export default function Catalogue(props: LayoutProps) {
+  const { data, t, currency, locale } = props;
   return (
     <>
-      <section className="container-page flex flex-wrap items-center justify-between gap-4 pt-10 pb-6">
-        <div>
-          <h1 className="text-[2rem] leading-none font-extrabold tracking-[-0.03em] sm:text-[2.6rem]">{t("landing.catalogue.title")}</h1>
-          <p className="muted mt-3">
-            {t("landing.catalogue.sub", { services: data.serviceCount, platforms: data.platforms.length })}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link href="/services" className="btn btn-ghost">
-            <Icon name="search" size={16} />
-            {t("landing.cta.secondary")}
-          </Link>
-          <Link href="/register" className="btn btn-primary">
-            {t("landing.cta.primary")}
-            <Icon name="arrowRight" size={16} />
-          </Link>
-        </div>
+      <Hero {...props} />
+      <PlatformStrip platforms={data.platforms} label={t("landing.hero.platforms")} />
+
+      <section className="container-page pt-14 pb-4">
+        <h2 className="text-2xl font-extrabold tracking-[-0.02em] sm:text-4xl">{t("landing.catalogue.title")}</h2>
+        <p className="muted mt-3">
+          {t("landing.catalogue.sub", { services: data.serviceCount, platforms: data.platforms.length })}
+        </p>
       </section>
 
       <section className="container-page pb-14">
@@ -79,26 +73,10 @@ export default function Catalogue({ data, t, currency, locale, settings }: Landi
         </div>
       </section>
 
-      <section className="container-page pb-16">
-        <div className="grid gap-4 border-t border-[var(--border)] pt-8 sm:grid-cols-3">
-          {[
-            { icon: "zap" as const, title: t("landing.trust.speed"), body: t("landing.trust.speedBody") },
-            { icon: "refresh" as const, title: t("landing.trust.refill"), body: t("landing.trust.refillBody") },
-            { icon: "ticket" as const, title: t("landing.trust.support"), body: t("landing.trust.supportBody") },
-          ].map((f) => (
-            <article key={f.title} className="flex gap-3">
-              <span className="mt-0.5 shrink-0 text-[var(--primary)]">
-                <Icon name={f.icon} size={19} />
-              </span>
-              <div>
-                <h3 className="text-sm font-semibold">{f.title}</h3>
-                <p className="muted mt-1 text-sm leading-relaxed">{f.body}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-        <p className="muted mt-8 text-center text-xs">{settings["site.supportEmail"] as string}</p>
-      </section>
+      <StatTiles data={data} t={t} />
+      <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
+      <Faqs questions={data.questions} title={t("landing.faq.title")} />
+      <ClosingCta t={t} settings={props.settings} />
     </>
   );
 }

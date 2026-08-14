@@ -1,11 +1,12 @@
 import { getAppContext } from "@/lib/context";
+import { captchaFor } from "@/lib/captcha";
 import { landingData, LANDING_LAYOUTS, type LandingLayout } from "@/lib/landing";
 import PriceBoard from "@/components/landing/price-board";
 import OrderFirst from "@/components/landing/order-first";
 import Proof from "@/components/landing/proof";
 import Editorial from "@/components/landing/editorial";
 import Catalogue from "@/components/landing/catalogue";
-import type { LandingProps } from "@/components/landing/types";
+import type { LayoutProps } from "@/components/landing/types";
 
 /**
  * Five landings, chosen in admin.
@@ -15,7 +16,7 @@ import type { LandingProps } from "@/components/landing/types";
  * orders, with an argument, or with the whole catalogue — so an operator
  * picks the opening that suits what they sell.
  */
-const LAYOUTS: Record<LandingLayout, (props: LandingProps) => React.ReactNode> = {
+const LAYOUTS: Record<LandingLayout, (props: LayoutProps) => React.ReactNode> = {
   priceBoard: PriceBoard,
   orderFirst: OrderFirst,
   proof: Proof,
@@ -27,7 +28,10 @@ export default async function LandingPage() {
   const ctx = await getAppContext();
   const { t, currency, locale, settings, user } = ctx;
 
-  const data = await landingData(user);
+  // The captcha is only fetched when a sign-in box is actually going on the
+  // page — an operator who turned it off should not pay for the lookup.
+  const wantsLogin = settings["landing.heroLogin"] !== false && !user;
+  const [data, captcha] = await Promise.all([landingData(user), wantsLogin ? captchaFor("login") : null]);
 
   const chosen = String(settings["appearance.landingLayout"] ?? "");
   const layout = (LANDING_LAYOUTS as readonly string[]).includes(chosen)
@@ -35,5 +39,24 @@ export default async function LandingPage() {
     : LANDING_LAYOUTS[0];
   const Layout = LAYOUTS[layout];
 
-  return <Layout data={data} t={t} currency={currency} locale={locale} settings={settings} />;
+  return (
+    <Layout
+      data={data}
+      t={t}
+      currency={currency}
+      locale={locale}
+      settings={settings}
+      captcha={captcha}
+      signedIn={Boolean(user)}
+      loginLabels={{
+        username: t("auth.username"),
+        password: t("auth.password"),
+        remember: t("auth.remember"),
+        forgot: t("auth.forgot"),
+        submit: t("nav.signin"),
+        noaccount: t("auth.noaccount"),
+        signup: t("nav.signup"),
+      }}
+    />
+  );
 }

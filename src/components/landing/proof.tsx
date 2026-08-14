@@ -1,7 +1,8 @@
-import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import type { LandingProps } from "./types";
+import Hero from "./hero";
+import { ClosingCta, Faqs, PlatformStrip, Quotes, StatTiles } from "./sections";
+import type { LayoutProps } from "./types";
 
 /**
  * Proof.
@@ -14,7 +15,8 @@ import type { LandingProps } from "./types";
  * There is no invented number anywhere on this layout. A panel on its first
  * week shows a short list, which is the honest thing for it to show.
  */
-export default function Proof({ data, t, locale, settings }: LandingProps) {
+export default function Proof(props: LayoutProps) {
+  const { data, t, locale } = props;
   const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
 
   const elapsed = (seconds: number) => {
@@ -35,31 +37,20 @@ export default function Proof({ data, t, locale, settings }: LandingProps) {
 
   return (
     <>
-      <section className="container-page pt-12 pb-6 sm:pt-16">
-        <h1 className="max-w-3xl text-[2.4rem] leading-[1.05] font-extrabold tracking-[-0.03em] sm:text-6xl">{t("landing.proof.title")}</h1>
-        <p className="muted mt-5 max-w-xl text-lg leading-relaxed">{t("landing.proof.sub")}</p>
+      <Hero {...props} />
+      <PlatformStrip platforms={data.platforms} label={t("landing.hero.platforms")} />
+      <StatTiles data={data} t={t} />
 
-        <div className="mt-10 flex flex-wrap gap-x-14 gap-y-6">
-          {[
-            { k: t("landing.stat.orders"), v: data.completedCount },
-            { k: t("landing.stat.services"), v: data.serviceCount },
-            { k: t("landing.stat.users"), v: data.userCount },
-          ].map((s) => (
-            <div key={s.k}>
-              <p className="font-mono text-4xl leading-none font-bold">{count.format(s.v)}</p>
-              <p className="muted mt-2 text-xs">{s.k}</p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <section className="container-page pt-4 pb-6">
+        <h2 className="text-2xl font-extrabold tracking-[-0.02em] sm:text-4xl">{t("landing.proof.title")}</h2>
+        <p className="muted mt-3 max-w-xl text-lg leading-relaxed">{t("landing.proof.sub")}</p>
 
-      <section className="container-page">
-        <div className="card overflow-hidden">
+        <div className="card mt-8 overflow-hidden">
           <div className="flex items-center gap-2 border-b border-[var(--border)] px-5 py-3">
             <span className="text-[var(--success)]">
               <Icon name="checkCircle" size={15} />
             </span>
-            <h2 className="text-sm font-semibold">{t("landing.proof.feed")}</h2>
+            <h3 className="text-sm font-semibold">{t("landing.proof.feed")}</h3>
           </div>
 
           {data.recent.length === 0 ? (
@@ -90,7 +81,7 @@ export default function Proof({ data, t, locale, settings }: LandingProps) {
         <p className="muted mt-3 text-xs">{t("landing.proof.note")}</p>
       </section>
 
-      <section className="container-page py-14">
+      <section className="container-page py-12">
         <div className="grid gap-x-8 gap-y-7 sm:grid-cols-2">
           {guarantees.map((g) => (
             <article key={g.title} className="border-t border-[var(--border)] pt-4">
@@ -106,18 +97,9 @@ export default function Proof({ data, t, locale, settings }: LandingProps) {
         </div>
       </section>
 
-      <section className="container-page pb-16">
-        <div className="card card-pad flex flex-wrap items-center justify-between gap-4 px-7 py-8">
-          <div>
-            <h2 className="text-xl font-bold tracking-tight">{t("landing.cta.final.title")}</h2>
-            <p className="muted mt-1 text-sm">{settings["site.supportEmail"] as string}</p>
-          </div>
-          <Link href="/register" className="btn btn-primary btn-lg">
-            {t("landing.cta.primary")}
-            <Icon name="arrowRight" size={17} />
-          </Link>
-        </div>
-      </section>
+      <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
+      <Faqs questions={data.questions} title={t("landing.faq.title")} />
+      <ClosingCta t={t} settings={props.settings} />
     </>
   );
 }
