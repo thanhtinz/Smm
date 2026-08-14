@@ -1,6 +1,19 @@
-export default function Logo({ text, size = 34 }: { text: string; size?: number }) {
+/**
+ * The panel's mark and name.
+ *
+ * An uploaded image replaces the built-in glyph but not the name — a wordmark
+ * that already contains the name can be given on its own by clearing the
+ * logo text in the admin area.
+ */
+export default function Logo({ text, image, size = 34 }: { text: string; image?: string; size?: number }) {
   return (
     <span className="flex items-center gap-2.5">
+      {image ? (
+        // Not next/image: this is an arbitrary URL an operator typed, which
+        // the optimiser would need whitelisted host by host.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={image} alt="" height={size} style={{ height: size, width: "auto" }} className="max-w-40 object-contain" />
+      ) : (
       <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden>
         <defs>
           <linearGradient id="novaLogoGrad" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
@@ -18,7 +31,8 @@ export default function Logo({ text, size = 34 }: { text: string; size?: number 
           strokeLinejoin="round"
         />
       </svg>
-      <span className="text-[1.05rem] font-bold tracking-tight">{text}</span>
+      )}
+      {text && <span className="text-[1.05rem] font-bold tracking-tight">{text}</span>}
     </span>
   );
 }

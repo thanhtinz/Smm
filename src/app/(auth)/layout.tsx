@@ -26,7 +26,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       <div className="flex flex-col">
         <div className="flex items-center justify-between px-6 py-5 sm:px-10">
           <Link href="/" className="ring-focus rounded-lg">
-            <Logo text={settings["site.logoText"] as string} size={30} />
+            <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} size={30} />
           </Link>
           <PreferenceMenu
             languages={ctx.languages}

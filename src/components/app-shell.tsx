@@ -38,7 +38,7 @@ export default function AppShell({
       <aside className="sticky top-0 hidden h-dvh flex-col border-r border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_55%,transparent)] lg:flex">
         <div className="flex h-16 shrink-0 items-center px-5">
           <Link href="/" className="ring-focus rounded-lg">
-            <Logo text={settings["site.logoText"] as string} size={30} />
+            <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} size={30} />
           </Link>
         </div>
 
@@ -75,7 +75,7 @@ export default function AppShell({
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_86%,transparent)] px-4 backdrop-blur-xl sm:px-6">
           <div className="flex items-center gap-3">
             <span className="lg:hidden">
-              <Logo text={settings["site.logoText"] as string} size={28} />
+              <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} size={28} />
             </span>
             <h1 className="hidden text-base font-semibold lg:block">{title}</h1>
           </div>

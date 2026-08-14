@@ -18,7 +18,7 @@ export default function SiteHeader({ ctx }: { ctx: AppContext }) {
       <div className="container-page flex h-16 items-center justify-between gap-4">
         <div className="flex items-center gap-8">
           <Link href="/" className="ring-focus rounded-lg">
-            <Logo text={settings["site.logoText"] as string} />
+            <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} />
           </Link>
           <nav className="hidden items-center gap-1 lg:flex">
             {nav.map((item) => (
