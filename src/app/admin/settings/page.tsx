@@ -5,19 +5,11 @@ import SettingsForm, { type SettingField } from "@/components/admin/settings-for
 
 export const metadata: Metadata = { title: "Settings" };
 
-const GROUP_TITLES: Record<string, string> = {
-  branding: "Branding",
-  appearance: "Appearance",
-  locale: "Localisation",
-  order: "Orders",
-  wallet: "Wallet",
-  auth: "Registration",
-  api: "API",
-  support: "Support",
-  mail: "Email",
-  panel: "Child panels",
-  maintenance: "Maintenance",
-};
+/** The same fallback rule as a field's: a group nobody has named keeps its own. */
+function groupTitle(group: string, t: (key: string) => string): string {
+  const named = t(`settingGroup.${group}`);
+  return named === `settingGroup.${group}` ? group : named;
+}
 
 export default async function AdminSettingsPage() {
   const { t } = await getAppContext();
@@ -27,8 +19,13 @@ export default async function AdminSettingsPage() {
   // without touching this page.
   const groups = new Map<string, SettingField[]>();
   for (const [key, def] of Object.entries(settingDefinitions)) {
+    // t() answers with the key when there is no entry, which is how a setting
+    // added since is left to the form's derived name rather than showing
+    // "setting.foo.bar" to an operator.
+    const named = t(`setting.${key}`);
     const entry: SettingField = {
       key,
+      label: named === `setting.${key}` ? "" : named,
       type: (def as { type: string }).type,
       options: (def as { options?: readonly string[] }).options
         ? [...((def as { options?: readonly string[] }).options as readonly string[])]
@@ -48,7 +45,7 @@ export default async function AdminSettingsPage() {
           <SettingsForm
             key={group}
             group={group}
-            title={GROUP_TITLES[group] ?? group}
+            title={groupTitle(group, t)}
             fields={fields}
             labels={{ save: t("common.save"), saved: t("admin.saved") }}
           />
