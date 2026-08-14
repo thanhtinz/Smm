@@ -6,19 +6,21 @@ import { displayMoney } from "@/lib/currency";
 import { priceServices, resolveTier } from "@/lib/pricing";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
+import CategoryList from "@/components/services/category-list";
+import { serviceListLabels } from "@/lib/service-list";
 import ServiceSearch from "@/components/services/service-search";
 
 /**
- * The catalogue is one page filtered by a query string, so every platform
- * would otherwise be a separate URL claiming the same content. The canonical
- * keeps the filtered views pointing at the one page that owns it.
+ * Filtering here is for someone already on the site. The address that owns a
+ * platform's content is /services/<slug>, so the filtered view points at it
+ * rather than competing with it for the same words.
  */
 export async function generateMetadata({ searchParams }: { searchParams: Promise<Search> }): Promise<Metadata> {
   const { platform } = await searchParams;
   const { t } = await getAppContext();
   return {
     title: t("nav.services"),
-    alternates: { canonical: platform ? `/services?platform=${platform}` : "/services" },
+    alternates: { canonical: platform ? `/services/${platform}` : "/services" },
   };
 }
 
@@ -116,88 +118,28 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
           </Link>
         </div>
       ) : (
-        <div className="mt-8 space-y-6">
-          {categories.map((category) => (
-            <section key={category.id} className="card overflow-hidden">
-              <header className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] px-5 py-4">
-                {category.platform && (
-                  <PlatformMark platform={category.platform} box={36} />
-                )}
-                <div className="min-w-0 flex-1">
-                  <h2 className="truncate font-semibold">{category.name}</h2>
-                  {category.description && <p className="muted truncate text-xs">{category.description}</p>}
-                </div>
-                <span className="badge badge-muted">{category.services.length}</span>
-              </header>
-
-              {/* Table on wide screens; the same rows become cards below md so
-                  the page never scrolls sideways. */}
-              <div className="scroll-x hidden md:block">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th className="w-20">ID</th>
-                      <th>{t("order.service")}</th>
-                      <th className="w-40 text-right">{t("order.rate")}</th>
-                      <th className="w-24 text-right">{t("order.min")}</th>
-                      <th className="w-28 text-right">{t("order.max")}</th>
-                      <th className="w-28">{t("common.status")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {category.services.map((s) => (
-                      <tr key={s.id}>
-                        <td className="muted font-mono text-xs">{s.publicId}</td>
-                        <td>
-                          <span className="font-medium">{s.name}</span>
-                          {s.averageTime && (
-                            <span className="muted mt-0.5 flex items-center gap-1 text-xs">
-                              <Icon name="clock" size={12} />
-                              {s.averageTime}
-                            </span>
-                          )}
-                        </td>
-                        <td className="text-right font-semibold tabular-nums">
-                          {displayMoney(rateOf(s.id, s.rate), currency, locale)}
-                        </td>
-                        <td className="muted text-right tabular-nums">{s.min.toLocaleString()}</td>
-                        <td className="muted text-right tabular-nums">{s.max.toLocaleString()}</td>
-                        <td>
-                          {s.refill ? (
-                            <span className="badge badge-success">
-                              <Icon name="refresh" size={12} />
-                              Refill
-                            </span>
-                          ) : (
-                            <span className="badge badge-muted">
-                              <Icon name="zap" size={12} />
-                              Standard
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              <ul className="divide-y divide-[var(--border)] md:hidden">
-                {category.services.map((s) => (
-                  <li key={s.id} className="px-5 py-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm font-medium">{s.name}</p>
-                      <span className="muted shrink-0 font-mono text-xs">{s.publicId}</span>
-                    </div>
-                    <dl className="mt-2.5 grid grid-cols-3 gap-2 text-xs">
-                      <Cell label={t("order.rate")} value={displayMoney(rateOf(s.id, s.rate), currency, locale)} strong />
-                      <Cell label={t("order.min")} value={s.min.toLocaleString()} />
-                      <Cell label={t("order.max")} value={s.max.toLocaleString()} />
-                    </dl>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+        <div className="mt-8">
+          <CategoryList
+            categories={categories.map((c) => ({
+              id: c.id,
+              name: c.name,
+              description: c.description,
+              platform: c.platform,
+              services: c.services.map((sv) => ({
+                id: sv.id,
+                publicId: sv.publicId,
+                name: sv.name,
+                rate: rateOf(sv.id, sv.rate),
+                min: sv.min,
+                max: sv.max,
+                refill: sv.refill,
+                averageTime: sv.averageTime,
+              })),
+            }))}
+            currency={currency}
+            locale={locale}
+            labels={serviceListLabels(t)}
+          />
         </div>
       )}
 
@@ -206,6 +148,11 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
 }
 
 function buildHref(params: { q?: string; platform?: string }) {
+  // With no search running, a platform chip goes to that platform's own page.
+  // Mid-search it has to stay on the filter, because the platform page has no
+  // search of its own to carry the term into.
+  if (params.platform && !params.q) return `/services/${params.platform}`;
+
   const sp = new URLSearchParams();
   if (params.platform) sp.set("platform", params.platform);
   if (params.q) sp.set("q", params.q);
@@ -239,14 +186,5 @@ function FilterChip({
       {platform ? <PlatformMark platform={platform} size={16} /> : icon ? <Icon name={icon} size={16} /> : null}
       {label}
     </Link>
-  );
-}
-
-function Cell({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
-  return (
-    <div>
-      <dt className="muted text-[0.65rem] tracking-wide uppercase">{label}</dt>
-      <dd className={`tabular-nums ${strong ? "font-semibold" : "muted"}`}>{value}</dd>
-    </div>
   );
 }

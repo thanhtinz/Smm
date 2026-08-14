@@ -25,6 +25,9 @@ export type PlatformRow = {
   profilePattern: string;
   postExample: string;
   profileExample: string;
+  seoTitle: string;
+  seoDescription: string;
+  seoBody: string;
 };
 
 export default function PlatformManager({ rows, labels }: { rows: PlatformRow[]; labels: Record<string, string> }) {
@@ -256,6 +259,37 @@ function PlatformForm({
             <TextInput name="profileExample" defaultValue={row?.profileExample ?? ""} placeholder="https://instagram.com/nova" />
           </Field>
         </div>
+      </fieldset>
+
+      {/* This platform's own page at /services/<slug>. Left empty it still
+          works and simply shows the platform's name — the fields are how an
+          operator competes for a search, not how the page is built. */}
+      <fieldset className="space-y-3">
+        <legend className="muted text-xs font-semibold tracking-[0.16em] uppercase">{labels.seoSection}</legend>
+
+        <Field name="seoTitle" label={labels.seoTitle} hint={labels.seoTitleHint}>
+          <TextInput name="seoTitle" defaultValue={row?.seoTitle ?? ""} />
+        </Field>
+
+        <Field name="seoDescription" label={labels.seoDescription}>
+          <textarea
+            id="seoDescription"
+            name="seoDescription"
+            rows={3}
+            className="field"
+            defaultValue={row?.seoDescription ?? ""}
+          />
+        </Field>
+
+        <Field name="seoBody" label={labels.seoBody} hint="HTML">
+          <textarea
+            id="seoBody"
+            name="seoBody"
+            rows={8}
+            className="field font-mono text-xs"
+            defaultValue={row?.seoBody ?? ""}
+          />
+        </Field>
       </fieldset>
 
       <div className="flex gap-2 pt-2">

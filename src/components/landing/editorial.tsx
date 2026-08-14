@@ -49,7 +49,7 @@ export default function Editorial({ data, t, currency, locale, settings }: Layou
           {data.platforms.map((p) => (
             <li key={p.id} className="border-b border-[var(--border)]">
               <Link
-                href={`/services?platform=${p.slug}`}
+                href={`/services/${p.slug}`}
                 className="group flex items-baseline gap-6 py-6 transition-opacity hover:opacity-60"
               >
                 <span className="font-display text-2xl sm:text-[1.75rem]">{p.name}</span>
