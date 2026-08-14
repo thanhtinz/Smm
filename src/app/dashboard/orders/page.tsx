@@ -154,7 +154,11 @@ export default async function OrdersPage({
                 <tbody>
                   {orders.map((o) => (
                     <tr key={o.id}>
-                      <td className="font-mono text-xs">#{o.publicId}</td>
+                      <td className="font-mono text-xs">
+                        <Link href={`/dashboard/orders/${o.publicId}`} className="hover:text-[var(--primary)]">
+                          #{o.publicId}
+                        </Link>
+                      </td>
                       <td className="max-w-[20rem]">
                         <p className="truncate">{o.service.name}</p>
                         {o.comments && (
@@ -204,10 +208,14 @@ export default async function OrdersPage({
               {orders.map((o) => (
                 <li key={o.id} className="px-5 py-4">
                   <div className="flex items-start justify-between gap-3">
-                    <span className="font-mono text-xs">#{o.publicId}</span>
+                    <Link href={`/dashboard/orders/${o.publicId}`} className="font-mono text-xs hover:text-[var(--primary)]">
+                      #{o.publicId}
+                    </Link>
                     <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
                   </div>
-                  <p className="mt-1.5 text-sm font-medium">{o.service.name}</p>
+                  <Link href={`/dashboard/orders/${o.publicId}`} className="mt-1.5 block text-sm font-medium">
+                    {o.service.name}
+                  </Link>
                   <p className="muted mt-0.5 truncate text-xs">
                     {o.posts ? `@${o.link} · ${o.posts.toLocaleString()} ${t("order.posts").toLowerCase()}` : o.link}
                   </p>
