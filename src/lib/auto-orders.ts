@@ -5,6 +5,7 @@ import { runAsPanel } from "./tenancy";
 import { settleRefund } from "./providers";
 import { resolveRequest } from "./requests";
 import { englishMessage } from "./fault";
+import { withSettled } from "./orders";
 
 /**
  * The decisions a panel can make without an operator at the keyboard.
@@ -106,7 +107,7 @@ async function cancelStuckOrders(report: AutoReport): Promise<void> {
       order.userId,
       order.charge,
       order.publicId,
-      { status: "canceled", remains: 0, note: `Cancelled automatically after ${minutes} minutes unsent` },
+      withSettled({ status: "canceled", remains: 0, note: `Cancelled automatically after ${minutes} minutes unsent` }),
       `Order #${order.publicId} could not be sent to the provider`,
     );
     report.stuck += 1;

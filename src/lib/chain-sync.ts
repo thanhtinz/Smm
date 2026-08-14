@@ -9,6 +9,7 @@ import { syncDueProviders } from "./provider-sync";
 import { runAutoDecisions } from "./auto-orders";
 import { notification, requestKey } from "./notify";
 import { englishMessage } from "./fault";
+import { withSettled } from "./orders";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -71,12 +72,12 @@ export async function propagateChainStatuses(limit = 200) {
             downstream.userId,
             share,
             downstream.publicId,
-            data,
+            withSettled(data),
             `Refund for order #${downstream.publicId}`,
           );
           refunded += 1;
         } else {
-          await db.order.update({ where: { id: downstream.id }, data });
+          await db.order.update({ where: { id: downstream.id }, data: withSettled(data) });
         }
       });
 

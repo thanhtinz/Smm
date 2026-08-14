@@ -17,6 +17,24 @@ export function orderCost(providerRate: number, quantity: number): number | null
 
 export const ACTIVE_ORDER_STATUSES = ["pending", "processing", "inprogress"] as const;
 
+/** Statuses an order does not move on from. */
+export const SETTLED_ORDER_STATUSES = ["completed", "partial", "canceled", "refunded"] as const;
+
+/**
+ * Stamps settledAt when this write is the one that finishes an order.
+ *
+ * Every place that sets a final status goes through here, so "how long did
+ * this take" has one answer rather than being inferred from updatedAt, which
+ * moves whenever anything at all touches the row.
+ */
+export function withSettled<T extends Record<string, unknown>>(data: T): T {
+  const status = data.status;
+  if (typeof status === "string" && SETTLED_ORDER_STATUSES.includes(status as never)) {
+    return { ...data, settledAt: new Date() };
+  }
+  return data;
+}
+
 export const ORDER_STATUSES = [
   "pending",
   "processing",

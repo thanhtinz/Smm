@@ -39,6 +39,30 @@ export function dateFormats(locale: string, timeZone: string): DateFormats {
 }
 
 /**
+ * A span of seconds in the reader's words: "2h 15m", "8 phút".
+ *
+ * Rounded to two units, because a delivery time is read to decide whether a
+ * supplier is slow, not to settle a stopwatch.
+ */
+export function formatDuration(seconds: number | null, t: (key: string, vars?: Record<string, string | number>) => string): string {
+  if (seconds === null) return "—";
+  if (seconds < 60) return t("time.seconds", { n: seconds });
+
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return t("time.minutes", { n: minutes });
+
+  const hours = Math.floor(minutes / 60);
+  const restMinutes = minutes % 60;
+  if (hours < 24) {
+    return restMinutes ? t("time.hoursMinutes", { h: hours, m: restMinutes }) : t("time.hours", { n: hours });
+  }
+
+  const days = Math.floor(hours / 24);
+  const restHours = hours % 24;
+  return restHours ? t("time.daysHours", { d: days, h: restHours }) : t("time.days", { n: days });
+}
+
+/**
  * The zones offered in the account page.
  *
  * A short list rather than every name Intl knows: a picker with 400 entries

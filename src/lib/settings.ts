@@ -51,6 +51,9 @@ export const settingDefinitions = {
   "order.enabled": { group: "order", type: "boolean", value: true },
   "order.minCharge": { group: "order", type: "number", value: 0 },
   "order.duplicateWindowMinutes": { group: "order", type: "number", value: 0 },
+  // How far back the provider health figures look. Short enough that a
+  // supplier going bad shows up, long enough that a quiet week is not noise.
+  "provider.healthWindowDays": { group: "order", type: "number", value: 30 },
   "order.maxPerMinute": { group: "order", type: "number", value: 0 },
   // On by default because that is what the panel has always done; turning it
   // off holds the queue for an operator to send by hand.
