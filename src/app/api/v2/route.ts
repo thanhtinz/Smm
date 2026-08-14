@@ -5,6 +5,7 @@ import { nextPublicId } from "@/lib/ids";
 import {
   calculateCharge,
   commentLines,
+  orderCost,
   isValidOrderLink,
   parseSubscription,
   subscriptionFields,
@@ -204,6 +205,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
+          cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity),
           ...subscriptionFields(subscription),
         },
       });

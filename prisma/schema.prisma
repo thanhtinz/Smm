@@ -385,6 +385,12 @@ model Order {
   link            String
   quantity        Int
   charge          Float // in base currency
+  /// What this order cost the panel, recorded when it was placed: the
+  /// provider's rate at that moment, or what the panel above charged. Null on
+  /// orders from before it was recorded, and on services fulfilled by hand —
+  /// the profit report counts neither rather than claiming a margin it does
+  /// not know. It is stored rather than derived because provider rates move.
+  cost            Float?
   startCount      Int            @default(0)
   remains         Int            @default(0)
   status          String         @default("pending") // pending processing inprogress completed partial canceled refunded

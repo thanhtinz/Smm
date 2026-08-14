@@ -3,7 +3,7 @@ import { db } from "./db";
 import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
 import { nextPublicId } from "./ids";
-import { calculateCharge, subscriptionFields, type Subscription } from "./orders";
+import { calculateCharge, orderCost, subscriptionFields, type Subscription } from "./orders";
 import { priceService, resolveTier } from "./pricing";
 
 /**
@@ -27,6 +27,8 @@ export type ChainHop = {
   serviceName: string;
   rate: number;
   charge: number;
+  /** What that panel's own provider charges, for the last hop's cost. */
+  providerRate: number;
   orderPublicId: number;
   txPublicId: number;
 };
@@ -95,6 +97,7 @@ export async function planUpstream(
           serviceName: parentService.name,
           rate,
           charge: calculateCharge(rate, totalQuantity),
+          providerRate: parentService.providerRate,
           orderPublicId,
           txPublicId,
         } satisfies ChainHop,
@@ -140,7 +143,7 @@ export async function writeUpstream(
   const created: string[] = [];
   let downstream = base.downstreamOrderId;
 
-  for (const hop of hops) {
+  for (const [index, hop] of hops.entries()) {
     const id = await runAsPanel(hop.panelId, async () => {
       const fresh = await tx.user.findUniqueOrThrow({
         where: { id: hop.userId },
@@ -164,6 +167,9 @@ export async function writeUpstream(
           sourceOrderId: downstream,
           runs: base.runs,
           interval: base.interval,
+          // Each hop is bought from the one above it; the topmost buys from a
+          // provider, so its cost comes from the service instead.
+          cost: hops[index + 1]?.charge ?? orderCost(hop.providerRate, base.quantity),
           ...subscriptionFields(base.subscription ?? null),
         },
       });
