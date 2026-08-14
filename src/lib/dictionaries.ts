@@ -15,6 +15,8 @@ export const en = {
   "nav.signup": "Create account",
   "nav.dashboard": "Dashboard",
   "nav.menu": "Menu",
+  "nav.wallet": "Wallet",
+  "nav.signout": "Sign out",
 
   "landing.badge": "Trusted by growing creators",
   "landing.headline": "Grow every social account from one panel",
@@ -169,6 +171,12 @@ export const en = {
   "dash.activeOrders": "Active orders",
   "dash.completed": "Completed",
   "dash.notifications": "Notifications",
+  "notify.empty": "Nothing to catch up on",
+  "notify.markAll": "Mark all as read",
+  "notify.clearRead": "Clear the read ones",
+  "notify.confirmClear": "Delete every notification you have already read?",
+  "notify.seeAll": "See all",
+  "notify.unread": "unread",
   "nav.account": "Account",
   "nav.profile": "Profile",
 
@@ -564,6 +572,8 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "nav.signup": "Tạo tài khoản",
   "nav.dashboard": "Bảng điều khiển",
   "nav.menu": "Menu",
+  "nav.wallet": "Ví tiền",
+  "nav.signout": "Đăng xuất",
 
   "landing.badge": "Được tin dùng bởi hàng nghìn nhà sáng tạo",
   "landing.headline": "Phát triển mọi tài khoản mạng xã hội từ một panel",
@@ -718,6 +728,12 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "dash.activeOrders": "Đơn đang chạy",
   "dash.completed": "Đã hoàn tất",
   "dash.notifications": "Thông báo",
+  "notify.empty": "Không có thông báo nào",
+  "notify.markAll": "Đánh dấu đã đọc hết",
+  "notify.clearRead": "Xoá mục đã đọc",
+  "notify.confirmClear": "Xoá mọi thông báo đã đọc?",
+  "notify.seeAll": "Xem tất cả",
+  "notify.unread": "chưa đọc",
   "nav.account": "Tài khoản",
   "nav.profile": "Hồ sơ",
 

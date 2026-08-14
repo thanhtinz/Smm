@@ -118,24 +118,40 @@ export default async function DashboardPage() {
         </section>
 
         <section className="card overflow-hidden">
-          <header className="px-5 py-4">
+          <header className="flex items-center justify-between gap-3 px-5 py-4">
             <h3 className="font-semibold">{t("dash.notifications")}</h3>
+            <Link href="/dashboard/notifications" className="btn btn-ghost btn-sm">
+              {t("notify.seeAll")}
+            </Link>
           </header>
           <div className="divide-y divide-[var(--border)]">
             {notifications.length === 0 ? (
-              <p className="muted px-5 py-8 text-center text-sm">{t("common.none")}</p>
+              <p className="muted px-5 py-8 text-center text-sm">{t("notify.empty")}</p>
             ) : (
-              notifications.map((n) => (
-                <article key={n.id} className="flex gap-3 px-5 py-4">
-                  <span className={`mt-0.5 shrink-0 text-[var(--${n.level === "info" ? "accent" : n.level})]`}>
-                    <Icon name={n.level === "success" ? "checkCircle" : n.level === "warning" ? "alert" : "info"} size={17} />
-                  </span>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium">{n.title}</p>
-                    <p className="muted mt-0.5 text-xs leading-relaxed">{n.body}</p>
-                  </div>
-                </article>
-              ))
+              notifications.map((n) => {
+                const body = (
+                  <>
+                    <span className={`mt-0.5 shrink-0 text-[var(--${n.level === "info" ? "accent" : n.level})]`}>
+                      <Icon name={n.level === "success" ? "checkCircle" : n.level === "warning" ? "alert" : "info"} size={17} />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-medium">{n.title}</span>
+                      <span className="muted mt-0.5 block text-xs leading-relaxed">{n.body}</span>
+                    </span>
+                  </>
+                );
+                // Every writer sets href — refunds point at the order, top-ups
+                // at the wallet — so the card is a way through, not a dead end.
+                return n.href ? (
+                  <Link key={n.id} href={n.href} className="flex gap-3 px-5 py-4 hover:bg-[var(--surface2)]">
+                    {body}
+                  </Link>
+                ) : (
+                  <article key={n.id} className="flex gap-3 px-5 py-4">
+                    {body}
+                  </article>
+                );
+              })
             )}
           </div>
         </section>
