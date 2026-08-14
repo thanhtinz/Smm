@@ -9,6 +9,7 @@ import { getCurrencies, getBaseCurrency } from "@/lib/currency";
 import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
 import { panelBaseUrl } from "@/lib/tenancy";
+import { readerMessages } from "@/lib/context";
 
 export type DepositState = {
   error?: string;
@@ -16,30 +17,31 @@ export type DepositState = {
 };
 
 export async function createDepositAction(_prev: DepositState, formData: FormData): Promise<DepositState> {
+  const t = await readerMessages();
   const user = await getCurrentUser();
-  if (!user) return { error: "Your session expired. Please sign in again." };
+  if (!user) return { error: t("err.session") };
 
   const methodId = String(formData.get("methodId") ?? "");
   const amountRaw = String(formData.get("amount") ?? "").trim();
   const currencyCode = String(formData.get("currency") ?? "").trim();
 
   const method = await db.paymentMethod.findFirst({ where: { id: methodId, enabled: true } });
-  if (!method) return { fieldErrors: { methodId: "Choose a payment method" } };
+  if (!method) return { fieldErrors: { methodId: t("err.chooseMethod") } };
 
   const config = parseConfig(method.config);
   if (!isConfigured(method.driver, config)) {
-    return { error: "This payment method is not fully configured yet. Please pick another one." };
+    return { error: t("err.methodUnconfigured") };
   }
 
   const amount = Number(amountRaw);
   if (!amountRaw || !Number.isFinite(amount) || amount <= 0) {
-    return { fieldErrors: { amount: "Enter an amount" } };
+    return { fieldErrors: { amount: t("err.amountRequired") } };
   }
 
   const accepted = parseCurrencies(method.currencies);
   const currencies = await getCurrencies();
   const currency = currencies.find((c) => c.code === currencyCode && (accepted.length === 0 || accepted.includes(c.code)));
-  if (!currency) return { fieldErrors: { currency: "Choose a currency this method accepts" } };
+  if (!currency) return { fieldErrors: { currency: t("err.currencyForMethod") } };
 
   if (method.minAmount > 0 && amount < method.minAmount) {
     return { fieldErrors: { amount: `Minimum for this method is ${method.minAmount.toLocaleString()} ${currency.code}` } };
@@ -69,7 +71,7 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   let couponId = "";
   if (couponCode) {
     const check = await evaluateCoupon(couponCode, user.id, amountInBase);
-    if (!check.ok) return { fieldErrors: { coupon: check.error } };
+    if (!check.ok) return { fieldErrors: { coupon: t(check.key, check.vars) } };
     couponBonusBase = check.bonus;
     couponId = check.couponId;
   }
@@ -105,6 +107,7 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
  * that was temporarily unreachable.
  */
 export async function prepareDeposit(transactionId: string) {
+  const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -116,9 +119,9 @@ export async function prepareDeposit(transactionId: string) {
 
   const driver = drivers[txn.method.driver];
   const config = parseConfig(txn.method.config);
-  if (!driver) return { kind: "unconfigured" as const, message: "Unknown payment driver." };
+  if (!driver) return { kind: "unconfigured" as const, message: t("err.payDriver") };
   if (!isConfigured(txn.method.driver, config)) {
-    return { kind: "unconfigured" as const, message: "This payment method is not fully configured yet." };
+    return { kind: "unconfigured" as const, message: t("err.payUnconfigured") };
   }
 
   const prefix = (config.prefix || "NOVA").replace(/[^A-Za-z0-9]/g, "").toUpperCase() || "NOVA";
@@ -134,7 +137,7 @@ export async function prepareDeposit(transactionId: string) {
       appUrl: await panelBaseUrl(),
     });
   } catch {
-    return { kind: "unconfigured" as const, message: "The payment provider could not be reached. Try again shortly." };
+    return { kind: "unconfigured" as const, message: t("err.payUnreachable") };
   }
 }
 

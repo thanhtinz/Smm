@@ -11,6 +11,8 @@ import { verifyCaptcha } from "@/lib/captcha";
 import { sendVerificationEmail, verificationRequired } from "@/lib/verification";
 import { startPendingLogin, twoFactorActive } from "@/lib/two-factor";
 import { notification } from "@/lib/notify";
+import { readerMessages } from "@/lib/context";
+import type { Translator } from "@/lib/i18n";
 
 export type FormState = {
   error?: string;
@@ -22,17 +24,21 @@ export type FormState = {
   values?: Record<string, string>;
 };
 
-const loginSchema = z.object({
-  identifier: z.string().min(1, "Enter your username or email"),
-  password: z.string().min(1, "Enter your password"),
+// Built per request rather than at module load: the messages are what the
+// reader sees, so they are looked up in the reader's language.
+const loginSchema = (t: Translator) =>
+  z.object({
+  identifier: z.string().min(1, t("err.identifierRequired")),
+  password: z.string().min(1, t("err.passwordRequired")),
 });
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const t = await readerMessages();
   const raw = {
     identifier: String(formData.get("identifier") ?? "").trim(),
     password: String(formData.get("password") ?? ""),
   };
-  const parsed = loginSchema.safeParse(raw);
+  const parsed = loginSchema(t).safeParse(raw);
   if (!parsed.success) {
     return { fieldErrors: fieldErrors(parsed.error), values: { identifier: raw.identifier } };
   }
@@ -40,7 +46,7 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   // Before the password is checked, so a failed captcha costs an attacker a
   // round trip without telling them anything about the account.
   if (!(await verifyCaptcha("login", formData))) {
-    return { error: "Please complete the verification and try again.", values: { identifier: raw.identifier } };
+    return { error: t("err.captcha"), values: { identifier: raw.identifier } };
   }
 
   const user = await db.user.findFirst({
@@ -53,11 +59,11 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   // enumerate which usernames exist.
   if (!user || !(await verifyPassword(parsed.data.password, user.password))) {
     await logActivity(user?.id ?? null, "login.failed", raw.identifier);
-    return { error: "Those credentials do not match an account.", values: { identifier: raw.identifier } };
+    return { error: t("err.credentials"), values: { identifier: raw.identifier } };
   }
   if (user.banned) {
     return {
-      error: user.banReason ? `This account is suspended: ${user.banReason}` : "This account is suspended.",
+      error: user.banReason ? t("err.suspendedReason", { reason: user.banReason }) : t("err.suspended"),
       values: { identifier: raw.identifier },
     };
   }
@@ -80,27 +86,29 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   redirect(user.role === "admin" ? "/admin" : "/dashboard");
 }
 
-const registerSchema = z
-  .object({
-    username: z
-      .string()
-      .min(3, "At least 3 characters")
-      .max(24, "At most 24 characters")
-      .regex(/^[a-zA-Z0-9_]+$/, "Letters, numbers and underscore only"),
-    email: z.string().email("Enter a valid email address"),
-    password: z.string().min(8, "At least 8 characters"),
-    confirm: z.string(),
-    terms: z.string().optional(),
-  })
-  .refine((d) => d.password === d.confirm, { path: ["confirm"], message: "Passwords do not match" });
+const registerSchema = (t: Translator) =>
+  z
+    .object({
+      username: z
+        .string()
+        .min(3, t("err.usernameShort"))
+        .max(24, t("err.usernameLong"))
+        .regex(/^[a-zA-Z0-9_]+$/, t("err.usernameChars")),
+      email: z.string().email(t("err.emailInvalid")),
+      password: z.string().min(8, t("err.passwordLength")),
+      confirm: z.string(),
+      terms: z.string().optional(),
+    })
+    .refine((d) => d.password === d.confirm, { path: ["confirm"], message: t("err.passwordMatch") });
 
 export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const t = await readerMessages();
   if (!(await getSetting("auth.registrationOpen"))) {
-    return { error: "Registration is currently closed." };
+    return { error: t("err.registerClosed") };
   }
 
   if (!(await verifyCaptcha("register", formData))) {
-    return { error: "Please complete the verification and try again." };
+    return { error: t("err.captcha") };
   }
 
   const raw = {
@@ -112,11 +120,11 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   };
   const values = { username: raw.username, email: raw.email };
 
-  const parsed = registerSchema.safeParse(raw);
+  const parsed = registerSchema(t).safeParse(raw);
   if (!parsed.success) return { fieldErrors: fieldErrors(parsed.error), values };
 
   if (await getSetting("auth.termsRequired")) {
-    if (!raw.terms) return { fieldErrors: { terms: "You must accept the terms to continue" }, values };
+    if (!raw.terms) return { fieldErrors: { terms: t("err.terms") }, values };
   }
 
   const clash = await db.user.findFirst({
@@ -211,8 +219,9 @@ function fieldErrors(error: z.ZodError): Record<string, string> {
  * in, so it must not report which addresses exist or which are confirmed.
  */
 export async function resendVerificationAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  const t = await readerMessages();
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
-  if (!email) return { fieldErrors: { email: "Enter your email address" } };
+  if (!email) return { fieldErrors: { email: t("err.emailRequired") } };
 
   if (await verificationRequired()) {
     const user = await db.user.findFirst({ where: { email, emailVerified: false, banned: false } });

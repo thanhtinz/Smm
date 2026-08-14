@@ -10,13 +10,15 @@ import {
   requireUser,
   verifyPassword,
 } from "@/lib/auth";
+import { readerMessages } from "@/lib/context";
 
 export type ProfileState = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
 export async function updateProfileAction(_prev: ProfileState, form: FormData): Promise<ProfileState> {
+  const t = await readerMessages();
   const user = await requireUser();
   const fullName = String(form.get("fullName") ?? "").trim();
-  if (fullName.length > 80) return { fieldErrors: { fullName: "At most 80 characters" } };
+  if (fullName.length > 80) return { fieldErrors: { fullName: t("err.fullNameLength") } };
 
   await db.user.update({ where: { id: user.id }, data: { fullName } });
   revalidatePath("/dashboard/profile");
@@ -30,6 +32,7 @@ export async function updateProfileAction(_prev: ProfileState, form: FormData): 
  * out mid-save.
  */
 export async function changePasswordAction(_prev: ProfileState, form: FormData): Promise<ProfileState> {
+  const t = await readerMessages();
   const user = await requireUser();
 
   const current = String(form.get("current") ?? "");
@@ -38,10 +41,10 @@ export async function changePasswordAction(_prev: ProfileState, form: FormData):
 
   const fresh = await db.user.findUniqueOrThrow({ where: { id: user.id }, select: { password: true } });
   if (!(await verifyPassword(current, fresh.password))) {
-    return { fieldErrors: { current: "That is not your current password" } };
+    return { fieldErrors: { current: t("err.currentPasswordWrong") } };
   }
-  if (password.length < 8) return { fieldErrors: { password: "At least 8 characters" } };
-  if (password !== confirm) return { fieldErrors: { confirm: "The passwords do not match" } };
+  if (password.length < 8) return { fieldErrors: { password: t("err.passwordLength") } };
+  if (password !== confirm) return { fieldErrors: { confirm: t("err.passwordMatch") } };
 
   await db.user.update({ where: { id: user.id }, data: { password: await hashPassword(password) } });
   await destroySessionsFor(user.id);

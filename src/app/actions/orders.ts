@@ -18,6 +18,10 @@ import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 import { duplicateOrder, guardOrder, orderRateLimit } from "@/lib/order-guard";
 import { maintenanceState } from "@/lib/maintenance";
+import { readerMessages } from "@/lib/context";
+
+/** As many as one paste is allowed to place at once. */
+const MAX_LINES = 100;
 
 export type OrderState = {
   error?: string;
@@ -26,11 +30,12 @@ export type OrderState = {
 };
 
 export async function placeOrderAction(_prev: OrderState, formData: FormData): Promise<OrderState> {
+  const t = await readerMessages();
   const user = await getCurrentUser();
-  if (!user) return { error: "Your session expired. Please sign in again." };
+  if (!user) return { error: t("err.session") };
 
   if (!(await getSetting("order.enabled"))) {
-    return { error: "Ordering is temporarily disabled." };
+    return { error: t("err.orderDisabled") };
   }
 
   // The layout already shows the notice; this is what stops a form posted
@@ -39,11 +44,11 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   if (closed.on) return { error: closed.message };
 
   const serviceId = String(formData.get("serviceId") ?? "");
-  if (!serviceId) return { fieldErrors: { serviceId: "Choose a service" } };
+  if (!serviceId) return { fieldErrors: { serviceId: t("err.chooseService") } };
 
   // Read first: the service type decides what the rest of the form means.
   const service = await db.service.findFirst({ where: { id: serviceId, enabled: true } });
-  if (!service) return { fieldErrors: { serviceId: "That service is no longer available" } };
+  if (!service) return { fieldErrors: { serviceId: t("err.serviceGone") } };
 
   // A subscription watches a profile instead of pointing at one post, so it
   // takes a username and a run of future posts rather than a link and a count.
@@ -89,7 +94,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     if (Object.keys(fieldErrors).length) return { fieldErrors };
 
     if (service.type === "custom_comments" && comments.length === 0) {
-      return { fieldErrors: { comments: "Write at least one comment" } };
+      return { fieldErrors: { comments: t("err.commentsEmpty") } };
     }
     if (quantity < service.min || quantity > service.max) {
       return {
@@ -117,7 +122,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   // After the shape of the order is known, so the message names the service
   // the customer actually chose.
   const guarded = await guardOrder(user.id, service.id, link);
-  if (guarded) return { error: guarded.error };
+  if (guarded) return { error: t(guarded.key, guarded.vars) };
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   // The tier price, not the list price — the same number the order form showed.
@@ -212,7 +217,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     return { success: { orderId: result.publicId, charge } };
   } catch (e) {
     if (e instanceof Error && e.message === "INSUFFICIENT_FUNDS") {
-      return { error: "Your balance is not enough for this order. Top up and try again." };
+      return { error: t("err.balanceOrder") };
     }
     if (e instanceof Error && e.message === "UPSTREAM_FUNDS") {
       // The customer is not the one short of money, and should not be told
@@ -242,9 +247,10 @@ export type MassOrderState = {
  * lines are placed — a bad line never blocks the rest.
  */
 export async function massOrderAction(_prev: MassOrderState, formData: FormData): Promise<MassOrderState> {
+  const t = await readerMessages();
   const user = await getCurrentUser();
-  if (!user) return { error: "Your session expired. Please sign in again." };
-  if (!(await getSetting("order.enabled"))) return { error: "Ordering is temporarily disabled." };
+  if (!user) return { error: t("err.session") };
+  if (!(await getSetting("order.enabled"))) return { error: t("err.orderDisabled") };
 
   const closed = await maintenanceState();
   if (closed.on) return { error: closed.message };
@@ -254,8 +260,8 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
     .map((l) => l.trim())
     .filter(Boolean);
 
-  if (lines.length === 0) return { error: "Paste at least one line." };
-  if (lines.length > 100) return { error: "A maximum of 100 lines can be submitted at once." };
+  if (lines.length === 0) return { error: t("err.linesEmpty") };
+  if (lines.length > MAX_LINES) return { error: t("err.linesMax", { max: MAX_LINES }) };
 
   const services = await db.service.findMany({ where: { enabled: true } });
   const byPublicId = new Map(services.map((s) => [String(s.publicId), s]));
@@ -271,27 +277,27 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
     const line = i + 1;
     const parts = raw.split("|").map((p) => p.trim());
     if (parts.length !== 3) {
-      results.push({ line, raw, ok: false, message: "Expected service_id | link | quantity" });
+      results.push({ line, raw, ok: false, message: t("err.massFormat") });
       return;
     }
     const [idPart, link, qtyPart] = parts;
     const service = byPublicId.get(idPart);
     if (!service) {
-      results.push({ line, raw, ok: false, message: `Unknown service id ${idPart}` });
+      results.push({ line, raw, ok: false, message: t("err.massUnknownService", { id: idPart }) });
       return;
     }
     if (!isValidOrderLink(link)) {
-      results.push({ line, raw, ok: false, message: "Invalid link" });
+      results.push({ line, raw, ok: false, message: t("err.massLink") });
       return;
     }
     // A comment service is bought by the comment, and a line of this form has
     // nowhere to put them, so it cannot be ordered here.
     if (service.type === "custom_comments") {
-      results.push({ line, raw, ok: false, message: `Service ${idPart} takes comments — order it one at a time` });
+      results.push({ line, raw, ok: false, message: t("err.massComments", { id: idPart }) });
       return;
     }
     if (service.type === "subscription") {
-      results.push({ line, raw, ok: false, message: `Service ${idPart} is a subscription — order it one at a time` });
+      results.push({ line, raw, ok: false, message: t("err.massSubscription", { id: idPart }) });
       return;
     }
     const quantity = Number(qtyPart);
@@ -308,12 +314,12 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   });
 
   const throttled = await orderRateLimit(user.id, parsed.length);
-  if (throttled) return { error: throttled.error };
+  if (throttled) return { error: t(throttled.key, throttled.vars) };
 
   for (const p of [...parsed]) {
     const clash = await duplicateOrder(user.id, p.service.id, p.link);
     if (!clash) continue;
-    results.push({ line: p.line, raw: p.raw, ok: false, message: clash.error });
+    results.push({ line: p.line, raw: p.raw, ok: false, message: t(clash.key, clash.vars) });
     parsed.splice(parsed.indexOf(p), 1);
   }
   if (parsed.length === 0) return { results: results.sort((a, b) => a.line - b.line), placed: 0, totalCharge: 0 };
@@ -398,7 +404,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   } catch (e) {
     if (e instanceof Error && e.message === "INSUFFICIENT_FUNDS") {
       return {
-        error: "Your balance is not enough for these orders. Nothing was placed.",
+        error: t("err.balanceOrders"),
         results: results.sort((a, b) => a.line - b.line),
         placed: 0,
         totalCharge,

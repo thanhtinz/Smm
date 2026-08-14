@@ -2,7 +2,8 @@ import { db } from "@/lib/db";
 
 export type CouponCheck =
   | { ok: true; couponId: string; code: string; bonus: number }
-  | { ok: false; error: string };
+  // What was wrong, for the caller to say in the reader's language.
+  | { ok: false; key: string; vars?: Record<string, string | number> };
 
 /**
  * Validates a coupon against a deposit amount expressed in the base currency
@@ -11,36 +12,36 @@ export type CouponCheck =
  */
 export async function evaluateCoupon(code: string, userId: string, amountInBase: number): Promise<CouponCheck> {
   const trimmed = code.trim().toUpperCase();
-  if (!trimmed) return { ok: false, error: "Enter a coupon code" };
+  if (!trimmed) return { ok: false, key: "err.couponRequired" };
 
   const coupon = await db.coupon.findFirst({ where: { code: trimmed } });
-  if (!coupon || !coupon.enabled) return { ok: false, error: "That coupon is not valid" };
+  if (!coupon || !coupon.enabled) return { ok: false, key: "err.couponInvalid" };
 
   if (coupon.expiresAt && coupon.expiresAt.getTime() < Date.now()) {
-    return { ok: false, error: "That coupon has expired" };
+    return { ok: false, key: "err.couponExpired" };
   }
   if (coupon.minAmount > 0 && amountInBase < coupon.minAmount) {
-    return { ok: false, error: `This coupon needs a deposit of at least ${coupon.minAmount.toLocaleString()}` };
+    return { ok: false, key: "err.couponMin", vars: { amount: coupon.minAmount.toLocaleString() } };
   }
 
   if (coupon.maxUses > 0) {
     const used = await db.couponRedemption.count({ where: { couponId: coupon.id } });
-    if (used >= coupon.maxUses) return { ok: false, error: "That coupon has been fully used" };
+    if (used >= coupon.maxUses) return { ok: false, key: "err.couponUsedUp" };
   }
   if (coupon.maxPerUser > 0) {
     const mine = await db.couponRedemption.count({ where: { couponId: coupon.id, userId } });
-    if (mine >= coupon.maxPerUser) return { ok: false, error: "You have already used this coupon" };
+    if (mine >= coupon.maxPerUser) return { ok: false, key: "err.couponUsed" };
   }
   if (coupon.firstDepositOnly) {
     const previous = await db.transaction.count({
       where: { userId, type: "deposit", status: "completed" },
     });
-    if (previous > 0) return { ok: false, error: "This coupon is for a first deposit only" };
+    if (previous > 0) return { ok: false, key: "err.couponFirstOnly" };
   }
 
   const bonus =
     coupon.type === "fixed" ? Math.round(coupon.value) : Math.round((amountInBase * coupon.value) / 100);
-  if (bonus <= 0) return { ok: false, error: "That coupon adds nothing to this deposit" };
+  if (bonus <= 0) return { ok: false, key: "err.couponNoBonus" };
 
   return { ok: true, couponId: coupon.id, code: coupon.code, bonus };
 }
