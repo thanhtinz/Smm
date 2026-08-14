@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import TransactionManager from "@/components/admin/transaction-manager";
 
@@ -15,7 +16,8 @@ export default async function AdminTransactionsPage({
 }) {
   const params = await searchParams;
   const ctx = await getAppContext();
-  const { t, currency, locale } = ctx;
+  const { t, currency, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const status = ["pending", "completed", "failed", "canceled"].includes(params.status ?? "")
     ? params.status
@@ -35,12 +37,7 @@ export default async function AdminTransactionsPage({
     db.transaction.count({ where: { type: "deposit", status: "pending" } }),
   ]);
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmtDate = { format: dates.stamp };
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">

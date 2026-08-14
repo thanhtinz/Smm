@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats, type DateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
@@ -20,7 +21,8 @@ export default async function OrdersPage({
   const params = await searchParams;
   const ctx = await getAppContext();
   const user = ctx.user!;
-  const { t, currency, locale } = ctx;
+  const { t, currency, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const status = ORDER_STATUSES.includes(params.status as never) ? params.status : undefined;
   const page = Math.max(1, Number(params.page) || 1);
@@ -135,7 +137,7 @@ export default async function OrdersPage({
                       <td>
                         <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
                       </td>
-                      <td className="muted text-xs">{formatDate(o.createdAt, locale)}</td>
+                      <td className="muted text-xs">{formatDate(o.createdAt, dates)}</td>
                       <td>
                         <OrderActions
                           order={{
@@ -274,12 +276,6 @@ function PageLink({
   );
 }
 
-function formatDate(date: Date, locale: string) {
-  return new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+function formatDate(date: Date, dates: DateFormats) {
+  return dates.full(date);
 }

@@ -4,11 +4,15 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
-import { CURRENCY_COOKIE, LOCALE_COOKIE, MODE_COOKIE, THEME_COOKIE } from "@/lib/context";
+import { CURRENCY_COOKIE, LOCALE_COOKIE, MODE_COOKIE, THEME_COOKIE, TIMEZONE_COOKIE } from "@/lib/context";
 
 const YEAR = 60 * 60 * 24 * 365;
 
-async function persist(cookie: string, value: string, column?: "locale" | "currency" | "theme" | "colorMode") {
+async function persist(
+  cookie: string,
+  value: string,
+  column?: "locale" | "currency" | "theme" | "colorMode" | "timezone",
+) {
   const jar = await cookies();
   jar.set(cookie, value, { path: "/", maxAge: YEAR, sameSite: "lax" });
   if (column) {
@@ -28,6 +32,20 @@ export async function setCurrency(code: string) {
 
 export async function setTheme(slug: string) {
   await persist(THEME_COOKIE, slug, "theme");
+}
+
+/**
+ * Refused rather than stored when Intl does not know the name: an unknown
+ * zone throws at format time, which would take every page down long after
+ * whatever set it.
+ */
+export async function setTimezone(name: string) {
+  try {
+    new Intl.DateTimeFormat("en", { timeZone: name });
+  } catch {
+    return;
+  }
+  await persist(TIMEZONE_COOKIE, name, "timezone");
 }
 
 export async function setColorMode(mode: string) {

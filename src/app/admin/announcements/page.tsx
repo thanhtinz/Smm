@@ -1,21 +1,17 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import AnnouncementManager from "@/components/admin/announcement-manager";
 
 export const metadata: Metadata = { title: "Announcements" };
 
 export default async function AdminAnnouncementsPage() {
-  const { t, locale } = await getAppContext();
+  const { t, locale, timezone } = await getAppContext();
+  const dates = dateFormats(locale, timezone);
   const rows = await db.announcement.findMany({ orderBy: { createdAt: "desc" } });
 
-  const fmt = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const fmt = { format: dates.full };
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">

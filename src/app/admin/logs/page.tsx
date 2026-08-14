@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = { title: "Activity log" };
@@ -17,7 +18,8 @@ export default async function AdminLogsPage({
   searchParams: Promise<{ q?: string; area?: string; page?: string }>;
 }) {
   const params = await searchParams;
-  const { t, locale } = await getAppContext();
+  const { t, locale, timezone } = await getAppContext();
+  const dates = dateFormats(locale, timezone);
 
   const q = (params.q ?? "").trim();
   const area = (params.area ?? "").trim();
@@ -48,13 +50,7 @@ export default async function AdminLogsPage({
     db.activityLog.count({ where }),
   ]);
 
-  const fmt = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+  const fmt = { format: dates.precise };
 
   const href = (next: Record<string, string | number | undefined>) => {
     const sp = new URLSearchParams();

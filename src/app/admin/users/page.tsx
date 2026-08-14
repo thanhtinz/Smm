@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import UserManager from "@/components/admin/user-manager";
 import { Icon } from "@/components/icons";
@@ -16,7 +17,8 @@ export default async function AdminUsersPage({
 }) {
   const params = await searchParams;
   const ctx = await getAppContext();
-  const { t, currency, locale } = ctx;
+  const { t, currency, locale, timezone } = ctx;
+  const dates = dateFormats(locale, timezone);
 
   const q = (params.q ?? "").trim();
   const page = Math.max(1, Number(params.page) || 1);
@@ -39,11 +41,7 @@ export default async function AdminUsersPage({
     [...tiers].filter((x) => x.minSpent > 0 && x.minSpent <= spent).sort((a, b) => b.minSpent - a.minSpent)[0] ??
     tiers.find((x) => x.isDefault);
 
-  const fmtDate = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  const fmtDate = { format: dates.day };
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
