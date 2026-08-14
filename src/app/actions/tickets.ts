@@ -8,13 +8,12 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "@/lib/notify";
 import { readerMessages } from "@/lib/context";
+import { OPEN_TICKET_STATUSES, priorityKey, priorityValue } from "@/lib/tickets";
 
 export type TicketState = {
   error?: string;
   fieldErrors?: Record<string, string>;
 };
-
-const OPEN_STATUSES = ["open", "answered", "pending"];
 
 export async function createTicketAction(_prev: TicketState, form: FormData): Promise<TicketState> {
   const t = await readerMessages();
@@ -36,7 +35,7 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
 
   const maxOpen = Number(await getSetting("support.maxOpenTickets")) || 0;
   if (maxOpen > 0) {
-    const open = await db.ticket.count({ where: { userId: user.id, status: { in: OPEN_STATUSES } } });
+    const open = await db.ticket.count({ where: { userId: user.id, status: { in: OPEN_TICKET_STATUSES } } });
     if (open >= maxOpen) {
       return { error: t("err.ticketsOpen", { count: open }) };
     }
@@ -125,5 +124,33 @@ export async function setTicketStatusAction(ticketId: string, status: string): P
   revalidatePath(`/dashboard/tickets/${ticket.id}`);
   revalidatePath("/dashboard/tickets");
   revalidatePath("/admin/tickets");
+  return {};
+}
+
+export async function setTicketPriorityAction(ticketId: string, priority: string): Promise<TicketState> {
+  const t = await readerMessages();
+  const user = await getCurrentUser();
+  if (!user) return { error: t("err.sessionShort") };
+
+  // Triage is support's job. A customer rating their own urgency would make
+  // the column say "urgent" on every row and stop being a queue order.
+  if (user.role !== "admin" && user.role !== "support") return { error: t("err.supportOnly") };
+
+  const value = priorityValue(priority);
+  if (value === null) return { error: t("err.priorityUnknown") };
+
+  const ticket = await db.ticket.findFirst({ where: { id: ticketId } });
+  if (!ticket) return { error: t("err.ticketGone") };
+
+  // updatedAt is the queue's tiebreaker, so setting a priority must not push
+  // the ticket to the top of it — hence the explicit write of the old value.
+  await db.ticket.update({
+    where: { id: ticket.id },
+    data: { priority: value, updatedAt: ticket.updatedAt },
+  });
+  await logActivity(user.id, "ticket.priority", `#${ticket.publicId} -> ${priorityKey(value)}`);
+
+  revalidatePath("/admin/tickets");
+  revalidatePath(`/admin/tickets/${ticket.id}`);
   return {};
 }

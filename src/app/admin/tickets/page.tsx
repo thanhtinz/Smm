@@ -5,26 +5,35 @@ import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
+import { TICKET_PRIORITIES, TICKET_STATUSES, priorityKey, priorityTone } from "@/lib/tickets";
 
 export const metadata: Metadata = { title: "Support" };
-
-const STATUSES = ["open", "answered", "pending", "closed"];
 
 export default async function AdminTicketsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; priority?: string }>;
 }) {
   const params = await searchParams;
   const ctx = await getAppContext();
   const { t, locale, timezone } = ctx;
   const dates = dateFormats(locale, timezone);
 
-  const status = STATUSES.includes(params.status ?? "") ? params.status : undefined;
-  const [tickets, counts] = await Promise.all([
+  const status = TICKET_STATUSES.includes((params.status ?? "") as never) ? params.status : undefined;
+  const priority = TICKET_PRIORITIES.find((p) => p.key === params.priority);
+
+  const where = {
+    ...(status ? { status } : {}),
+    ...(priority ? { priority: priority.value } : {}),
+  };
+
+  const [tickets, counts, priorityCounts] = await Promise.all([
     db.ticket.findMany({
-      where: status ? { status } : {},
-      orderBy: { updatedAt: "desc" },
+      where,
+      // The queue order: the most urgent first, then whatever has been waiting
+      // longest within that band. Closed tickets sort with everything else,
+      // which is why the status tabs exist.
+      orderBy: [{ priority: "desc" }, { updatedAt: "desc" }],
       take: 100,
       include: {
         user: { select: { username: true } },
@@ -32,9 +41,11 @@ export default async function AdminTicketsPage({
       },
     }),
     db.ticket.groupBy({ by: ["status"], _count: true }),
+    db.ticket.groupBy({ by: ["priority"], _count: true }),
   ]);
 
   const fmtDate = { format: dates.stamp };
+  const countFor = (value: number) => priorityCounts.find((c) => c.priority === value)?._count ?? 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
@@ -42,11 +53,16 @@ export default async function AdminTicketsPage({
 
       <div className="scroll-x -mx-1 px-1">
         <div className="flex gap-2 pb-1">
-          <Tab href="/admin/tickets" active={!status} label={t("common.all")} count={counts.reduce((n, c) => n + c._count, 0)} />
-          {STATUSES.map((s) => (
+          <Tab
+            href={queryFor(undefined, params.priority)}
+            active={!status}
+            label={t("common.all")}
+            count={counts.reduce((n, c) => n + c._count, 0)}
+          />
+          {TICKET_STATUSES.map((s) => (
             <Tab
               key={s}
-              href={`/admin/tickets?status=${s}`}
+              href={queryFor(s, params.priority)}
               active={status === s}
               label={t(`support.status.${s}`)}
               count={counts.find((c) => c.status === s)?._count ?? 0}
@@ -55,27 +71,64 @@ export default async function AdminTicketsPage({
         </div>
       </div>
 
+      {/* A second row rather than more tabs in the first: status and priority
+          are different questions and they combine. */}
+      <div className="scroll-x -mx-1 px-1">
+        <div className="flex gap-2 pb-1">
+          <Tab
+            href={queryFor(status, undefined)}
+            active={!priority}
+            label={t("support.priority.any")}
+            count={priorityCounts.reduce((n, c) => n + c._count, 0)}
+            small
+          />
+          {[...TICKET_PRIORITIES]
+            .reverse()
+            .map((p) => (
+              <Tab
+                key={p.key}
+                href={queryFor(status, p.key)}
+                active={priority?.key === p.key}
+                label={t(`support.priority.${p.key}`)}
+                count={countFor(p.value)}
+                small
+              />
+            ))}
+        </div>
+      </div>
+
       <div className="card overflow-hidden">
         {tickets.length === 0 ? (
           <p className="muted px-5 py-14 text-center text-sm">{t("common.none")}</p>
         ) : (
           <ul className="divide-y divide-[var(--border)]">
-            {tickets.map((ticket) => (
-              <li key={ticket.id}>
-                <Link href={`/admin/tickets/${ticket.id}`} className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--surface2)]">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{ticket.subject}</p>
-                    <p className="muted mt-0.5 text-xs">
-                      #{ticket.publicId} · {ticket.user.username} · {t(`support.category.${ticket.category}`)} ·{" "}
-                      {fmtDate.format(ticket.updatedAt)}
-                    </p>
-                  </div>
-                  <span className="muted text-xs tabular-nums">{ticket._count.messages}</span>
-                  <StatusBadge status={ticket.status} label={t(`support.status.${ticket.status}`)} />
-                  <Icon name="chevronRight" size={16} />
-                </Link>
-              </li>
-            ))}
+            {tickets.map((ticket) => {
+              const tone = priorityTone(ticket.priority);
+              return (
+                <li key={ticket.id}>
+                  <Link
+                    href={`/admin/tickets/${ticket.id}`}
+                    className="flex items-center gap-3 px-5 py-4 hover:bg-[var(--surface2)]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="flex items-center gap-2 truncate text-sm font-medium">
+                        {tone && (
+                          <span className={`badge badge-${tone}`}>{t(`support.priority.${priorityKey(ticket.priority)}`)}</span>
+                        )}
+                        {ticket.subject}
+                      </p>
+                      <p className="muted mt-0.5 text-xs">
+                        #{ticket.publicId} · {ticket.user.username} · {t(`support.category.${ticket.category}`)} ·{" "}
+                        {fmtDate.format(ticket.updatedAt)}
+                      </p>
+                    </div>
+                    <span className="muted text-xs tabular-nums">{ticket._count.messages}</span>
+                    <StatusBadge status={ticket.status} label={t(`support.status.${ticket.status}`)} />
+                    <Icon name="chevronRight" size={16} />
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -83,12 +136,34 @@ export default async function AdminTicketsPage({
   );
 }
 
-function Tab({ href, active, label, count }: { href: string; active: boolean; label: string; count: number }) {
+function queryFor(status: string | undefined, priority: string | undefined) {
+  const sp = new URLSearchParams();
+  if (status) sp.set("status", status);
+  if (priority) sp.set("priority", priority);
+  const qs = sp.toString();
+  return qs ? `/admin/tickets?${qs}` : "/admin/tickets";
+}
+
+function Tab({
+  href,
+  active,
+  label,
+  count,
+  small,
+}: {
+  href: string;
+  active: boolean;
+  label: string;
+  count: number;
+  small?: boolean;
+}) {
   return (
     <Link
       href={href}
       aria-current={active ? "page" : undefined}
-      className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+      className={`flex shrink-0 items-center gap-2 rounded-full border font-medium transition-colors ${
+        small ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm"
+      } ${
         active
           ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] text-[var(--primary)]"
           : "muted border-[var(--border)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
