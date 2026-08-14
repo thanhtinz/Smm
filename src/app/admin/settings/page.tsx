@@ -26,6 +26,10 @@ export default async function AdminSettingsPage() {
     const entry: SettingField = {
       key,
       label: named === `setting.${key}` ? "" : named,
+      // The image control needs its own three, and only it uses them.
+      hint: t("setting.imageHint"),
+      uploadLabel: t("admin.upload"),
+      removeLabel: t("admin.remove"),
       type: (def as { type: string }).type,
       options: (def as { options?: readonly string[] }).options
         ? [...((def as { options?: readonly string[] }).options as readonly string[])]

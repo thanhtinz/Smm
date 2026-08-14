@@ -16,8 +16,10 @@ export const settingDefinitions = {
     value: "The fastest SMM panel to grow your social presence with reliable, automated delivery.",
   },
   "site.logoText": { group: "branding", type: "text", value: "Nova" },
-  "site.logoUrl": { group: "branding", type: "text", value: "" },
-  "site.faviconUrl": { group: "branding", type: "text", value: "" },
+  // Uploaded rather than pasted: an operator with a logo file should not have
+  // to find somewhere to host it first.
+  "site.logoUrl": { group: "branding", type: "image", value: "" },
+  "site.faviconUrl": { group: "branding", type: "image", value: "" },
   "site.supportEmail": { group: "branding", type: "text", value: "support@novapanel.io" },
   "site.telegram": { group: "branding", type: "text", value: "" },
   "site.whatsapp": { group: "branding", type: "text", value: "" },

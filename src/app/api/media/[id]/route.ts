@@ -18,6 +18,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const media = await db.media.findUnique({ where: { id } });
   if (!media) return new NextResponse("Not found", { status: 404 });
 
+  // Uploads are files under public/ now, served by the web server. Only rows
+  // written before that still carry their bytes here.
+  if (media.path) return NextResponse.redirect(new URL(`/${media.path}`, _request.url), 308);
+  if (!media.data) return new NextResponse("Not found", { status: 404 });
+
   return new NextResponse(new Uint8Array(media.data), {
     headers: {
       "Content-Type": media.mime,
