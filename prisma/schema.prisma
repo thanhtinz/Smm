@@ -145,6 +145,9 @@ model User {
   tickets         Ticket[]           @relation("TicketAuthor")
   assignedTickets Ticket[]           @relation("TicketAssignee")
   ticketMessages  TicketMessage[]
+  conversations   Conversation[]     @relation("ConversationUser")
+  assignedThreads Conversation[]     @relation("ConversationAssignee")
+  inboxMessages   InboxMessage[]     @relation("InboxAuthor")
   notifications   Notification[]
   activityLogs    ActivityLog[]
   orderRequests   OrderRequest[]
@@ -798,6 +801,81 @@ model Faq {
   @@index([panelId])
 }
 
+/// A connected messaging account: a Telegram bot, a Facebook page, a Zalo OA.
+/// One panel can hold several of each.
+model Channel {
+  id         String  @id @default(cuid())
+  panelId    String  @default("")
+  panel      Panel   @relation("PanelChannels", fields: [panelId], references: [id], onDelete: Cascade)
+  kind       String // telegram | messenger | zalo | instagram
+  /// The operator's own label for it, shown in the inbox.
+  name       String
+  /// The account's id on the platform. Incoming events name it, which is how
+  /// one webhook address serves every channel a panel has connected.
+  externalId String  @default("")
+  enabled    Boolean @default(true)
+  /// JSON credentials, written in admin and never shown back in full.
+  config     String  @default("{}")
+  position   Int     @default(0)
+
+  conversations Conversation[]
+  createdAt     DateTime       @default(now())
+
+  @@unique([panelId, kind, externalId])
+  @@index([panelId])
+}
+
+/// One person talking to one channel.
+model Conversation {
+  id            String  @id @default(cuid())
+  panelId       String  @default("")
+  panel         Panel   @relation("PanelConversations", fields: [panelId], references: [id], onDelete: Cascade)
+  channelId     String
+  channel       Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  /// The thread's id on the platform — chat id, PSID, user id.
+  externalId    String
+  contactName   String  @default("")
+  contactHandle String  @default("")
+  /// Set when the person is recognised as a panel customer.
+  userId        String?
+  user          User?   @relation("ConversationUser", fields: [userId], references: [id], onDelete: SetNull)
+  status        String  @default("open") // open | closed
+  assigneeId    String?
+  assignee      User?   @relation("ConversationAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  /// Incoming messages nobody on the team has read yet.
+  unread        Int     @default(0)
+
+  messages  InboxMessage[]
+  createdAt DateTime       @default(now())
+  /// When the thread last moved, in either direction. The inbox sorts on it.
+  lastAt    DateTime       @default(now())
+
+  @@unique([panelId, channelId, externalId])
+  @@index([panelId, status, lastAt])
+  @@index([channelId])
+}
+
+model InboxMessage {
+  id             String       @id @default(cuid())
+  panelId        String       @default("")
+  panel          Panel        @relation("PanelInboxMessages", fields: [panelId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// "in" from the customer, "out" from the team.
+  direction      String
+  body           String
+  /// The platform's own id. Null on our own sends, and NULLs do not collide in
+  /// a SQLite unique index — which is what makes the constraint below work as
+  /// idempotency for redelivered webhooks without blocking repeat replies.
+  externalId     String?
+  authorId       String?
+  author         User?        @relation("InboxAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdAt      DateTime     @default(now())
+
+  @@unique([panelId, conversationId, externalId])
+  @@index([conversationId])
+}
+
 model Panel {
   id       String  @id @default(cuid())
   slug     String  @unique
@@ -858,6 +936,9 @@ model Panel {
   pages          Page[]             @relation("PanelPages")
   testimonials   Testimonial[]      @relation("PanelTestimonials")
   faqs           Faq[]              @relation("PanelFaqs")
+  channels       Channel[]          @relation("PanelChannels")
+  conversations  Conversation[]     @relation("PanelConversations")
+  inboxMessages  InboxMessage[]     @relation("PanelInboxMessages")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
   createdAt      DateTime           @default(now())

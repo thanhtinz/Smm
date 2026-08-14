@@ -91,6 +91,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/users", label: t("admin.users"), icon: "users" },
         { href: "/admin/tiers", label: t("tier.title"), icon: "trending" },
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
+        { href: "/admin/inbox", label: t("inbox.title"), icon: "mail" },
         { href: "/admin/announcements", label: t("announcement.title"), icon: "megaphone" },
         { href: "/admin/pages", label: t("page.title"), icon: "document" },
         { href: "/admin/landing", label: t("landing.admin.title"), icon: "layers" },
@@ -118,6 +119,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       ]
     : [
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
+        { href: "/admin/inbox", label: t("inbox.title"), icon: "mail" },
         { href: "/dashboard", label: t("dash.title"), icon: "dashboard", exact: true },
       ];
 
