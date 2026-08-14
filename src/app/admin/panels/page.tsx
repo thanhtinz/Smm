@@ -93,6 +93,7 @@ export default async function AdminPanelsPage() {
             verified: d.verified,
             isPrimary: d.isPrimary,
             verifyToken: d.verifyToken,
+            managed: d.dnsRecordId !== "",
           })),
         }))}
         labels={{
@@ -107,6 +108,7 @@ export default async function AdminPanelsPage() {
           addDomain: t("panel.addDomain"),
           verify: t("panel.verify"),
           verified: t("panel.verified"),
+          dnsManaged: t("panel.dnsManaged"),
           unverified: t("panel.unverified"),
           owner: t("panel.owner"),
           rent: t("panel.rent"),

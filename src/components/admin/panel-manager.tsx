@@ -17,7 +17,15 @@ import EntityDrawer from "@/components/admin/entity-drawer";
 import CopyField from "@/components/ui/copy-field";
 import { Icon } from "@/components/icons";
 
-export type DomainRow = { id: string; host: string; verified: boolean; isPrimary: boolean; verifyToken: string };
+export type DomainRow = {
+  id: string;
+  host: string;
+  verified: boolean;
+  isPrimary: boolean;
+  verifyToken: string;
+  /** Set when the panel created this hostname's DNS record itself. */
+  managed: boolean;
+};
 
 export type PanelRow = {
   id: string;
@@ -316,6 +324,11 @@ function DomainDrawer({
                 <span className={`badge ${d.verified ? "badge-success" : "badge-warning"}`}>
                   {d.verified ? labels.verified : labels.unverified}
                 </span>
+              </div>
+
+              {d.managed && <p className="muted mt-2 text-xs">{labels.dnsManaged}</p>}
+
+              <div>
               </div>
 
               {!d.verified && (

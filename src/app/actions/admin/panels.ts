@@ -1,6 +1,7 @@
 "use server";
 
 import { randomBytes } from "crypto";
+import { cloudflareConfig, createRecord, deleteRecord, insideZone, zoneName } from "@/lib/cloudflare";
 import { resolveTxt } from "node:dns/promises";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
@@ -171,13 +172,66 @@ export async function addPanelDomainAction(_prev: ActionResult, form: FormData):
     return { fieldErrors: { host: "Another panel already answers on that hostname" } };
   }
 
+  // Inside a zone the operator owns, the panel creates the record itself and
+  // the hostname is live immediately — asking the owner to prove control of a
+  // domain the panel already controls would be theatre. Everything else keeps
+  // the TXT proof.
+  const managed = await manageZoneRecord(host);
+  if (managed.error) return { fieldErrors: { host: managed.error } };
+
   await db.panelDomain.create({
-    data: { panelId, host, verified: false, verifyToken: randomBytes(12).toString("hex") },
+    data: {
+      panelId,
+      host,
+      verified: managed.recordId !== "",
+      verifyToken: randomBytes(12).toString("hex"),
+      dnsRecordId: managed.recordId,
+    },
   });
 
-  await logActivity(admin.id, "admin.panel.domain.add", `${target.slug} ${host}`);
+  await logActivity(
+    admin.id,
+    "admin.panel.domain.add",
+    `${target.slug} ${host}${managed.recordId ? " (dns created)" : ""}`,
+  );
   revalidatePath("/admin/panels");
   return { ok: true };
+}
+
+/**
+ * Creates the DNS record when the hostname falls inside the configured zone.
+ *
+ * A blank record id means the hostname is not this operator's to point — not
+ * that anything failed — so the caller falls back to the TXT proof. A real
+ * failure is reported, because silently landing an unreachable hostname is
+ * worse than refusing to add it.
+ */
+async function manageZoneRecord(host: string): Promise<{ recordId: string; error?: string }> {
+  const config = await cloudflareConfig();
+  if (!config) return { recordId: "" };
+
+  const zone = await zoneName(config);
+  if (!zone.ok) return { recordId: "", error: zone.error };
+  if (!insideZone(host, zone.data)) return { recordId: "" };
+
+  // Everything points at wherever the panel already answers, so moving the
+  // app means changing one record rather than one per child.
+  const target = await primaryHost();
+  if (!target) return { recordId: "", error: "This panel has no primary hostname to point at" };
+  if (host === target) return { recordId: "" };
+
+  const created = await createRecord(config, host, target);
+  return created.ok ? { recordId: created.data } : { recordId: "", error: created.error };
+}
+
+/** The hostname the root panel answers on, which children CNAME to. */
+async function primaryHost(): Promise<string> {
+  const root = await db.panel.findFirst({ where: { parentId: null }, select: { id: true } });
+  if (!root) return "";
+  const domain =
+    (await db.panelDomain.findFirst({ where: { panelId: root.id, isPrimary: true } })) ??
+    (await db.panelDomain.findFirst({ where: { panelId: root.id }, orderBy: { createdAt: "asc" } }));
+  return domain?.host ?? "";
 }
 
 /**
@@ -235,6 +289,16 @@ export async function deletePanelDomainAction(id: string): Promise<ActionResult>
 
   const remaining = await db.panelDomain.count({ where: { panelId: domain.panelId } });
   if (remaining <= 1) return { error: "A panel needs at least one hostname." };
+
+  // Take the DNS record with it, but only one the panel created — a record
+  // that was there first belongs to whoever made it.
+  if (domain.dnsRecordId) {
+    const config = await cloudflareConfig();
+    if (config) {
+      const removed = await deleteRecord(config, domain.dnsRecordId);
+      if (!removed.ok) return { error: `The hostname is still in DNS: ${removed.error}` };
+    }
+  }
 
   await db.panelDomain.delete({ where: { id } });
   await logActivity(admin.id, "admin.panel.domain.delete", domain.host);
