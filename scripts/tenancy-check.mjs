@@ -89,7 +89,7 @@ async function checkNoOrphans() {
     "setting", "counter", "user", "session", "authToken", "recoveryCode", "activityLog", "media", "platform", "category",
     "provider", "service", "serviceRoute", "order", "orderRequest", "paymentMethod", "transaction", "ticket",
     "ticketMessage", "notification", "coupon", "couponRedemption", "referralEarning",
-    "announcement", "page", "userTier", "tierPrice", "testimonial", "faq",
+    "announcement", "page", "userTier", "tierPrice", "testimonial", "faq", "channel", "conversation", "inboxMessage",
   ];
   let total = 0;
   for (const m of models) {

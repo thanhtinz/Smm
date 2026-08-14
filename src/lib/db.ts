@@ -33,6 +33,9 @@ const TENANT_MODELS = new Set([
   "Page",
   "Testimonial",
   "Faq",
+  "Channel",
+  "Conversation",
+  "InboxMessage",
   "UserTier",
   "TierPrice",
 ]);
