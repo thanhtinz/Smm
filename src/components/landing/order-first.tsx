@@ -2,17 +2,20 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { displayMoney } from "@/lib/currency";
 import QuotePicker from "./quote-picker";
-import type { LandingProps } from "./types";
+import { ClosingCta, Faqs, Pills, PlatformStrip, Quotes, StatTiles, Steps } from "./sections";
+import type { LayoutProps } from "./types";
 
 /**
  * Order first.
  *
- * The whole page is arranged around one working control: the same
- * platform → category → service cascade the order form uses, above the fold,
- * quoting a real price from real rates. Everything else on the page is
- * subordinate to it and set quietly.
+ * The other layouts open with a headline and put the working controls further
+ * down. This one gives the top of the page to the same
+ * platform → category → service cascade the order form uses, quoting a real
+ * price from real rates — so the visitor's first interaction is with the
+ * product rather than with copy about it.
  */
-export default function OrderFirst({ data, t, currency, locale, settings }: LandingProps) {
+export default function OrderFirst(props: LayoutProps) {
+  const { data, t, currency, locale, settings } = props;
   const m = {
     rate: currency.rate,
     symbol: currency.symbol,
@@ -21,79 +24,72 @@ export default function OrderFirst({ data, t, currency, locale, settings }: Land
     locale,
   };
 
-  const assurances = [
-    { icon: "zap" as const, text: t("landing.trust.speed") },
-    { icon: "refresh" as const, text: t("landing.trust.refill") },
-    { icon: "creditCard" as const, text: t("landing.trust.pay") },
-    { icon: "code" as const, text: t("landing.trust.api") },
-  ];
-
   return (
     <>
-      <section className="container-page grid gap-8 py-10 lg:grid-cols-[1.35fr_0.65fr] lg:py-14">
-        <div>
-          <h1 className="text-[2.1rem] leading-[1.05] font-extrabold tracking-[-0.03em] sm:text-[2.75rem]">{t("landing.quote.title")}</h1>
-          <p className="muted mt-3 text-lg">{t("landing.quote.sub")}</p>
-          <div className="mt-5">
-            <QuotePicker
-              platforms={data.platforms}
-              picks={data.picks}
-              m={m}
-              labels={{
-                category: t("order.category"),
-                service: t("order.service"),
-                quantity: t("order.quantity"),
-                charge: t("order.charge"),
-                start: t("landing.cta.primary"),
-                browse: t("landing.cta.secondary"),
-              }}
-            />
+      <section className="relative overflow-hidden">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-10"
+          style={{
+            background:
+              "radial-gradient(900px 400px at 20% 0%, color-mix(in srgb, var(--primary) 20%, transparent), transparent 70%)," +
+              "radial-gradient(700px 340px at 85% 5%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%)",
+          }}
+        />
+
+        <div className="container-page grid gap-9 py-12 lg:grid-cols-[1.3fr_0.7fr] lg:py-16">
+          <div>
+            <h1 className="text-[2.2rem] leading-[1.05] font-extrabold tracking-[-0.035em] sm:text-[3rem]">
+              {t("landing.quote.title")}
+            </h1>
+            <p className="muted mt-3 max-w-xl text-lg">{t("landing.quote.sub")}</p>
+
+            <div className="mt-7">
+              <QuotePicker
+                platforms={data.platforms}
+                picks={data.picks}
+                m={m}
+                labels={{
+                  category: t("order.category"),
+                  service: t("order.service"),
+                  quantity: t("order.quantity"),
+                  charge: t("order.charge"),
+                  start: t("landing.cta.primary"),
+                  browse: t("landing.cta.secondary"),
+                }}
+              />
+            </div>
           </div>
-        </div>
 
-        <aside className="space-y-6 lg:pt-14">
-          <ul className="space-y-3">
-            {assurances.map((a) => (
-              <li key={a.text} className="flex items-center gap-3 text-sm">
-                <span className="text-[var(--primary)]">
-                  <Icon name={a.icon} size={17} />
-                </span>
-                {a.text}
-              </li>
-            ))}
-          </ul>
+          <aside className="space-y-7 lg:pt-16">
+            <Pills t={t} />
 
-          {/* Counts straight from the tables — nothing padded, so a young
-              panel shows small numbers rather than invented ones. */}
-          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-[var(--radius)] border border-[var(--border)] bg-[var(--border)]">
-            {[
-              { k: t("landing.stat.services"), v: data.serviceCount },
-              { k: t("landing.stat.users"), v: data.userCount },
-              { k: t("landing.stat.orders"), v: data.completedCount },
-              { k: t("landing.board.from"), v: null },
-            ].map((s) => (
-              <div key={s.k} className="bg-[var(--surface)] px-4 py-4">
-                <dd className="font-mono text-2xl font-bold">
-                  {s.v === null ? displayMoney(data.from, currency, locale) : s.v.toLocaleString()}
-                </dd>
-                <dt className="muted mt-0.5 text-xs">{s.k}</dt>
+            {data.from > 0 && (
+              <div>
+                <p className="muted text-xs font-semibold tracking-[0.16em] uppercase">{t("landing.board.from")}</p>
+                <p className="mt-2 font-mono text-4xl leading-none font-bold text-[var(--primary)]">
+                  {displayMoney(data.from, currency, locale)}
+                </p>
+                <p className="muted mt-2 text-sm">{t("landing.board.per")}</p>
               </div>
-            ))}
-          </dl>
+            )}
 
-          <p className="muted text-xs leading-relaxed">{settings["site.description"] as string}</p>
-        </aside>
-      </section>
+            <p className="muted text-sm leading-relaxed">{settings["site.description"] as string}</p>
 
-      <section className="container-page pb-16">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-t border-[var(--border)] pt-6">
-          <p className="text-sm font-medium">{t("landing.cta.final.title")}</p>
-          <Link href="/register" className="btn btn-primary">
-            {t("landing.cta.primary")}
-            <Icon name="arrowRight" size={16} />
-          </Link>
+            <Link href="/register" className="btn btn-primary btn-lg w-full">
+              {t("landing.cta.primary")}
+              <Icon name="arrowRight" size={17} />
+            </Link>
+          </aside>
         </div>
       </section>
+
+      <PlatformStrip platforms={data.platforms} label={t("landing.hero.platforms")} />
+      <StatTiles data={data} t={t} />
+      <Steps t={t} />
+      <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
+      <Faqs questions={data.questions} title={t("landing.faq.title")} />
+      <ClosingCta t={t} settings={settings} />
     </>
   );
 }

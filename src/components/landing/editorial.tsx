@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { displayMoney } from "@/lib/currency";
-import type { LandingProps } from "./types";
+import { Faqs, Quotes } from "./sections";
+import type { LayoutProps } from "./types";
 
 /**
  * Editorial.
@@ -11,7 +12,7 @@ import type { LandingProps } from "./types";
  * a contents page, with the starting price hanging in the outer margin the
  * way a page number would.
  */
-export default function Editorial({ data, t, currency, locale, settings }: LandingProps) {
+export default function Editorial({ data, t, currency, locale, settings }: LayoutProps) {
   const steps = [
     { title: t("landing.howto.1.title"), body: t("landing.howto.1.body") },
     { title: t("landing.howto.2.title"), body: t("landing.howto.2.body") },
@@ -79,6 +80,9 @@ export default function Editorial({ data, t, currency, locale, settings }: Landi
           ))}
         </div>
       </section>
+
+      <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
+      <Faqs questions={data.questions} title={t("landing.faq.title")} />
 
       <section className="container-page pb-28">
         <div className="border-t border-[var(--text)] pt-10">

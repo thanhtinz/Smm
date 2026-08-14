@@ -29,6 +29,13 @@ export const settingDefinitions = {
   "appearance.defaultTheme": { group: "appearance", type: "text", value: "aurora" },
   "appearance.defaultColorMode": { group: "appearance", type: "select", value: "dark", options: ["dark", "light", "system"] },
   "appearance.allowUserTheme": { group: "appearance", type: "boolean", value: true },
+  // Whatever the operator wants beside the headline: a mascot, a product
+  // shot, a photograph. Left empty the hero shows live order cards instead,
+  // which needs no artwork and is true.
+  "landing.heroImage": { group: "appearance", type: "image", value: "" },
+  // Panels in this market put the sign-in box on the home page, because most
+  // visitors are returning customers. Off gives the plain pair of buttons.
+  "landing.heroLogin": { group: "appearance", type: "boolean", value: true },
   "appearance.landingLayout": {
     group: "appearance",
     type: "select",

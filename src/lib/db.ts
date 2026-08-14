@@ -31,6 +31,8 @@ const TENANT_MODELS = new Set([
   "ReferralEarning",
   "Announcement",
   "Page",
+  "Testimonial",
+  "Faq",
   "UserTier",
   "TierPrice",
 ]);
