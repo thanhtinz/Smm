@@ -8,6 +8,7 @@ import { nextPublicId } from "@/lib/ids";
 import {
   calculateCharge,
   commentLines,
+  orderCost,
   isValidOrderLink,
   parseSubscription,
   subscriptionFields,
@@ -154,6 +155,9 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
+          // On a child panel the cost is what the panel above charges, which
+          // the first hop already worked out.
+          cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity),
           ...subscriptionFields(subscription),
         },
       });
@@ -348,6 +352,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
             charge: p.charge,
             remains: p.quantity,
             status: "pending",
+            cost: (plans.get(p.line) ?? [])[0]?.charge ?? orderCost(p.service.providerRate, p.quantity),
           },
         });
         await writeUpstream(tx, plans.get(p.line) ?? [], {

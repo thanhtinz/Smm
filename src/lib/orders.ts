@@ -3,6 +3,18 @@ export function calculateCharge(ratePer1000: number, quantity: number): number {
   return Math.round((ratePer1000 * quantity) / 1000);
 }
 
+/**
+ * What an order costs the panel, recorded at the moment it is placed.
+ *
+ * Null where the panel has no cost to record — a service fulfilled by hand —
+ * so the profit report can leave those out instead of counting them as pure
+ * margin. Stored rather than derived because provider rates move, and the
+ * scheduled sync now moves them without anyone typing.
+ */
+export function orderCost(providerRate: number, quantity: number): number | null {
+  return providerRate > 0 ? Math.round((providerRate * quantity) / 1000) : null;
+}
+
 export const ACTIVE_ORDER_STATUSES = ["pending", "processing", "inprogress"] as const;
 
 export const ORDER_STATUSES = [
