@@ -1,7 +1,7 @@
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import Hero from "./hero";
-import { ClosingCta, Faqs, PlatformStrip, Quotes, StatTiles } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, PlatformStrip, Quotes, StatTiles } from "./sections";
 import type { LayoutProps } from "./types";
 
 /**
@@ -97,6 +97,7 @@ export default function Proof(props: LayoutProps) {
         </div>
       </section>
 
+      <PaymentStrip payments={data.payments} title={t("landing.pay.title")} note={t("landing.pay.note")} />
       <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
       <Faqs questions={data.questions} title={t("landing.faq.title")} />
       <ClosingCta t={t} settings={props.settings} />

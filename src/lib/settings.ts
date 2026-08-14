@@ -22,6 +22,9 @@ export const settingDefinitions = {
   "site.faviconUrl": { group: "branding", type: "image", value: "" },
   "site.supportEmail": { group: "branding", type: "text", value: "support@novapanel.io" },
   "site.telegram": { group: "branding", type: "text", value: "" },
+  // Zalo is how this market actually reaches support; a phone number or a
+  // zalo.me link both work.
+  "site.zalo": { group: "branding", type: "text", value: "" },
   "site.whatsapp": { group: "branding", type: "text", value: "" },
   "site.facebook": { group: "branding", type: "text", value: "" },
 
@@ -33,6 +36,9 @@ export const settingDefinitions = {
   // shot, a photograph. Left empty the hero shows live order cards instead,
   // which needs no artwork and is true.
   "landing.heroImage": { group: "appearance", type: "image", value: "" },
+  // Panels here quote a rate per thousand; buyers here think in dong per
+  // follow. Which one leads is the operator's call.
+  "landing.priceUnit": { group: "appearance", type: "select", value: "perUnit", options: ["perUnit", "per1000"] },
   // Panels in this market put the sign-in box on the home page, because most
   // visitors are returning customers. Off gives the plain pair of buttons.
   "landing.heroLogin": { group: "appearance", type: "boolean", value: true },

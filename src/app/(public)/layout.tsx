@@ -5,6 +5,7 @@ import { getSetting } from "@/lib/settings";
 import { guardPanel } from "@/lib/tenancy";
 import PanelSuspended from "@/components/panel-suspended";
 import MaintenanceNotice from "@/components/maintenance-notice";
+import ContactDock from "@/components/landing/contact-dock";
 import { maintenanceState } from "@/lib/maintenance";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
@@ -29,6 +30,10 @@ export default async function PublicLayout({ children }: { children: React.React
       <SiteHeader ctx={ctx} />
       <main className="flex-1">{children}</main>
       <SiteFooter ctx={ctx} />
+      <ContactDock
+        settings={ctx.settings}
+        labels={{ zalo: ctx.t("landing.contact.zalo"), telegram: ctx.t("landing.contact.telegram") }}
+      />
     </div>
   );
 }

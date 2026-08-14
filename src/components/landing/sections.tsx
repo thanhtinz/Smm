@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
+import { displayMoney, type CurrencyInfo } from "@/lib/currency";
 import type { Quote, Question, PlatformLine } from "@/lib/landing";
 import type { LandingProps } from "./types";
 
@@ -17,7 +18,41 @@ import type { LandingProps } from "./types";
  * page, not a page of placeholders.
  */
 
-// -------------------------------------------------------------- platforms
+// ------------------------------------------------------------------ price
+
+/**
+ * A rate, in the words the reader thinks in.
+ *
+ * Panels quote per thousand because that is what the provider API deals in.
+ * Buyers in this market quote per follow — "60đ/follow", not "60.000đ/1000" —
+ * and reading a price they have to divide by a thousand is friction on the
+ * one number the page exists to show. Which one leads is set in admin.
+ */
+export function rateLabel(
+  ratePerThousand: number,
+  currency: CurrencyInfo,
+  locale: string,
+  settings: Record<string, unknown>,
+  t: LandingProps["t"],
+): { amount: string; unit: string } {
+  if (settings["landing.priceUnit"] === "per1000") {
+    return { amount: displayMoney(ratePerThousand, currency, locale), unit: t("landing.board.per") };
+  }
+
+  // Per-unit prices are a thousandth of the stored rate, so a currency that
+  // shows no decimals — VND — would round 1.200/1000 to "1đ" and lose the
+  // difference between two services. Per-unit always allows two, and trailing
+  // zeros are dropped so a round price still reads as a round price.
+  const each = (ratePerThousand / 1000) * (currency.rate || 1);
+  const value = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: Math.max(currency.decimals, 2),
+  }).format(each);
+  const amount = currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+  return { amount, unit: t("landing.board.perUnit") };
+}
+
+// --------------------------------------------------------------- platforms
 
 export function PlatformStrip({ platforms, label }: { platforms: PlatformLine[]; label: string }) {
   if (!platforms.length) return null;
@@ -218,6 +253,66 @@ export function Faqs({ questions, title }: { questions: Question[]; title: strin
         ))}
       </div>
     </section>
+  );
+}
+
+// --------------------------------------------------------------- payments
+
+export function PaymentStrip({
+  payments,
+  title,
+  note,
+}: {
+  payments: { id: string; name: string; icon: string }[];
+  title: string;
+  note: string;
+}) {
+  if (!payments.length) return null;
+
+  return (
+    <section className="container-page py-10">
+      <div className="card card-pad flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-6">
+        <div className="mr-auto">
+          <h2 className="font-semibold">{title}</h2>
+          <p className="muted mt-1 text-sm">{note}</p>
+        </div>
+        <ul className="flex flex-wrap gap-2">
+          {payments.map((m) => (
+            <li
+              key={m.id}
+              className="surface-2 flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm font-medium"
+            >
+              <span className="text-[var(--primary)]">
+                <Icon name={m.icon as IconName} size={17} />
+              </span>
+              {m.name}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+/** Refill and stated-time badges, both read off the platform's services. */
+export function QualityTags({ platform, t }: { platform: PlatformLine; t: LandingProps["t"] }) {
+  if (!platform.refill && !platform.timed) return null;
+
+  return (
+    <span className="flex flex-wrap gap-1.5">
+      {platform.refill && (
+        <span className="badge badge-success gap-1">
+          <Icon name="shield" size={12} />
+          {t("landing.tag.refill")}
+        </span>
+      )}
+      {platform.timed > 0 && (
+        <span className="badge badge-muted gap-1">
+          <Icon name="clock" size={12} />
+          {t("landing.tag.timed")}
+        </span>
+      )}
+    </span>
   );
 }
 

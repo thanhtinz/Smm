@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import { displayMoney } from "@/lib/currency";
 import Hero from "./hero";
-import { ClosingCta, Faqs, PlatformStrip, Quotes, StatTiles, Steps } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, PlatformStrip, QualityTags, Quotes, StatTiles, Steps, rateLabel } from "./sections";
 import type { LayoutProps } from "./types";
 
 /**
@@ -23,6 +22,7 @@ export default function PriceBoard(props: LayoutProps) {
   const { data, t, currency, locale } = props;
   const cheapest = [...data.platforms].sort((a, b) => a.from - b.from);
   const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const rate = (n: number) => rateLabel(n, currency, locale, props.settings, t);
 
   return (
     <>
@@ -65,15 +65,18 @@ export default function PriceBoard(props: LayoutProps) {
                         .map((c) => c.name)
                         .join(" · ")}
                     </span>
+                    <span className="mt-1.5 flex">
+                      <QualityTags platform={p} t={t} />
+                    </span>
                   </span>
                   <span className="muted hidden w-24 text-right font-mono text-sm sm:block">
                     {count.format(p.services)}
                   </span>
                   <span className="w-32 text-right sm:w-44">
                     <span className="block font-mono text-[1.35rem] leading-none font-bold">
-                      {displayMoney(p.from, currency, locale)}
+                      {rate(p.from).amount}
                     </span>
-                    <span className="muted mt-1 block text-[0.68rem]">{t("landing.board.per")}</span>
+                    <span className="muted mt-1 block text-[0.68rem]">{rate(p.from).unit}</span>
                   </span>
                   <span className="muted hidden transition-transform group-hover:translate-x-1 sm:block">
                     <Icon name="chevronRight" size={17} />
@@ -88,6 +91,7 @@ export default function PriceBoard(props: LayoutProps) {
       </section>
 
       <StatTiles data={data} t={t} />
+      <PaymentStrip payments={data.payments} title={t("landing.pay.title")} note={t("landing.pay.note")} />
       <Steps t={t} />
       <Quotes quotes={data.quotes} title={t("landing.quotes.title")} />
       <Faqs questions={data.questions} title={t("landing.faq.title")} />
