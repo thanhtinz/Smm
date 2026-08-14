@@ -19,7 +19,10 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
 
   const ticket = await db.ticket.findFirst({
     where: { id, userId: user.id },
-    include: { messages: { orderBy: { createdAt: "asc" }, include: { author: { select: { username: true } } } } },
+    include: {
+      mergedInto: { select: { id: true, publicId: true } },
+      messages: { orderBy: { createdAt: "asc" }, include: { author: { select: { username: true } } } },
+    },
   });
   if (!ticket) notFound();
 
@@ -39,6 +42,20 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         </div>
         <StatusBadge status={ticket.status} label={t(`support.status.${ticket.status}`)} />
       </div>
+
+      {/* The customer opened this one and will look for the answer here, so
+          the pointer comes before the thread rather than after it. */}
+      {ticket.mergedInto && (
+        <div className="alert alert-info" role="status">
+          <Icon name="layers" size={16} />
+          <span>
+            {t("support.merge.merged", { id: ticket.mergedInto.publicId })}{" "}
+            <Link href={`/dashboard/tickets/${ticket.mergedInto.id}`} className="font-medium underline">
+              {t("support.merge.openTarget", { id: ticket.mergedInto.publicId })}
+            </Link>
+          </span>
+        </div>
+      )}
 
       <TicketThread
         ticketId={ticket.id}

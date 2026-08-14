@@ -547,32 +547,38 @@ model Transaction {
 // ---------------------------------------------------------------------------
 
 model Ticket {
-  id         String          @id @default(cuid())
-  panelId    String          @default("")
-  panel      Panel           @relation("PanelTickets", fields: [panelId], references: [id], onDelete: Cascade)
-  publicId   Int
-  userId     String
-  user       User            @relation("TicketAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  id           String          @id @default(cuid())
+  panelId      String          @default("")
+  panel        Panel           @relation("PanelTickets", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId     Int
+  userId       String
+  user         User            @relation("TicketAuthor", fields: [userId], references: [id], onDelete: Cascade)
   /// The staff member holding this ticket. Null means nobody has claimed it.
   /// Cleared rather than cascaded when that account goes: the ticket outlives
   /// whoever was working it.
-  assigneeId String?
-  assignee   User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  subject    String
-  category   String          @default("general")
-  status     String          @default("open") // open | answered | pending | closed
+  assigneeId   String?
+  assignee     User?           @relation("TicketAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  subject      String
+  category     String          @default("general")
+  status       String          @default("open") // open | answered | pending | closed
   /// 0 low, 1 normal, 2 high, 3 urgent — a number so the queue sorts in SQL.
   /// Set by support, never by the customer. See src/lib/tickets.ts.
-  priority   Int             @default(1)
-  messages   TicketMessage[]
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+  priority     Int             @default(1)
+  /// Set when this ticket was folded into another. The row stays, because the
+  /// customer quoted its number and has to keep finding the conversation by it.
+  mergedIntoId String?
+  mergedInto   Ticket?         @relation("TicketMerge", fields: [mergedIntoId], references: [id], onDelete: SetNull)
+  mergedFrom   Ticket[]        @relation("TicketMerge")
+  messages     TicketMessage[]
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   @@unique([panelId, publicId])
   @@index([userId])
   @@index([panelId])
   @@index([panelId, priority, updatedAt])
   @@index([assigneeId])
+  @@index([mergedIntoId])
 }
 
 model TicketMessage {
