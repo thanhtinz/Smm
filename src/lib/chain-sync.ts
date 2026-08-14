@@ -4,6 +4,7 @@ import { runAsPanel } from "./tenancy";
 import { settleRefund, dispatchPendingOrders, syncOrderStatuses } from "./providers";
 import { billPanelRent } from "./billing";
 import { updateExchangeRates } from "./exchange";
+import { syncDueProviders } from "./provider-sync";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -162,5 +163,25 @@ export async function runSyncCycle() {
   const requests = await propagateRequestDecisions();
   const rent = await billPanelRent();
   const rates = await updateExchangeRates();
-  return { sent, synced, chain, requests, rent, rates, failures };
+
+  // Last: a repriced catalogue should not change what the orders dispatched a
+  // moment ago were charged at.
+  const catalogue = await syncDueProviders();
+  failures.push(...catalogue.filter((r) => r.error).map((r) => `${r.provider}: ${r.error}`));
+
+  return {
+    sent,
+    synced,
+    chain,
+    requests,
+    rent,
+    rates,
+    catalogue: catalogue.map((r) => ({
+      provider: r.provider,
+      repriced: r.repriced,
+      missing: r.missing,
+      alerts: r.alerts.length,
+    })),
+    failures,
+  };
 }

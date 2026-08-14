@@ -22,6 +22,8 @@ export type ServiceRow = {
   sourceCost: number;
   /** Hand-set price per tier id, empty where the tier percentage applies. */
   tierPrices: Record<string, string>;
+  /** Set when the sell price follows the provider's cost plus its markup. */
+  autoPrice: boolean;
   type: string;
   rate: number;
   providerRate: number;
@@ -438,6 +440,10 @@ function ServiceForm({
           </Field>
         </>
       )}
+
+      {/* Sits with the price because it decides who owns it: ticked, the
+          provider sync writes it; cleared, this field is the last word. */}
+      <Check name="autoPrice" label={labels.autoPrice} defaultChecked={row?.autoPrice ?? false} />
 
       {tiers.length > 0 && (
         <TierPrices
