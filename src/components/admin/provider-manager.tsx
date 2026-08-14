@@ -168,6 +168,7 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
       )}
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.name}` : labels.new}
         onClose={close}
@@ -205,7 +206,7 @@ function ProviderForm({
       )}
 
       <Field name="name" label={labels.name} error={state.fieldErrors?.name} required>
-        <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder="Upstream Panel" />
+        <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder={labels.egName} />
       </Field>
 
       <Field name="apiUrl" label={labels.apiUrl} error={state.fieldErrors?.apiUrl} required>

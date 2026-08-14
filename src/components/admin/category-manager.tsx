@@ -171,6 +171,7 @@ export default function CategoryManager({
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.name}` : labels.new}
         onClose={close}
@@ -234,7 +235,7 @@ function CategoryForm({
       </Field>
 
       <Field name="name" label={labels.name} error={state.fieldErrors?.name} required>
-        <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder="Instagram Followers" />
+        <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder={labels.egName} />
       </Field>
 
       <Field name="description" label={labels.description}>

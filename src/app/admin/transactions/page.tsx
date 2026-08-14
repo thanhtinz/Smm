@@ -63,6 +63,8 @@ export default async function AdminTransactionsPage({
           createdAt: fmtDate.format(r.createdAt),
         }))}
         labels={{
+          close: t("common.close"),
+          pagination: t("common.pagination"),
           empty: t("common.none"),
           id: t("order.id"),
           user: t("auth.username"),

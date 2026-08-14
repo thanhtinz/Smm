@@ -26,6 +26,8 @@ export default async function AdminCurrenciesPage() {
           rateUpdatedAt: c.rateUpdatedAt ? fmtWhen.format(c.rateUpdatedAt) : "",
         }))}
         labels={{
+          close: t("common.close"),
+          egName: t("eg.currencyName"),
           title: t("common.currency"),
           new: t("admin.new"),
           edit: t("admin.edit"),

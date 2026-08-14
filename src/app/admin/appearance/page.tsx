@@ -37,6 +37,8 @@ export default async function AdminAppearancePage() {
       <ThemeManager
         rows={rows}
         labels={{
+          close: t("common.close"),
+          egName: t("eg.themeName"),
           title: t("common.appearance"),
           new: t("admin.new"),
           edit: t("admin.edit"),

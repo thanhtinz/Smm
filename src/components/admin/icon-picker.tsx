@@ -14,11 +14,14 @@ export default function IconPicker({
   value,
   color,
   label,
+  searchLabel,
 }: {
   name: string;
   value: string;
   color?: string;
   label: string;
+  /** Passed in: a client component has no dictionary of its own. */
+  searchLabel: string;
 }) {
   const [selected, setSelected] = useState<string>(value);
   const [query, setQuery] = useState("");
@@ -36,9 +39,9 @@ export default function IconPicker({
         type="search"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search icons"
+        placeholder={searchLabel}
         className="field mb-2"
-        aria-label="Search icons"
+        aria-label={searchLabel}
       />
 
       <div className="grid max-h-44 grid-cols-8 gap-1.5 overflow-y-auto rounded-xl border border-[var(--border)] p-2">

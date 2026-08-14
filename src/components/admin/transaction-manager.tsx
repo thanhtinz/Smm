@@ -142,7 +142,7 @@ export default function TransactionManager({
       </div>
 
       {totalPages > 1 && (
-        <nav className="flex items-center justify-between" aria-label="Pagination">
+        <nav className="flex items-center justify-between" aria-label={labels.pagination}>
           <PageLink status={activeStatus} page={page - 1} disabled={page <= 1} icon="chevronLeft" />
           <span className="muted text-sm tabular-nums">
             {page} / {totalPages}

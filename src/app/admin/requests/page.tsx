@@ -70,6 +70,7 @@ export default async function AdminRequestsPage({
           createdAt: fmtDate.format(r.createdAt),
         }))}
         labels={{
+          close: t("common.close"),
           empty: t("common.none"),
           type: t("admin.type"),
           user: t("auth.username"),

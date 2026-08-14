@@ -120,6 +120,7 @@ export default function CouponManager({ rows, labels }: { rows: CouponRow[]; lab
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.code}` : labels.new}
         onClose={close}

@@ -150,7 +150,7 @@ export default async function AppShell({
 
         <main className="flex-1 px-4 py-6 pb-24 sm:px-6 lg:pb-10">{children}</main>
 
-        <MobileNav items={primaryMobile} />
+        <MobileNav items={primaryMobile} label={t("nav.primary")} />
       </div>
     </div>
   );

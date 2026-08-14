@@ -185,6 +185,7 @@ export default function CurrencyManager({
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.code}` : labels.new}
         onClose={close}
@@ -231,7 +232,7 @@ function CurrencyForm({
       </div>
 
       <Field name="name" label={labels.name}>
-        <TextInput name="name" defaultValue={row?.name} placeholder="US Dollar" />
+        <TextInput name="name" defaultValue={row?.name} placeholder={labels.egName} />
       </Field>
 
       <Field name="rate" label={labels.rate} error={state.fieldErrors?.rate} hint={labels.rateHint} required>

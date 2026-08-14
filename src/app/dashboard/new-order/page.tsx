@@ -63,6 +63,7 @@ export default async function NewOrderPage() {
       <h2 className="text-2xl font-bold tracking-tight">{t("dash.newOrder")}</h2>
 
       <OrderTabs
+        label={t("order.type")}
         tabs={[
           { key: "single", label: t("order.single"), icon: "cart" },
           { key: "mass", label: t("order.mass"), icon: "layers" },

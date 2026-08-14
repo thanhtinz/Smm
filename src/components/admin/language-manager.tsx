@@ -146,6 +146,7 @@ export default function LanguageManager({
       </div>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={creating || editing !== null}
         title={editing ? `${labels.edit} — ${editing.code}` : labels.new}
         onClose={close}
@@ -154,6 +155,7 @@ export default function LanguageManager({
       </EntityDrawer>
 
       <EntityDrawer
+        closeLabel={labels.close}
         open={translating !== null}
         title={`${labels.translations} — ${translating?.nativeName ?? ""}`}
         onClose={close}
@@ -205,11 +207,11 @@ function LanguageForm({
       </Field>
 
       <Field name="name" label={labels.name} required>
-        <TextInput name="name" defaultValue={row?.name} placeholder="Spanish" />
+        <TextInput name="name" defaultValue={row?.name} placeholder={labels.egName} />
       </Field>
 
       <Field name="nativeName" label={labels.nativeName} required>
-        <TextInput name="nativeName" defaultValue={row?.nativeName} placeholder="Español" />
+        <TextInput name="nativeName" defaultValue={row?.nativeName} placeholder={labels.egNative} />
       </Field>
 
       <div className="grid gap-4 sm:grid-cols-2">

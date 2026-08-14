@@ -47,6 +47,9 @@ export default async function AdminLanguagesPage() {
           translatedCount: covered[l.id] ?? 0,
         }))}
         labels={{
+          close: t("common.close"),
+          egNative: t("eg.nativeName"),
+          egName: t("eg.languageName"),
           title: t("common.language"),
           new: t("admin.new"),
           edit: t("admin.edit"),

@@ -30,6 +30,7 @@ export default async function AdminCouponsPage() {
           used: c._count.redemptions,
         }))}
         labels={{
+          close: t("common.close"),
           title: t("coupon.title"),
           new: t("admin.new"),
           edit: t("admin.edit"),

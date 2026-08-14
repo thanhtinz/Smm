@@ -40,7 +40,10 @@ export default function NotificationList({
   read: number;
   page: number;
   totalPages: number;
-  labels: Record<"title" | "empty" | "markAll" | "clearRead" | "confirmClear" | "unread" | "prev" | "next", string>;
+  labels: Record<
+    "title" | "empty" | "markAll" | "clearRead" | "confirmClear" | "unread" | "prev" | "next" | "pagination",
+    string
+  >;
 }) {
   const [pending, start] = useTransition();
 
@@ -94,7 +97,7 @@ export default function NotificationList({
       </div>
 
       {totalPages > 1 && (
-        <nav className="flex items-center justify-between" aria-label="Pagination">
+        <nav className="flex items-center justify-between" aria-label={labels.pagination}>
           <PageLink href={hrefFor(page - 1)} disabled={page <= 1} icon="chevronLeft" label={labels.prev} />
           <span className="muted text-sm tabular-nums">
             {page} / {totalPages}

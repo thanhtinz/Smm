@@ -11,15 +11,18 @@ import { isActive } from "@/components/nav-link";
  */
 export default function MobileNav({
   items,
+  label,
 }: {
   items: { href: string; label: string; icon: IconName; exact?: boolean }[];
+  /** What this navigation is, for a screen reader. */
+  label: string;
 }) {
   const pathname = usePathname();
   const visible = items.slice(0, 5);
 
   return (
     <nav
-      aria-label="Primary"
+      aria-label={label}
       className="fixed inset-x-0 bottom-0 z-40 border-t border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_94%,transparent)] backdrop-blur-xl lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >

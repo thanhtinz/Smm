@@ -60,6 +60,7 @@ export default async function AdminOrdersPage({
   const fmtDay = { format: dates.day };
 
   const labels: Record<string, string> = {
+    close: t("common.close"),
     empty: t("common.none"),
     id: t("order.id"),
     user: t("auth.username"),
@@ -157,7 +158,7 @@ export default async function AdminOrdersPage({
       />
 
       {totalPages > 1 && (
-        <nav className="flex items-center justify-between" aria-label="Pagination">
+        <nav className="flex items-center justify-between" aria-label={t("common.pagination")}>
           <PageLink href={buildPage(status, q, page - 1)} disabled={page <= 1} icon="chevronLeft" />
           <span className="muted text-sm tabular-nums">
             {page} / {totalPages}

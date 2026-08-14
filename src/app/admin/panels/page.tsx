@@ -95,6 +95,7 @@ export default async function AdminPanelsPage() {
           })),
         }))}
         labels={{
+          close: t("common.close"),
           title: t("panel.title"),
           new: t("panel.new"),
           create: t("panel.create"),

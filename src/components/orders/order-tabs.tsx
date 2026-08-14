@@ -10,15 +10,18 @@ import { Icon, type IconName } from "@/components/icons";
 export default function OrderTabs({
   tabs,
   children,
+  label,
 }: {
   tabs: { key: string; label: string; icon: IconName }[];
   children: Record<string, React.ReactNode>;
+  /** What the tablist is, for a screen reader. */
+  label: string;
 }) {
   const [active, setActive] = useState(tabs[0].key);
 
   return (
     <div className="space-y-5">
-      <div role="tablist" aria-label="Order type" className="flex gap-1.5 rounded-full border border-[var(--border)] p-1">
+      <div role="tablist" aria-label={label} className="flex gap-1.5 rounded-full border border-[var(--border)] p-1">
         {tabs.map((tab) => (
           <button
             key={tab.key}

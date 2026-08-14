@@ -56,6 +56,7 @@ export default async function AdminTiersPage() {
           manualPrices: x._count.prices,
         }))}
         labels={{
+          close: t("common.close"),
           title: t("tier.title"),
           new: t("tier.new"),
           edit: t("admin.edit"),
