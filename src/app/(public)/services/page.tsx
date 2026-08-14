@@ -10,7 +10,7 @@ import ServiceSearch from "@/components/services/service-search";
 
 export const metadata: Metadata = { title: "Services" };
 
-type Search = { platform?: string; q?: string };
+type Search = { platform?: string; category?: string; q?: string };
 
 export default async function ServicesPage({ searchParams }: { searchParams: Promise<Search> }) {
   const params = await searchParams;
@@ -29,6 +29,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
     where: {
       visible: true,
       ...(activePlatform ? { platformId: activePlatform.id } : {}),
+      // The catalogue landing links a category directly, so arriving that way
+      // opens on that one rather than on the whole platform.
+      ...(params.category ? { id: params.category } : {}),
       services: { some: { enabled: true, ...(query ? { name: { contains: query } } : {}) } },
     },
     orderBy: [{ position: "asc" }, { name: "asc" }],

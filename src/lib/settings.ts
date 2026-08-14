@@ -29,7 +29,12 @@ export const settingDefinitions = {
   "appearance.defaultTheme": { group: "appearance", type: "text", value: "aurora" },
   "appearance.defaultColorMode": { group: "appearance", type: "select", value: "dark", options: ["dark", "light", "system"] },
   "appearance.allowUserTheme": { group: "appearance", type: "boolean", value: true },
-  "appearance.landingLayout": { group: "appearance", type: "select", value: "spotlight", options: ["spotlight", "editorial", "minimal"] },
+  "appearance.landingLayout": {
+    group: "appearance",
+    type: "select",
+    value: "priceBoard",
+    options: ["priceBoard", "orderFirst", "proof", "editorial", "catalogue"],
+  },
 
   // --- Localisation -------------------------------------------------------
   "locale.default": { group: "locale", type: "text", value: "vi" },

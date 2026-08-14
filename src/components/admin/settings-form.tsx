@@ -17,6 +17,8 @@ export type SettingField = {
   key: string;
   type: string;
   options?: string[];
+  /** What each option is called. Missing entries show the stored value. */
+  optionLabels?: Record<string, string>;
   value: unknown;
 };
 
@@ -109,7 +111,7 @@ function SettingControl({ field, error }: { field: SettingField; error?: string 
         <select id={field.key} name={field.key} className="field" defaultValue={String(field.value)}>
           {(field.options ?? []).map((o) => (
             <option key={o} value={o}>
-              {o}
+              {field.optionLabels?.[o] ?? o}
             </option>
           ))}
         </select>
