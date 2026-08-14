@@ -8,6 +8,8 @@ import { displayMoney } from "@/lib/currency";
 import TicketThread from "@/components/tickets/ticket-thread";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
+import PriorityPicker from "@/components/tickets/priority-picker";
+import { TICKET_PRIORITIES, priorityKey, priorityTone } from "@/lib/tickets";
 
 export const metadata: Metadata = { title: "Ticket" };
 
@@ -27,6 +29,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
   if (!ticket) notFound();
 
   const fmtDate = { format: dates.stamp };
+  const tone = priorityTone(ticket.priority);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -42,7 +45,21 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
             #{ticket.publicId} · {t(`support.category.${ticket.category}`)}
           </p>
         </div>
-        <StatusBadge status={ticket.status} label={t(`support.status.${ticket.status}`)} />
+        <div className="flex items-center gap-2">
+          {tone && (
+            <span className={`badge badge-${tone}`}>{t(`support.priority.${priorityKey(ticket.priority)}`)}</span>
+          )}
+          <StatusBadge status={ticket.status} label={t(`support.status.${ticket.status}`)} />
+        </div>
+      </div>
+
+      <div className="card card-pad">
+        <PriorityPicker
+          ticketId={ticket.id}
+          value={priorityKey(ticket.priority)}
+          labels={{ title: t("support.priority.title"), saved: t("admin.saved") }}
+          options={[...TICKET_PRIORITIES].reverse().map((p) => ({ key: p.key, label: t(`support.priority.${p.key}`) }))}
+        />
       </div>
 
       <div className="card card-pad flex flex-wrap gap-x-6 gap-y-2 text-sm">

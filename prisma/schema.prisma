@@ -555,6 +555,9 @@ model Ticket {
   subject   String
   category  String          @default("general")
   status    String          @default("open") // open | answered | pending | closed
+  /// 0 low, 1 normal, 2 high, 3 urgent — a number so the queue sorts in SQL.
+  /// Set by support, never by the customer. See src/lib/tickets.ts.
+  priority  Int             @default(1)
   messages  TicketMessage[]
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt
@@ -562,6 +565,7 @@ model Ticket {
   @@unique([panelId, publicId])
   @@index([userId])
   @@index([panelId])
+  @@index([panelId, priority, updatedAt])
 }
 
 model TicketMessage {
