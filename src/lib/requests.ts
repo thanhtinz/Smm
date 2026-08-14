@@ -31,9 +31,11 @@ async function forwardTarget(orderId: string): Promise<Forward | null> {
 
   const order = await db.order.findUnique({
     where: { id: orderId },
-    select: { id: true, providerOrderId: true, service: { select: { providerId: true } } },
+    select: { id: true, providerOrderId: true, providerId: true, service: { select: { providerId: true } } },
   });
-  if (order?.providerOrderId && order.service.providerId) return { kind: "provider", orderId: order.id };
+  if (order?.providerOrderId && (order.providerId ?? order.service.providerId)) {
+    return { kind: "provider", orderId: order.id };
+  }
   return null;
 }
 
@@ -45,9 +47,10 @@ async function forwardRequest(
   if (target.kind === "provider") {
     const order = await db.order.findUniqueOrThrow({
       where: { id: target.orderId },
-      include: { service: { include: { provider: true } } },
+      include: { provider: true, service: { include: { provider: true } } },
     });
-    const provider = order.service.provider;
+    // Whoever took the order is who can refill or cancel it.
+    const provider = order.provider ?? order.service.provider;
     if (!provider?.enabled) return { error: "The provider for this order is disabled." };
 
     const result =

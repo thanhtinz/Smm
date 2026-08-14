@@ -16,6 +16,9 @@ export type ServiceRow = {
   categoryId: string;
   providerId: string | null;
   providerServiceId: string;
+  /** Where an order goes when the provider above refuses it. */
+  backupProviderId: string | null;
+  backupProviderServiceId: string;
   /** Set on a child panel: the parent's service this one is bought from. */
   sourceServiceId: string;
   /** What the parent charges for it — the cost side of the margin. */
@@ -438,6 +441,29 @@ function ServiceForm({
           <Field name="providerServiceId" label={labels.providerServiceId}>
             <TextInput name="providerServiceId" defaultValue={row?.providerServiceId} />
           </Field>
+
+          {/* Tried only when the one above refuses, so an outage upstream
+              does not become a queue of orders nobody looks at. */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field name="backupProviderId" label={labels.backupProvider} hint={labels.backupHint}>
+              <select
+                id="backupProviderId"
+                name="backupProviderId"
+                className="field"
+                defaultValue={row?.backupProviderId ?? ""}
+              >
+                <option value="">{labels.noProvider}</option>
+                {providers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field name="backupProviderServiceId" label={labels.backupServiceId}>
+              <TextInput name="backupProviderServiceId" defaultValue={row?.backupProviderServiceId} />
+            </Field>
+          </div>
         </>
       )}
 
