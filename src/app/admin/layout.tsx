@@ -94,6 +94,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/announcements", label: t("announcement.title"), icon: "megaphone" },
         { href: "/admin/pages", label: t("page.title"), icon: "document" },
         { href: "/admin/landing", label: t("landing.admin.title"), icon: "layers" },
+        { href: "/admin/tools", label: t("tools.title"), icon: "code" },
       ],
     },
     {

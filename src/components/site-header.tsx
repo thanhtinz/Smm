@@ -12,6 +12,9 @@ export default function SiteHeader({ ctx }: { ctx: AppContext }) {
   const links = [
     { href: "/", label: t("nav.home") },
     { href: "/services", label: t("nav.services") },
+    // Only where the operator kept the hub — a header link to a 404 is worse
+    // than no link.
+    ...(settings["tools.enabled"] === false ? [] : [{ href: "/tools", label: t("tools.title") }]),
     { href: "/api-docs", label: t("nav.api") },
     { href: "/p/terms", label: t("nav.terms") },
   ];
