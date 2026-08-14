@@ -9,6 +9,7 @@ import { syncDueProviders } from "./provider-sync";
 import { runAutoDecisions } from "./auto-orders";
 import { notification, requestKey } from "./notify";
 import { englishMessage } from "./fault";
+import { sendPendingNotificationMails } from "./notify-mail";
 import { withSettled } from "./orders";
 
 /**
@@ -180,6 +181,11 @@ export async function runSyncCycle() {
   const chain = await propagateChainStatuses();
   const requests = await propagateRequestDecisions();
   const rent = await billPanelRent();
+
+  // Last: everything above may have written notifications, and each of them
+  // is a candidate for an email on this same pass rather than the next one.
+  const mailed = await sendPendingNotificationMails();
+  failures.push(...mailed.failures);
   const rates = await updateExchangeRates();
 
   // Last: a repriced catalogue should not change what the orders dispatched a
@@ -194,6 +200,7 @@ export async function runSyncCycle() {
   return {
     sent,
     synced,
+    mailed: mailed.sent,
     chain,
     requests,
     rent,

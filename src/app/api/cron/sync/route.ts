@@ -21,6 +21,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     dispatched: result.sent,
     updated: result.synced,
+    mailed: result.mailed,
     chain: result.chain,
     requests: result.requests,
     catalogue: result.catalogue,
