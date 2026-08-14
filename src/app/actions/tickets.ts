@@ -9,6 +9,7 @@ import { nextPublicId } from "@/lib/ids";
 import { notification } from "@/lib/notify";
 import { readerMessages } from "@/lib/context";
 import { OPEN_TICKET_STATUSES, priorityKey, priorityValue } from "@/lib/tickets";
+import { STAFF_ROLES } from "@/lib/two-factor";
 
 export type TicketState = {
   error?: string;
@@ -81,8 +82,15 @@ export async function replyTicketAction(_prev: TicketState, form: FormData): Pro
     }),
     db.ticket.update({
       where: { id: ticket.id },
-      // A staff reply is "answered"; a customer reply puts it back in the queue.
-      data: { status: isStaff ? "answered" : "open", updatedAt: new Date() },
+      data: {
+        // A staff reply is "answered"; a customer reply puts it back in the queue.
+        status: isStaff ? "answered" : "open",
+        updatedAt: new Date(),
+        // Answering an unclaimed ticket claims it. Whoever replied is working
+        // it whether or not they thought to say so, and the alternative is a
+        // queue where "unassigned" stops meaning "nobody has looked".
+        ...(isStaff && !ticket.assigneeId ? { assigneeId: user.id } : {}),
+      },
     }),
   ]);
 
@@ -150,6 +158,54 @@ export async function setTicketPriorityAction(ticketId: string, priority: string
   });
   await logActivity(user.id, "ticket.priority", `#${ticket.publicId} -> ${priorityKey(value)}`);
 
+  revalidatePath("/admin/tickets");
+  revalidatePath(`/admin/tickets/${ticket.id}`);
+  return {};
+}
+
+export async function setTicketAssigneeAction(ticketId: string, assigneeId: string): Promise<TicketState> {
+  const t = await readerMessages();
+  const user = await getCurrentUser();
+  if (!user) return { error: t("err.sessionShort") };
+  if (!STAFF_ROLES.has(user.role)) return { error: t("err.supportOnly") };
+
+  const ticket = await db.ticket.findFirst({ where: { id: ticketId } });
+  if (!ticket) return { error: t("err.ticketGone") };
+
+  // The empty string is "nobody", which is a legitimate thing to set — a
+  // ticket handed back to the queue is not the same as one nobody touched.
+  let assignee: { id: string; username: string } | null = null;
+  if (assigneeId) {
+    // findFirst, so the panel filter applies: one panel's staff can never be
+    // put on another panel's ticket.
+    const found = await db.user.findFirst({
+      where: { id: assigneeId, role: { in: [...STAFF_ROLES] } },
+      select: { id: true, username: true },
+    });
+    if (!found) return { error: t("err.assigneeUnknown") };
+    assignee = found;
+  }
+
+  // updatedAt carries the queue order, so claiming a ticket must not move it.
+  await db.ticket.update({
+    where: { id: ticket.id },
+    data: { assigneeId: assignee?.id ?? null, updatedAt: ticket.updatedAt },
+  });
+
+  // Handing someone else a ticket is news to them; claiming one yourself is
+  // not, so no notification goes out for that.
+  if (assignee && assignee.id !== user.id) {
+    await db.notification.create({
+      data: notification({
+        userId: assignee.id,
+        key: "ticket.assigned",
+        params: { id: ticket.publicId, subject: ticket.subject },
+        href: `/admin/tickets/${ticket.id}`,
+      }),
+    });
+  }
+
+  await logActivity(user.id, "ticket.assign", `#${ticket.publicId} -> ${assignee?.username ?? "—"}`);
   revalidatePath("/admin/tickets");
   revalidatePath(`/admin/tickets/${ticket.id}`);
   return {};

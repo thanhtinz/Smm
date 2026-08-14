@@ -10,3 +10,6 @@ export const PANEL_HOST_HEADER = "x-panel-host";
 export function normaliseHost(raw: string): string {
   return raw.split(",")[0].trim().toLowerCase().replace(/:\d+$/, "");
 }
+
+/** The path being served, stamped by middleware for the same reason. */
+export const PATHNAME_HEADER = "x-pathname";

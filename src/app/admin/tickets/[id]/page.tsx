@@ -8,8 +8,9 @@ import { displayMoney } from "@/lib/currency";
 import TicketThread from "@/components/tickets/ticket-thread";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
-import PriorityPicker from "@/components/tickets/priority-picker";
+import TicketTriage from "@/components/tickets/ticket-triage";
 import { TICKET_PRIORITIES, priorityKey, priorityTone } from "@/lib/tickets";
+import { STAFF_ROLES } from "@/lib/two-factor";
 
 export const metadata: Metadata = { title: "Ticket" };
 
@@ -18,6 +19,12 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
   const ctx = await getAppContext();
   const { t, locale, currency, timezone } = ctx;
   const dates = dateFormats(locale, timezone);
+
+  const staff = await db.user.findMany({
+    where: { role: { in: [...STAFF_ROLES] } },
+    orderBy: { username: "asc" },
+    select: { id: true, username: true },
+  });
 
   const ticket = await db.ticket.findUnique({
     where: { id },
@@ -54,11 +61,18 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
       </div>
 
       <div className="card card-pad">
-        <PriorityPicker
+        <TicketTriage
           ticketId={ticket.id}
-          value={priorityKey(ticket.priority)}
-          labels={{ title: t("support.priority.title"), saved: t("admin.saved") }}
-          options={[...TICKET_PRIORITIES].reverse().map((p) => ({ key: p.key, label: t(`support.priority.${p.key}`) }))}
+          priority={priorityKey(ticket.priority)}
+          assignee={ticket.assigneeId ?? ""}
+          labels={{
+            priority: t("support.priority.title"),
+            assignee: t("support.assignee.title"),
+            nobody: t("support.assignee.none"),
+            saved: t("admin.saved"),
+          }}
+          priorities={[...TICKET_PRIORITIES].reverse().map((p) => ({ key: p.key, label: t(`support.priority.${p.key}`) }))}
+          staff={staff.map((u) => ({ key: u.id, label: u.username }))}
         />
       </div>
 
