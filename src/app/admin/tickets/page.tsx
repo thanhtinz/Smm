@@ -24,6 +24,9 @@ export default async function AdminTicketsPage({
   const who = params.who === "mine" || params.who === "unclaimed" ? params.who : undefined;
 
   const where = {
+    // A merged ticket is a duplicate whose messages now live elsewhere, so it
+    // is not work anybody should be handed. It stays reachable by its number.
+    mergedIntoId: null,
     ...(status ? { status } : {}),
     ...(priority ? { priority: priority.value } : {}),
     ...(who === "mine" ? { assigneeId: ctx.user!.id } : {}),
@@ -44,10 +47,10 @@ export default async function AdminTicketsPage({
         _count: { select: { messages: true } },
       },
     }),
-    db.ticket.groupBy({ by: ["status"], _count: true }),
-    db.ticket.groupBy({ by: ["priority"], _count: true }),
-    db.ticket.count({ where: { assigneeId: ctx.user!.id } }),
-    db.ticket.count({ where: { assigneeId: null } }),
+    db.ticket.groupBy({ by: ["status"], where: { mergedIntoId: null }, _count: true }),
+    db.ticket.groupBy({ by: ["priority"], where: { mergedIntoId: null }, _count: true }),
+    db.ticket.count({ where: { assigneeId: ctx.user!.id, mergedIntoId: null } }),
+    db.ticket.count({ where: { assigneeId: null, mergedIntoId: null } }),
   ]);
 
   const fmtDate = { format: dates.stamp };

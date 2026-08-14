@@ -210,3 +210,64 @@ export async function setTicketAssigneeAction(ticketId: string, assigneeId: stri
   revalidatePath(`/admin/tickets/${ticket.id}`);
   return {};
 }
+
+export async function mergeTicketAction(sourceId: string, targetId: string): Promise<TicketState> {
+  const t = await readerMessages();
+  const user = await getCurrentUser();
+  if (!user) return { error: t("err.sessionShort") };
+  if (!STAFF_ROLES.has(user.role)) return { error: t("err.supportOnly") };
+  if (sourceId === targetId) return { error: t("err.mergeSelf") };
+
+  const [source, target] = await Promise.all([
+    db.ticket.findFirst({ where: { id: sourceId }, include: { _count: { select: { messages: true } } } }),
+    db.ticket.findFirst({ where: { id: targetId } }),
+  ]);
+  if (!source || !target) return { error: t("err.ticketGone") };
+
+  // The one rule that matters. Two customers' threads in one ticket would
+  // show each of them the other's messages, and a support desk is exactly
+  // where people paste order links and transaction references.
+  if (source.userId !== target.userId) return { error: t("err.mergeOtherUser") };
+
+  // Merging into something already merged would leave the thread one hop
+  // further away than the pointer says.
+  if (target.mergedIntoId) return { error: t("err.mergeIntoMerged") };
+  if (source.mergedIntoId) return { error: t("err.mergeAlready") };
+
+  await db.$transaction([
+    // The messages move, so the conversation reads in one place.
+    db.ticketMessage.updateMany({ where: { ticketId: source.id }, data: { ticketId: target.id } }),
+    db.ticket.update({
+      where: { id: source.id },
+      data: { mergedIntoId: target.id, status: "closed" },
+    }),
+    db.ticket.update({
+      where: { id: target.id },
+      data: {
+        // Folding a live question into a closed ticket has to reopen it,
+        // otherwise the merge quietly buries the thing the customer asked.
+        ...(target.status === "closed" ? { status: "open" } : {}),
+        // Whichever was more urgent decides, because the merged ticket now
+        // carries both questions.
+        priority: Math.max(source.priority, target.priority),
+        updatedAt: new Date(),
+      },
+    }),
+  ]);
+
+  await db.notification.create({
+    data: notification({
+      userId: source.userId,
+      key: "ticket.merged",
+      params: { id: source.publicId, into: target.publicId },
+      href: `/dashboard/tickets/${target.id}`,
+    }),
+  });
+
+  await logActivity(user.id, "ticket.merge", `#${source.publicId} -> #${target.publicId}`);
+  revalidatePath("/admin/tickets");
+  revalidatePath(`/admin/tickets/${source.id}`);
+  revalidatePath(`/admin/tickets/${target.id}`);
+  revalidatePath("/dashboard/tickets");
+  return {};
+}
