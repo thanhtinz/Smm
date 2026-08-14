@@ -192,45 +192,74 @@ export function normaliseStatus(raw: string | undefined): string | null {
  */
 export async function dispatchPendingOrders(limit = 25) {
   const orders = await db.order.findMany({
-    where: { status: "pending", providerOrderId: "", service: { provider: { enabled: true } } },
+    where: { status: "pending", providerOrderId: "", service: { providerId: { not: null } } },
     orderBy: { createdAt: "asc" },
     take: limit,
-    include: { service: { include: { provider: true } } },
+    include: { service: { include: { provider: true, backupProvider: true } } },
   });
 
   let sent = 0;
   const failures: string[] = [];
 
   for (const order of orders) {
-    const provider = order.service.provider;
-    if (!provider || !order.service.providerServiceId) continue;
+    // Primary first, then the backup. A provider that is switched off counts
+    // as a refusal, which is the point of naming a second one.
+    const routes = [
+      { provider: order.service.provider, serviceId: order.service.providerServiceId, backup: false },
+      {
+        provider: order.service.backupProvider,
+        serviceId: order.service.backupProviderServiceId,
+        backup: true,
+      },
+    ].filter((r) => r.provider?.enabled && r.serviceId);
 
-    const result = await placeProviderOrder(provider, {
-      service: order.service.providerServiceId,
-      link: order.link,
-      quantity: order.quantity,
-      comments: order.comments,
-      runs: order.runs,
-      interval: order.interval,
-      posts: order.posts,
-      minPerPost: order.minPerPost,
-      maxPerPost: order.maxPerPost,
-      delay: order.delay,
-      expiry: order.expiry,
-    });
+    if (routes.length === 0) continue;
 
-    if (!result.ok) {
-      failures.push(`#${order.publicId}: ${result.error}`);
-      // Recorded on the order so an operator can see why it is still queued.
-      await db.order.update({ where: { id: order.id }, data: { note: result.error } });
-      continue;
+    const refusals: string[] = [];
+    let placed = false;
+
+    for (const route of routes) {
+      const result = await placeProviderOrder(route.provider!, {
+        service: route.serviceId,
+        link: order.link,
+        quantity: order.quantity,
+        comments: order.comments,
+        runs: order.runs,
+        interval: order.interval,
+        posts: order.posts,
+        minPerPost: order.minPerPost,
+        maxPerPost: order.maxPerPost,
+        delay: order.delay,
+        expiry: order.expiry,
+      });
+
+      if (!result.ok) {
+        refusals.push(`${route.provider!.name}: ${result.error}`);
+        continue;
+      }
+
+      await db.order.update({
+        where: { id: order.id },
+        data: {
+          providerOrderId: String(result.data.order),
+          // Remembered so status, refill and cancel go back to whoever took
+          // it, not to whichever provider the service points at later.
+          providerId: route.provider!.id,
+          status: "processing",
+          note: route.backup ? `Sent to the backup provider ${route.provider!.name}` : "",
+        },
+      });
+      sent += 1;
+      placed = true;
+      break;
     }
 
-    await db.order.update({
-      where: { id: order.id },
-      data: { providerOrderId: String(result.data.order), status: "processing", note: "" },
-    });
-    sent += 1;
+    if (!placed) {
+      const reason = refusals.join(" | ");
+      failures.push(`#${order.publicId}: ${reason}`);
+      // Recorded on the order so an operator can see why it is still queued.
+      await db.order.update({ where: { id: order.id }, data: { note: reason } });
+    }
   }
 
   return { sent, failures };
@@ -242,26 +271,26 @@ export async function syncOrderStatuses(limit = 100) {
     where: {
       providerOrderId: { not: "" },
       status: { in: ["pending", "processing", "inprogress"] },
-      service: { provider: { enabled: true } },
     },
     orderBy: { updatedAt: "asc" },
     take: limit,
-    include: { service: { include: { provider: true } } },
+    include: { provider: true, service: { include: { provider: true } } },
   });
 
-  // One request per provider rather than per order.
+  // One request per provider rather than per order, keyed by whoever took the
+  // order. Orders placed before that was recorded fall back to the service.
   const byProvider = new Map<string, typeof orders>();
   for (const order of orders) {
-    const id = order.service.providerId;
-    if (!id) continue;
-    byProvider.set(id, [...(byProvider.get(id) ?? []), order]);
+    const provider = order.provider ?? order.service.provider;
+    if (!provider?.enabled) continue;
+    byProvider.set(provider.id, [...(byProvider.get(provider.id) ?? []), order]);
   }
 
   let updated = 0;
   const failures: string[] = [];
 
   for (const group of byProvider.values()) {
-    const provider = group[0].service.provider!;
+    const provider = (group[0].provider ?? group[0].service.provider)!;
     const result = await fetchProviderStatuses(
       provider,
       group.map((o) => o.providerOrderId)

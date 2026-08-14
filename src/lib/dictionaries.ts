@@ -299,6 +299,9 @@ export const en = {
   "service.typeCustomComments": "Custom comments",
   "service.typeSubscription": "Subscription",
   "service.autoPrice": "Follow the provider price",
+  "service.backupProvider": "Backup provider",
+  "service.backupHint": "Tried only when the first one refuses",
+  "service.backupServiceId": "Backup service id",
 
   "announcement.title": "Announcements",
   "announcement.new": "New announcement",
@@ -823,6 +826,9 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "service.typeCustomComments": "Bình luận tự soạn",
   "service.typeSubscription": "Theo dõi bài mới",
   "service.autoPrice": "Giá bán chạy theo giá nhà cung cấp",
+  "service.backupProvider": "NCC dự phòng",
+  "service.backupHint": "Chỉ dùng khi NCC chính từ chối",
+  "service.backupServiceId": "Mã dịch vụ bên NCC dự phòng",
 
   "announcement.title": "Thông báo chung",
   "announcement.new": "Tạo thông báo",

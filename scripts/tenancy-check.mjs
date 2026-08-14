@@ -43,6 +43,8 @@ const EDGES = [
   ["category", "platformId", "platform"],
   ["service", "categoryId", "category"],
   ["service", "providerId", "provider"],
+  ["service", "backupProviderId", "provider"],
+  ["order", "providerId", "provider"],
   ["order", "userId", "user"],
   ["order", "serviceId", "service"],
   ["orderRequest", "orderId", "order"],

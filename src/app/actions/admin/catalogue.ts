@@ -174,6 +174,8 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     categoryId,
     providerId: providerId || null,
     providerServiceId: String(form.get("providerServiceId") ?? "").trim(),
+    backupProviderId: String(form.get("backupProviderId") ?? "").trim() || null,
+    backupProviderServiceId: String(form.get("backupProviderServiceId") ?? "").trim(),
     description: String(form.get("description") ?? "").trim(),
     type: SERVICE_TYPES.has(String(form.get("type"))) ? String(form.get("type")) : "default",
     rate,
