@@ -22,6 +22,8 @@ export type SyncReport = {
   created: number;
   updated: number;
   repriced: number;
+  /** How many alternative suppliers changed price, which changes routing. */
+  repricedRoutes: number;
   missing: number;
   returned: number;
   /** Changes worth a human look, in the order they were found. Each is the
@@ -58,6 +60,7 @@ export async function syncProviderCatalogue(
     created: 0,
     updated: 0,
     repriced: 0,
+    repricedRoutes: 0,
     missing: 0,
     returned: 0,
     alerts: [],
@@ -79,6 +82,18 @@ export async function syncProviderCatalogue(
   }
 
   const ours = await db.service.findMany({ where: { providerId: provider.id } });
+
+  // Costs move at this provider for every service routed through it, not only
+  // the ones that name it as their first choice.
+  const routes = await db.serviceRoute.findMany({ where: { providerId: provider.id } });
+  for (const route of routes) {
+    const row = upstream.get(route.providerServiceId);
+    const cost = row ? Number(row.rate) || 0 : 0;
+    if (cost > 0 && cost !== route.cost) {
+      await db.serviceRoute.update({ where: { id: route.id }, data: { cost } });
+      report.repricedRoutes += 1;
+    }
+  }
 
   for (const service of ours) {
     const row = upstream.get(service.providerServiceId);

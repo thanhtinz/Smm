@@ -44,6 +44,8 @@ const EDGES = [
   ["service", "categoryId", "category"],
   ["service", "providerId", "provider"],
   ["service", "backupProviderId", "provider"],
+  ["serviceRoute", "serviceId", "service"],
+  ["serviceRoute", "providerId", "provider"],
   ["order", "providerId", "provider"],
   ["order", "userId", "user"],
   ["order", "serviceId", "service"],
@@ -85,7 +87,7 @@ async function checkNoOrphans() {
   console.log("\nNo row left with the placeholder panelId");
   const models = [
     "setting", "counter", "user", "session", "authToken", "recoveryCode", "activityLog", "media", "platform", "category",
-    "provider", "service", "order", "orderRequest", "paymentMethod", "transaction", "ticket",
+    "provider", "service", "serviceRoute", "order", "orderRequest", "paymentMethod", "transaction", "ticket",
     "ticketMessage", "notification", "coupon", "couponRedemption", "referralEarning",
     "announcement", "page", "userTier", "tierPrice",
   ];

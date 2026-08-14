@@ -5,6 +5,7 @@ import ServiceManager from "@/components/admin/service-manager";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
 import { priceServices, resolveTier } from "@/lib/pricing";
 import { displayMoney } from "@/lib/currency";
+import { orderRoutes } from "@/lib/routing";
 
 export const metadata: Metadata = { title: "Services" };
 
@@ -18,7 +19,12 @@ export default async function AdminServicesPage() {
   const [services, categories, platforms, providers, tiers] = await Promise.all([
     db.service.findMany({
       orderBy: [{ position: "asc" }, { publicId: "asc" }],
-      include: { tierPrices: { select: { tierId: true, rate: true } } },
+      include: {
+        tierPrices: { select: { tierId: true, rate: true } },
+        routes: {
+          include: { provider: { select: { id: true, name: true, enabled: true, balance: true, lastSyncAt: true } } },
+        },
+      },
     }),
     db.category.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
     db.platform.findMany({ orderBy: [{ position: "asc" }, { name: "asc" }] }),
@@ -66,6 +72,19 @@ export default async function AdminServicesPage() {
           autoPrice: s.autoPrice,
           type: s.type,
           target: s.target,
+          // Ordered here the same way dispatch will order them, so the list an
+          // operator reads is the list that will actually be tried.
+          routes: orderRoutes(s.routes).map((r) => ({
+            id: s.routes.find((row) => row.providerId === r.providerId)!.id,
+            providerId: r.providerId,
+            providerName: r.providerName,
+            providerServiceId: r.providerServiceId,
+            cost: r.cost,
+            enabled: s.routes.find((row) => row.providerId === r.providerId)!.enabled,
+            skipped: r.skipped ?? "",
+            primary: r.providerId === s.providerId,
+            costLabel: r.cost > 0 ? displayMoney(r.cost, ctx.currency, ctx.locale) : t("route.unknownCost"),
+          })),
           rate: s.rate,
           providerRate: s.providerRate,
           min: s.min,
@@ -94,6 +113,23 @@ export default async function AdminServicesPage() {
           decimals: ctx.currency.decimals,
           rate: ctx.currency.rate,
           locale: ctx.locale,
+        }}
+        routeLabels={{
+          title: t("route.title"),
+          hint: t("route.hint"),
+          add: t("route.add"),
+          provider: t("route.provider"),
+          serviceId: t("route.serviceId"),
+          cost: t("route.cost"),
+          empty: t("route.empty"),
+          primary: t("route.primary"),
+          balanceOut: t("route.balanceOut"),
+          providerOff: t("route.providerOff"),
+          enabled: t("admin.enabled"),
+          delete: t("admin.delete"),
+          confirmDelete: t("admin.confirmDelete"),
+          save: t("common.save"),
+          cancel: t("common.cancel"),
         }}
         labels={{
           close: t("common.close"),

@@ -6,6 +6,7 @@ import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import { Icon } from "@/components/icons";
+import RouteEditor, { type RouteRow } from "@/components/admin/route-editor";
 import PlatformMark from "@/components/platform-mark";
 
 export type ServiceRow = {
@@ -29,6 +30,7 @@ export type ServiceRow = {
   autoPrice: boolean;
   type: string;
   target: string;
+  routes: RouteRow[];
   rate: number;
   providerRate: number;
   min: number;
@@ -60,6 +62,7 @@ export default function ServiceManager({
   isChild,
   currency,
   labels,
+  routeLabels,
 }: {
   rows: ServiceRow[];
   categories: CategoryOption[];
@@ -70,6 +73,8 @@ export default function ServiceManager({
   isChild: boolean;
   currency: { symbol: string; symbolBefore: boolean; decimals: number; rate: number; locale: string };
   labels: Record<string, string>;
+  /** The supplier list has its own words: several names collide. */
+  routeLabels: Record<string, string>;
 }) {
   const [editing, setEditing] = useState<ServiceRow | null>(null);
   const [creating, setCreating] = useState(false);
@@ -289,6 +294,7 @@ export default function ServiceManager({
           tiers={tiers}
           isChild={isChild}
           labels={labels}
+          routeLabels={routeLabels}
           onDone={close}
         />
       </EntityDrawer>
@@ -305,6 +311,7 @@ function ServiceForm({
   tiers,
   isChild,
   labels,
+  routeLabels,
   onDone,
 }: {
   row: ServiceRow | null;
@@ -315,6 +322,8 @@ function ServiceForm({
   tiers: TierPriceOption[];
   isChild: boolean;
   labels: Record<string, string>;
+  /** The supplier list has its own words: several names collide. */
+  routeLabels: Record<string, string>;
   onDone: () => void;
 }) {
   const [state, action] = useActionState<ActionResult, FormData>(async (prev, form) => {
@@ -336,6 +345,7 @@ function ServiceForm({
   }, [categories, platforms]);
 
   return (
+    <>
     <form action={action} className="space-y-4" noValidate>
       {row && <input type="hidden" name="id" value={row.id} />}
 
@@ -512,6 +522,13 @@ function ServiceForm({
         </button>
       </div>
     </form>
+
+    {/* Outside the form on purpose: each supplier saves on its own, and a
+        service has to exist before anything can be routed to it. */}
+    {row && (
+      <RouteEditor serviceId={row.id} rows={row.routes} providers={providers} labels={routeLabels} />
+    )}
+    </>
   );
 }
 
