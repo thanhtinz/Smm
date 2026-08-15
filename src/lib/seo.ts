@@ -35,46 +35,25 @@ export type SitemapEntry = { url: string; lastModified?: Date; priority?: number
 /**
  * Every public address this panel has.
  *
- * Built from the catalogue and the pages the operator published, so a panel
- * that sells nothing yet submits a short sitemap rather than a list of empty
- * pages — which is the difference between a thin site and a broken one.
+ * The catalogue is not among them: it lives inside the panel, where a reader
+ * has to sign in. Listing an address a visitor cannot open is worse than not
+ * listing it.
  */
 export async function publicUrls(): Promise<SitemapEntry[]> {
   const base = await panelBaseUrl();
   const at = (path: string) => `${base}${path}`;
 
-  const [platforms, pages] = await Promise.all([
-    db.platform.findMany({
-      where: { visible: true, categories: { some: { services: { some: { enabled: true } } } } },
-      orderBy: { position: "asc" },
-      select: {
-        slug: true,
-        categories: {
-          where: { visible: true, services: { some: { enabled: true } } },
-          orderBy: [{ position: "asc" }, { name: "asc" }],
-          select: { slug: true },
-        },
-      },
-    }),
-    db.page.findMany({
-      where: { published: true },
-      orderBy: { position: "asc" },
-      select: { slug: true, updatedAt: true },
-    }),
-  ]);
+  // The catalogue is not public any more, so the map is the landing page, the
+  // API documentation and whatever pages the operator wrote. Short on purpose:
+  // listing an address a visitor cannot open is worse than not listing it.
+  const pages = await db.page.findMany({
+    where: { published: true },
+    orderBy: { position: "asc" },
+    select: { slug: true, updatedAt: true },
+  });
 
   return [
     { url: at("/"), priority: 1 },
-    { url: at("/services"), priority: 0.9 },
-    // One address per platform, because that is the page a person searching
-    // for "buff follow tiktok" should land on rather than the whole catalogue.
-    ...platforms.map((p) => ({ url: at(`/services/${p.slug}`), priority: 0.8 })),
-    // And one per category under it: "tăng follow instagram" and "tăng like
-    // instagram" are different searches, and a single Instagram page competes
-    // with itself for both.
-    ...platforms.flatMap((p) =>
-      p.categories.map((c) => ({ url: at(`/services/${p.slug}/${c.slug}`), priority: 0.7 })),
-    ),
     { url: at("/api-docs"), priority: 0.4 },
     ...pages.map((p) => ({ url: at(`/p/${p.slug}`), lastModified: p.updatedAt, priority: 0.5 })),
   ];

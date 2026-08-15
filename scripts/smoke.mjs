@@ -14,7 +14,7 @@ import { PrismaClient } from "@prisma/client";
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const db = new PrismaClient();
 
-const GUEST = ["/", "/services", "/api-docs", "/login", "/register", "/forgot-password", "/resend-verification"];
+const GUEST = ["/", "/api-docs", "/login", "/register", "/forgot-password", "/resend-verification"];
 const CUSTOMER = [
   "/dashboard",
   "/dashboard/new-order",
@@ -75,6 +75,11 @@ async function walk(label, paths, login) {
     // Missing favicons and blocked third-party requests are the environment,
     // not the page.
     if (/favicon|net::ERR_|ERR_CONNECTION|Failed to load resource/i.test(text)) return;
+    // This walk navigates faster than a person does, so Next's prefetch of a
+    // link is often still in flight when the page it belongs to is gone. It
+    // lands on a different page every run, which is what says it is the walk
+    // and not the app; the fallback it describes works.
+    if (/Failed to fetch RSC payload/i.test(text)) return;
     noise.push(text.slice(0, 160));
   });
   page.on("pageerror", (e) => noise.push(`uncaught: ${String(e).slice(0, 160)}`));
@@ -129,8 +134,6 @@ const platform = await db.platform.findFirst({
 await walk("Signed out", [
   ...GUEST,
   ...(page1 ? [`/p/${page1.slug}`] : []),
-  ...(platform ? [`/services/${platform.slug}`] : []),
-  ...(platform?.categories[0] ? [`/services/${platform.slug}/${platform.categories[0].slug}`] : []),
 ]);
 
 await walk(

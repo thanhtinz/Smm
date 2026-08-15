@@ -37,9 +37,7 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
           )}
         </div>
 
-        <FooterCol title={t("nav.services")}>
-          <FooterLink href="/services">{t("nav.services")}</FooterLink>
-          <FooterLink href="/services">{t("nav.pricing")}</FooterLink>
+        <FooterCol title={t("nav.api")}>
           <FooterLink href="/api-docs">{t("nav.api")}</FooterLink>
         </FooterCol>
 

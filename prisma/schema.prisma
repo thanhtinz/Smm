@@ -292,15 +292,6 @@ model Platform {
   /// Shown to the customer as the shape to copy.
   postExample    String     @default("")
   profileExample String     @default("")
-  /// The platform's own page. All three are the operator's words: a panel
-  /// selling Vietnamese TikTok follows and one selling Spotify plays are not
-  /// competing for the same search, and neither is served by generated copy.
-  /// Blank falls back to the platform name, so a page always has a heading.
-  seoTitle       String     @default("")
-  seoDescription String     @default("")
-  /// HTML, written by the panel's own admin — the same author as every other
-  /// string on the site, so there is no untrusted author here.
-  seoBody        String     @default("")
   visible        Boolean    @default(true)
   position       Int        @default(0)
   categories     Category[]
@@ -315,9 +306,9 @@ model Category {
   panel       Panel     @relation("PanelCategories", fields: [panelId], references: [id], onDelete: Cascade)
   platformId  String?
   platform    Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
-  /// The category's own address, under its platform: /services/tiktok/follow.
-  /// Unique per platform rather than per panel, so two platforms can both have
-  /// a "follow" without one of them having to be called "follow-2".
+  /// The category's own address, under its platform. The panel routes by it:
+  /// /dashboard/order/tiktok/follow. Unique per platform rather than per
+  /// panel, so two platforms can both have a "follow".
   slug        String    @default("")
   name        String
   description String    @default("")

@@ -265,6 +265,8 @@ function CategoryForm({
         {labels.visible}
       </label>
 
+
+
       <div className="flex gap-2 pt-2">
         <SubmitButton className="btn btn-primary flex-1">
           <Icon name="check" size={16} />

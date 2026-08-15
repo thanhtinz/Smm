@@ -54,6 +54,13 @@ export function rateLabel(
 
 // --------------------------------------------------------------- platforms
 
+/**
+ * The platforms this panel sells for.
+ *
+ * They point at the order form rather than a public catalogue: the catalogue
+ * lives inside the panel now, and the form redirects a signed-out reader to
+ * sign in, which is where a landing page was trying to send them anyway.
+ */
 export function PlatformStrip({ platforms, label }: { platforms: PlatformLine[]; label: string }) {
   if (!platforms.length) return null;
 
@@ -64,7 +71,7 @@ export function PlatformStrip({ platforms, label }: { platforms: PlatformLine[];
         {platforms.map((p) => (
           <Link
             key={p.id}
-            href={`/services/${p.slug}`}
+            href="/dashboard/new-order"
             className="flex items-center gap-2 rounded-full border border-[var(--border)] px-3.5 py-1.5 text-sm font-medium transition-colors hover:border-[color-mix(in_srgb,var(--primary)_50%,transparent)]"
           >
             <PlatformMark platform={p} size={16} />
