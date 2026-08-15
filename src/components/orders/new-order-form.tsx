@@ -9,6 +9,7 @@ import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
 import OrderFacts, { type Fact } from "@/components/orders/order-facts";
 import ServiceSearch from "@/components/orders/service-search";
+import PlatformMark from "@/components/platform-mark";
 import { SUBSCRIPTION_DELAYS } from "@/lib/orders";
 
 export type ServiceOption = {
@@ -288,28 +289,30 @@ export default function NewOrderForm({
           />
         </Field>
 
-        {/* A select, like the two steps below it. It was a row of chips,
-            which had to wrap, could not show which was chosen without colour,
-            and made the first step of the cascade look unlike the rest of it. */}
+        {/* A native select cannot draw the platform's mark, and the mark is
+            how a customer picks: they recognise the logo before they read the
+            word. Same control as the service step, with its search off — the
+            whole list fits on screen and a search field over eight rows is in
+            the way rather than a help. */}
         <Field name="platformId" label={labels.platform}>
-          <select
-            id="platformId"
+          <Combobox
             name="platformId"
-            className="field"
             value={platformId}
-            onChange={(e) => {
-              setPlatformId(e.target.value);
+            onChange={(id) => {
+              setPlatformId(id);
               setCategoryId("");
               setServiceId("");
             }}
-          >
-            <option value="">{labels.selectPlatform}</option>
-            {platforms.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
+            searchable={false}
+            placeholder={labels.selectPlatform}
+            searchPlaceholder={labels.selectPlatform}
+            emptyLabel={labels.noResults}
+            options={platforms.map((p) => ({
+              value: p.id,
+              label: p.name,
+              icon: <PlatformMark platform={p} size={17} />,
+            }))}
+          />
         </Field>
 
         <Field name="categoryId" label={labels.category}>
