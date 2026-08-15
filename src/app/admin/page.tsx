@@ -3,6 +3,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { displayMoney } from "@/lib/currency";
+import { ACTIVE_ORDER_STATUSES } from "@/lib/orders";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon, type IconName } from "@/components/icons";
@@ -20,7 +21,7 @@ export default async function AdminOverviewPage() {
     db.user.count(),
     db.order.count(),
     db.service.count({ where: { enabled: true } }),
-    db.order.count({ where: { status: { in: ["pending", "processing", "inprogress"] } } }),
+    db.order.count({ where: { status: { in: ACTIVE_ORDER_STATUSES } } }),
     db.order.aggregate({ _sum: { charge: true } }),
     db.transaction.aggregate({ _sum: { amount: true }, where: { type: "deposit", status: "completed" } }),
     db.order.findMany({

@@ -9,12 +9,12 @@ import {
   isValidOrderLink,
   parseSubscription,
   subscriptionFields,
-  apiStatus,
   type Subscription,
 } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
-import { guardOrder } from "@/lib/order-guard";
+import { guardOrder, duplicateWindow, findDuplicate } from "@/lib/order-guard";
+import { apiStatus } from "@/lib/api-status";
 import { englishMessage } from "@/lib/fault";
 import { openRequest } from "@/lib/requests";
 import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
@@ -219,10 +219,19 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
 
   const [orderPublicId, txPublicId] = await Promise.all([nextPublicId("order"), nextPublicId("transaction")]);
 
+  // Read out here so the transaction below does no settings lookup of its own.
+  const dedupe = await duplicateWindow();
+
   try {
     const order = await db.$transaction(async (tx) => {
       const fresh = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { balance: true, spent: true } });
       if (fresh.balance < charge) throw new Error("FUNDS");
+
+      // The same race the form has: a client library retrying is two identical
+      // requests in flight at once, and one delivery must not be charged twice.
+      if (dedupe && (await findDuplicate(tx, userId, service.id, link, dedupe.since))) {
+        throw new Error("DUPLICATE");
+      }
 
       const created = await tx.order.create({
         data: {
@@ -274,6 +283,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     return NextResponse.json({ order: order.publicId });
   } catch (e) {
     if (e instanceof Error && e.message === "FUNDS") return fail("Not enough funds on balance");
+    if (e instanceof Error && e.message === "DUPLICATE") return fail("An identical order was just placed");
     if (e instanceof Error && e.message === "UPSTREAM_FUNDS") {
       await logActivity(userId, "order.chain.funds", service.name);
       return fail(CHAIN_UNAVAILABLE);

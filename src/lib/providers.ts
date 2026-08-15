@@ -3,6 +3,7 @@ import { nextPublicId } from "@/lib/ids";
 import { notification } from "./notify";
 import { routesFor } from "./routing";
 import { withSettled, recordOrderStep } from "./orders";
+import { refundOwed } from "./refunds";
 
 /**
  * Client for upstream panels. They speak the same standard this panel exposes
@@ -335,7 +336,7 @@ export async function syncOrderStatuses(limit = 100) {
             : 0;
 
       if (refundable > 0) {
-        await settleRefund(order.id, order.userId, refundable, order.publicId, withSettled(data));
+        await settleRefund(order.id, order.userId, refundable, order.publicId, withSettled(data), undefined, order.charge);
       } else {
         await db.order.update({ where: { id: order.id }, data: withSettled(data) });
       }
@@ -362,30 +363,35 @@ export async function settleRefund(
   orderPublicId: number,
   data: Record<string, unknown>,
   note?: string,
+  /** The order's full charge, which is the ceiling on everything refunded. */
+  charge = amount,
 ) {
   const txPublicId = await nextPublicId("transaction");
 
   await db.$transaction(async (tx) => {
-    const existing = await tx.transaction.findFirst({
-      where: { userId, type: "refund", reference: String(orderPublicId) },
-      select: { id: true },
-    });
     await tx.order.update({ where: { id: orderId }, data });
-    if (existing) return;
+
+    // Capped at what is still owed rather than refused outright when any
+    // refund exists: an order refunded 30% for a partial delivery and then
+    // cancelled is owed the other 70%, and a flat "already refunded, skip"
+    // would keep it.
+    const owed = await refundOwed(tx, { userId, publicId: orderPublicId, charge });
+    const payable = Math.min(amount, owed);
+    if (payable <= 0) return;
 
     const user = await tx.user.findUniqueOrThrow({ where: { id: userId }, select: { balance: true, spent: true } });
-    const balanceAfter = user.balance + amount;
+    const balanceAfter = user.balance + payable;
 
     await tx.user.update({
       where: { id: userId },
-      data: { balance: balanceAfter, spent: Math.max(0, user.spent - amount) },
+      data: { balance: balanceAfter, spent: Math.max(0, user.spent - payable) },
     });
     await tx.transaction.create({
       data: {
         publicId: txPublicId,
         userId,
         type: "refund",
-        amount,
+        amount: payable,
         status: "completed",
         reference: String(orderPublicId),
         note: note ?? `Provider refund for order #${orderPublicId}`,

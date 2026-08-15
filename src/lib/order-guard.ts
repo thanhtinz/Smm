@@ -38,22 +38,52 @@ export type GuardVerdict = { block: Fault } | { hold: string } | null;
  * whose customers legitimately re-order the same link.
  */
 export async function duplicateOrder(userId: string, serviceId: string, link: string): Promise<GuardResult> {
-  const minutes = Number(await getSetting("order.duplicateWindowMinutes")) || 0;
-  if (minutes <= 0) return null;
+  const window = await duplicateWindow();
+  if (!window) return null;
 
-  const recent = await db.order.findFirst({
-    where: {
-      userId,
-      serviceId,
-      link,
-      status: { in: COUNTED_STATUSES },
-      createdAt: { gt: new Date(Date.now() - minutes * 60_000) },
-    },
-    select: { publicId: true },
-  });
+  const recent = await findDuplicate(db, userId, serviceId, link, window.since);
   if (!recent) return null;
 
-  return { key: "err.duplicateOrder", vars: { id: recent.publicId, minutes } };
+  return { key: "err.duplicateOrder", vars: { id: recent.publicId, minutes: window.minutes } };
+}
+
+/** The configured window, or null when duplicate checking is switched off. */
+export async function duplicateWindow(): Promise<{ minutes: number; since: Date } | null> {
+  const minutes = Number(await getSetting("order.duplicateWindowMinutes")) || 0;
+  if (minutes <= 0) return null;
+  return { minutes, since: new Date(Date.now() - minutes * 60_000) };
+}
+
+/** Narrow enough that a `$transaction` handle satisfies it. */
+type OrderReader = {
+  order: {
+    findFirst: (args: {
+      where: Record<string, unknown>;
+      select: { publicId: true };
+    }) => Promise<{ publicId: number } | null>;
+  };
+};
+
+/**
+ * The same lookup, through whichever client is passed.
+ *
+ * It is run twice: once before the order is priced, so the customer gets a
+ * useful message, and again inside the transaction that takes their money.
+ * The first check alone loses the race it exists to win — two submissions a
+ * few milliseconds apart both read "no duplicate" and both charge — which is
+ * exactly the double-click this is here to stop.
+ */
+export async function findDuplicate(
+  client: OrderReader,
+  userId: string,
+  serviceId: string,
+  link: string,
+  since: Date,
+): Promise<{ publicId: number } | null> {
+  return client.order.findFirst({
+    where: { userId, serviceId, link, status: { in: COUNTED_STATUSES }, createdAt: { gt: since } },
+    select: { publicId: true },
+  });
 }
 
 /**

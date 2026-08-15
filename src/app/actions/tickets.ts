@@ -8,7 +8,7 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "@/lib/notify";
 import { readerMessages } from "@/lib/context";
-import { OPEN_TICKET_STATUSES, priorityKey, priorityValue } from "@/lib/tickets";
+import { OPEN_TICKET_STATUSES, TICKET_STATUSES, priorityKey, priorityValue } from "@/lib/tickets";
 import { STAFF_ROLES } from "@/lib/two-factor";
 
 export type TicketState = {
@@ -116,6 +116,11 @@ export async function setTicketStatusAction(ticketId: string, status: string): P
   const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
+
+  // Checked against the list rather than trusted from the client: a status
+  // outside it matches no queue filter and no badge, so the ticket would
+  // simply vanish from every screen that looks for it.
+  if (!TICKET_STATUSES.includes(status as never)) return { error: t("adm.unknownStatus") };
 
   const isStaff = user.role === "admin" || user.role === "support";
   // A customer may close their own ticket, but not reopen or re-queue it.

@@ -7,6 +7,7 @@ import { nextPublicId } from "@/lib/ids";
 import { creditDeposit } from "@/lib/payments/credit";
 import { withSettled, recordOrderStep, readSubscription, ORDER_STATUSES, isValidOrderLink } from "@/lib/orders";
 import { planUpstream, writeUpstream } from "@/lib/chain";
+import { refundOwed } from "@/lib/refunds";
 import type { ActionResult } from "./catalogue";
 import { notification } from "@/lib/notify";
 import { readerMessages, getAppContext } from "@/lib/context";
@@ -38,9 +39,6 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
       const order = await tx.order.findUniqueOrThrow({ where: { id }, include: { service: true } });
       if (order.status === status) return;
 
-      const wasRefunded = REFUNDING.has(order.status);
-      const willRefund = REFUNDING.has(status);
-
       const change = {
         status,
         note: note || order.note,
@@ -49,19 +47,25 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
       await tx.order.update({ where: { id }, data: withSettled(change) });
       await recordOrderStep(tx, order, change, admin.username);
 
-      if (willRefund && !wasRefunded) {
+      // What is owed, not what was charged: an order that already had a
+      // partial refund must only get the remainder, and one already settled
+      // must get nothing. Asking whether the previous status happened to be a
+      // refunding one answered neither.
+      const owed = REFUNDING.has(status) ? await refundOwed(tx, order) : 0;
+
+      if (owed > 0) {
         const user = await tx.user.findUniqueOrThrow({ where: { id: order.userId }, select: { balance: true, spent: true } });
-        const balanceAfter = user.balance + order.charge;
+        const balanceAfter = user.balance + owed;
         await tx.user.update({
           where: { id: order.userId },
-          data: { balance: balanceAfter, spent: Math.max(0, user.spent - order.charge) },
+          data: { balance: balanceAfter, spent: Math.max(0, user.spent - owed) },
         });
         await tx.transaction.create({
           data: {
             publicId: refundPublicId,
             userId: order.userId,
             type: "refund",
-            amount: order.charge,
+            amount: owed,
             status: "completed",
             reference: String(order.publicId),
             note: `Refund for order #${order.publicId}`,
@@ -79,7 +83,10 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
         });
       }
     });
-  } catch {
+  } catch (e) {
+    // Recorded rather than swallowed: without this the only trace of a failed
+    // status change is a customer saying it did not work.
+    await logActivity(admin.id, "admin.order.failed", `${id} -> ${status}: ${e instanceof Error ? e.message : String(e)}`);
     return { error: t("adm.orderFailed") };
   }
 

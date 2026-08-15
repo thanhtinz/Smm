@@ -109,6 +109,7 @@ async function cancelStuckOrders(report: AutoReport): Promise<void> {
       order.publicId,
       withSettled({ status: "canceled", remains: 0, note: `Cancelled automatically after ${minutes} minutes unsent` }),
       `Order #${order.publicId} could not be sent to the provider`,
+      order.charge,
     );
     await recordOrderStep(
       db,
