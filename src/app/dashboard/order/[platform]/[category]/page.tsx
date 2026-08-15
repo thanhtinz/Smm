@@ -58,6 +58,7 @@ export default async function PanelCategoryOrderPage({
     );
   }
 
+  const scheduleMaxDays = Number(await getSetting("order.scheduleMaxDays")) || 0;
   const tier = await resolveTier(user);
   const rates = await priceServices(tier, category.services);
 
@@ -131,6 +132,7 @@ export default async function PanelCategoryOrderPage({
         balance={user.balance}
         currency={currency}
         locked
+        scheduleMaxDays={scheduleMaxDays}
         labels={orderFormLabels(t)}
       />
     </div>

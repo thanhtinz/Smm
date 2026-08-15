@@ -455,6 +455,57 @@ thẻ biến mất chứ không còn cái tiêu đề trơ ra; slug sai trả 40
 
 ---
 
+## Thêm: quay lại đúng trang, thẻ chọn dịch vụ, và đặt lịch chạy
+
+Ba việc còn dở, bạn bảo làm nốt.
+
+**Đăng nhập xong về đúng chỗ.** Khách xin `/dashboard/orders` bị đá sang form
+đăng nhập rồi thả xuống bảng điều khiển, phải tự mò lại. Giờ hai layout có bảo
+vệ đều mang theo đường dẫn bị từ chối, form nhớ nó, đăng nhập xong đi thẳng tới
+— **qua cả bước 2FA**, không thì tài khoản có xác thực hai lớp lại mất chỗ vì
+đã bật bảo mật.
+
+Giá trị đó là **danh sách hình dạng được phép**, không phải danh sách mẹo bị
+cấm: `next` là một lỗ open-redirect chực chờ, và cái vừa đăng nhập xong chính
+là thứ làm người ta tin đích đến. Chỉ đường dẫn trên site này mới được đi theo;
+`//evil.test`, `/\evil.test`, ký tự điều khiển, và chính các trang đăng nhập
+(đi vòng) đều bị từ chối. **Kiểm ở action chứ không chỉ ở chỗ tạo link** —
+trường ẩn cũng sửa được như mọi trường khác.
+
+**Chọn dịch vụ bằng thẻ, kèm nhãn.** Dropdown bắt khách mở ra, đọc, đóng lại,
+rồi nhớ. Cascade đã thu về một danh mục rồi, và chọn cái nào trong đó — rẻ,
+nhanh, hay ít tụt — mới là quyết định. Nhãn là chữ của operator (`Hot:danger,
+Giá rẻ:success, Ít tụt`), panel không biết trước từ vựng nào; chỉ **màu** bị
+giới hạn trong năm màu sẵn có, không thì gõ sai sẽ tạo ra một class rỗng.
+
+**Đặt lịch chạy.** Trừ tiền ngay, đến giờ mới gửi đi — số dư cam kết lúc khách
+đang nhìn đáng tin hơn số dư kiểm lúc 3 giờ sáng. Tắt mặc định
+(`order.scheduleMaxDays = 0`); panel không muốn giữ đơn đã trả tiền thì không
+phải giải thích với khách vì sao đơn đứng im. Giờ đọc theo **múi giờ của
+panel**, không phải của máy chủ — operator ở Hà Nội và máy chủ ở Frankfurt sẽ
+lệch nhau bảy tiếng về nghĩa của "2 giờ chiều". Đơn đang chờ hiện rõ "Hẹn
+lúc..." ở danh sách, không thì nó trông như đơn kẹt.
+
+**Ba lỗi thật bắt được, hai trong số đó có từ trước.**
+- **`Date.UTC` cuộn tràn thay vì từ chối**: `2026-13-40T99:99` thành một thời
+  điểm có thật mà không ai gõ. Giờ kiểm khoảng giá trị và kiểm ngày có tồn tại
+  trong tháng đó không (31 tháng Hai lọt qua kiểm khoảng).
+- **React reset form sau khi server action trả về**, bỏ tick mọi checkbox và
+  radio trong khi state vẽ chúng vẫn giữ nguyên. Màn hình và thứ sắp gửi đi bất
+  đồng: **đơn bị từ chối một lần thì lần sau gửi đi không kèm dịch vụ nào**.
+  Giờ những giá trị đó đi qua input ẩn — `value` là thuộc tính nên reset khôi
+  phục nguyên vẹn. Nút drip-feed dính lỗi này từ trước.
+- **Ô link bị xoá sạch sau mỗi lần từ chối** vì nó là ô duy nhất không do state
+  giữ. Sai số lượng, trùng đơn, thiếu số dư — lần nào cũng mất cái link vừa dán.
+
+**Chứng minh.** 16/16 cho phần chuyển hướng (gồm sáu đích độc hại bị từ chối và
+hai lần sửa tay trường ẩn), 22/22 cho thẻ dịch vụ (gồm bảy trường hợp phân tích
+nhãn và điều hướng bằng bàn phím), 27/27 cho đặt lịch — múi giờ tính tay trước
+(+7, và Berlin hai mùa), tám chuỗi rác bị từ chối, tiền trừ ngay, dispatcher
+bỏ qua đơn chưa tới giờ rồi nhận nó khi tới.
+
+---
+
 ## Đã cân nhắc và loại
 
 - **Tool buff trực tiếp / kịch bản seeding / spam fanpage** — gian lận nền

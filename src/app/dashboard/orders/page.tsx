@@ -208,6 +208,12 @@ export default async function OrdersPage({
                       <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                       <td>
                         <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
+                        {/* Otherwise a paid order sitting still looks stuck. */}
+                        {o.startAt && o.startAt > new Date() && (
+                          <span className="muted mt-1 block text-xs whitespace-nowrap">
+                            {t("order.scheduledFor", { when: dates.stamp(o.startAt) })}
+                          </span>
+                        )}
                       </td>
                       {/* Day, month and clock. The full stamp wants ~150px
                           and, squeezed into the width this table can spare,
@@ -232,6 +238,11 @@ export default async function OrdersPage({
                     </Link>
                     <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
                   </div>
+                  {o.startAt && o.startAt > new Date() && (
+                    <p className="muted mt-1 text-xs">
+                      {t("order.scheduledFor", { when: dates.stamp(o.startAt) })}
+                    </p>
+                  )}
                   <Link href={`/dashboard/orders/${o.publicId}`} className="mt-1.5 block text-sm font-medium">
                     {o.service.name}
                   </Link>

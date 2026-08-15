@@ -25,9 +25,13 @@ export type PickerService = {
  * and the difference between them is what the customer is here to weigh. A
  * closed control hides exactly that.
  *
- * They are radios, not buttons: a keyboard moves through them with the arrow
- * keys for free, the browser enforces that one is chosen, and the form submits
- * the value without any JavaScript of ours in the path.
+ * They are radios so a keyboard moves through them with the arrow keys for
+ * free — but what the form submits is the hidden input beside them, not the
+ * radio. React resets a form once a server action finishes, and a reset
+ * unchecks every box and radio in it while the React state that drew them
+ * stays put. The screen then disagrees with what the next submit would send:
+ * an order refused once would come back refused for having no service at all.
+ * A hidden input's value is an attribute, so a reset restores it unchanged.
  */
 export default function ServicePicker({
   name,
@@ -57,6 +61,7 @@ export default function ServicePicker({
     // Capped and scrollable: a category with forty services should not push
     // the link and quantity fields off the screen.
     <div className="max-h-[26rem] space-y-2 overflow-y-auto" role="radiogroup">
+      <input type="hidden" name={name} value={value} />
       {services.map((service) => {
         const chosen = service.id === value;
         return (
@@ -70,7 +75,9 @@ export default function ServicePicker({
           >
             <input
               type="radio"
-              name={name}
+              // A group name so the arrow keys work, deliberately not the one
+              // the action reads.
+              name={`${name}__choice`}
               value={service.id}
               checked={chosen}
               onChange={() => onChange(service.id)}

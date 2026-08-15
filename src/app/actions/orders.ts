@@ -18,6 +18,7 @@ import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@
 import { duplicateOrder, duplicateWindow, findDuplicate, guardOrder, orderRateLimit } from "@/lib/order-guard";
 import { maintenanceState } from "@/lib/maintenance";
 import { readerMessages } from "@/lib/context";
+import { parseLocalTime } from "@/lib/dates";
 import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
 
 /** As many as one paste is allowed to place at once. */
@@ -132,6 +133,28 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     if (Object.keys(fieldErrors).length) return { fieldErrors };
   }
 
+  // Scheduled orders are charged now and held until their time. Read here,
+  // before anything is committed, so a bad time costs nothing.
+  const scheduleMaxDays = Number(await getSetting("order.scheduleMaxDays")) || 0;
+  let startAt: Date | null = null;
+  const wantsSchedule = formData.get("schedule") === "on";
+  if (wantsSchedule) {
+    if (scheduleMaxDays <= 0) return { fieldErrors: { startAt: t("err.scheduleOff") } };
+
+    // A datetime-local field sends "2026-08-20T14:30" with no zone, meaning
+    // the reader's wall clock. It is read in the panel's timezone rather than
+    // the server's, or an operator in Hanoi and a server in Frankfurt would
+    // disagree by seven hours about what "2pm" meant.
+    const typed = String(formData.get("startAt") ?? "").trim();
+    const timezone = String(await getSetting("locale.timezone")) || "UTC";
+    startAt = parseLocalTime(typed, timezone);
+    if (!startAt) return { fieldErrors: { startAt: t("err.scheduleInvalid") } };
+    if (startAt.getTime() <= Date.now()) return { fieldErrors: { startAt: t("err.schedulePast") } };
+    if (startAt.getTime() > Date.now() + scheduleMaxDays * 86_400_000) {
+      return { fieldErrors: { startAt: t("err.scheduleTooFar", { n: scheduleMaxDays }) } };
+    }
+  }
+
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   // The tier price, not the list price — the same number the order form showed.
   const rate = await priceService(await resolveTier(user), service);
@@ -191,6 +214,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
+          startAt,
           // On a child panel the cost is what the panel above charges, which
           // the first hop already worked out.
           cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity),

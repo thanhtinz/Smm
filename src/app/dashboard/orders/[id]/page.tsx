@@ -65,6 +65,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
 
   const facts: { label: string; value: string }[] = [
     { label: t("order.quantity"), value: order.quantity.toLocaleString() },
+    // Only while it is still ahead: once it has run, the time it was due says
+    // nothing the timeline does not say better.
+    ...(order.startAt && order.startAt > new Date()
+      ? [{ label: t("order.scheduleAt"), value: dates.full(order.startAt) }]
+      : []),
     { label: t("order.charge"), value: displayMoney(order.charge, currency, locale) },
     { label: t("common.date"), value: dates.full(order.createdAt) },
     ...(order.settledAt ? [{ label: t("order.finished"), value: dates.full(order.settledAt) }] : []),
