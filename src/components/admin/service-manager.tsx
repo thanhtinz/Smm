@@ -39,6 +39,7 @@ export type ServiceRow = {
   cancel: boolean;
   dripfeed: boolean;
   averageTime: string;
+  tags: string;
   warrantyDays: number;
   startMinutes: number;
   speedPerDay: number;
@@ -423,6 +424,18 @@ function ServiceForm({
         </Field>
         <Field name="averageTime" label={labels.averageTime}>
           <TextInput name="averageTime" defaultValue={row?.averageTime} placeholder="1 hour" />
+        </Field>
+
+        {/* What the customer scans before reading anything. The words are the
+            operator's — this panel does not know a vocabulary — and a label
+            may name its colour after a colon. */}
+        <Field name="tags" label={labels.tags} hint={labels.tagsHint}>
+          <TextInput
+            name="tags"
+            defaultValue={row?.tags}
+            hint={labels.tagsHint}
+            placeholder="Hot:danger, Giá rẻ:success, Ít tụt"
+          />
         </Field>
 
         {/* The three numbers this market quotes. Left at zero each one shows

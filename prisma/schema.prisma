@@ -394,6 +394,11 @@ model Service {
   /// Free text from the provider, shown as written. It cannot be compared,
   /// sorted or added up, which is why the three numbers below exist.
   averageTime             String         @default("")
+  /// Short labels the customer scans before reading anything: "Hot", "Giá rẻ",
+  /// "Ít tụt". Comma separated, and a label may name its colour after a colon
+  /// — "Hot:danger" — from the badge set the rest of the panel uses. The words
+  /// are the operator's; this file does not know a vocabulary.
+  tags                    String         @default("")
   /// The three figures this market quotes, as numbers the operator states.
   /// Zero means "not stated" and shows nothing — a service that has never
   /// been sold saying "0 minutes" is a lie in the other direction.
