@@ -46,6 +46,8 @@ export type OrderLabels = Record<
   | "addFunds"
   | "selectCategory"
   | "selectService"
+  | "fromTitle"
+  | "fromHint"
   | "selectPlatformFirst"
   | "selectCategoryFirst"
   | "searchService"
@@ -162,6 +164,28 @@ export default function NewOrderForm({
     service && !subscription && qty > 0 && (qty < service.min || qty > service.max);
   const fmt = (base: number) => formatCurrency(base, currency);
 
+  /**
+   * The cheapest service on each platform, for the panel that would otherwise
+   * be empty until three choices have been made.
+   *
+   * Price per unit is the question a customer arrives with in this market, and
+   * making them answer three questions before it appears is answering the
+   * wrong one. Derived from the services already loaded, so it costs nothing.
+   */
+  const cheapest = useMemo(() => {
+    const byPlatform = new Map<string, number>();
+    for (const service of services) {
+      const platform = categories.find((c) => c.id === service.categoryId)?.platformId;
+      if (!platform) continue;
+      const best = byPlatform.get(platform);
+      if (best === undefined || service.rate < best) byPlatform.set(platform, service.rate);
+    }
+    return platforms
+      .map((p) => ({ platform: p, from: byPlatform.get(p.id) }))
+      .filter((row): row is { platform: PlatformOption; from: number } => row.from !== undefined)
+      .sort((a, b) => a.from - b.from);
+  }, [services, categories, platforms]);
+
   if (state.success) {
     return (
       <div className="card card-pad text-center">
@@ -200,8 +224,11 @@ export default function NewOrderForm({
             branch of the choice and benefits from being visible at a glance. */}
         <div>
           <span className="label">{labels.platform}</span>
-          <div className="scroll-x -mx-1 px-1">
-            <div className="flex gap-2 pb-1">
+          {/* Wraps rather than scrolling sideways: the strip used to cut its
+              last chip off at the edge with nothing to say it continued, so a
+              platform the panel sells could simply not be seen. */}
+          <div>
+            <div className="flex flex-wrap gap-2 pb-1">
               {platforms.map((p) => (
                 <button
                   key={p.id}
@@ -212,7 +239,7 @@ export default function NewOrderForm({
                     setServiceId("");
                   }}
                   aria-pressed={p.id === platformId}
-                  className={`flex shrink-0 items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
                     p.id === platformId
                       ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] text-[var(--primary)]"
                       : "muted border-[var(--border)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
@@ -566,18 +593,38 @@ export default function NewOrderForm({
               )}
             </>
           ) : (
-            <div className="py-8 text-center">
-              <span className="muted inline-flex">
-                <Icon name="package" size={28} />
-              </span>
-              <p className="muted mt-2 text-sm">
+            <>
+              <p className="text-sm font-semibold">{labels.fromTitle}</p>
+              <p className="muted mt-0.5 text-xs">{labels.fromHint}</p>
+
+              <ul className="mt-3 divide-y divide-[var(--border)]">
+                {cheapest.map(({ platform, from }) => (
+                  <li key={platform.id}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPlatformId(platform.id);
+                        setCategoryId("");
+                        setServiceId("");
+                      }}
+                      className="flex w-full items-center gap-2.5 py-2.5 text-left transition-opacity hover:opacity-70"
+                    >
+                      <PlatformMark platform={platform} size={18} />
+                      <span className="min-w-0 flex-1 truncate text-sm">{platform.name}</span>
+                      <span className="font-mono text-sm font-semibold tabular-nums">{fmt(from)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <p className="muted mt-3 text-xs">
                 {!platformId
                   ? labels.selectPlatformFirst
                   : !categoryId
                     ? labels.selectCategoryFirst
                     : labels.selectService}
               </p>
-            </div>
+            </>
           )}
         </div>
       </aside>

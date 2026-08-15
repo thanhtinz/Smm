@@ -158,6 +158,18 @@ mở trang lần đầu:
 
 **Cỡ.** Nhỏ–vừa. Không đụng schema.
 
+**Đã làm xong.** Ảnh `docs/screenshots/order-before-after.png`.
+
+- **Khung phải giờ là bảng giá**: rẻ nhất mỗi nền tảng, sắp từ thấp lên, bấm
+  vào là chọn luôn nền tảng đó. Dữ liệu suy ra từ danh sách dịch vụ form đã tải
+  sẵn — không thêm props, không thêm truy vấn.
+- **Dải nền tảng xuống dòng thay vì cuộn ngang.** Trước đó chip cuối bị cắt ở
+  mép phải mà không có dấu hiệu nào cho biết còn nữa: **Facebook, X/Twitter,
+  Telegram, Spotify đều không nhìn thấy được**. Giờ cả 8 nền tảng hiện hết.
+
+Phần bảo hành/thời gian bắt đầu trong dòng dịch vụ phải chờ mục 2 — hiện panel
+chưa có số liệu đó dưới dạng dữ liệu.
+
 ---
 
 ## 4. Đặt lại một đơn cũ vẫn phải chọn lại từ đầu
@@ -205,6 +217,35 @@ Lý do: (1) là khách không trả tiền được, mất doanh thu ngay hôm n
 mọi thứ. (3) và (4) rẻ và chạm vào mọi khách, mọi lần đặt. (2) là thứ làm panel
 này khác phần còn lại nhưng cần (3) đã xong mới có chỗ hiển thị. (5) phụ thuộc
 (2) để có nội dung đáng đọc.
+
+## Thêm: trang lịch chạy tự động trong admin
+
+Không nằm trong kế hoạch ban đầu, bạn yêu cầu thêm — và đúng chỗ thiếu.
+
+**Bằng chứng.** Panel không tự chạy: nó mở một endpoint và phải có thứ bên
+ngoài gọi. Đó là hình dạng đúng cho một web app, nhưng phần cấu hình thì **vô
+hình**: địa chỉ không có trong tài liệu nào, secret nằm trong biến môi trường,
+và việc có ai đang gọi hay không chỉ suy ra được từ một dòng trên trang tổng
+quan. Có sẵn nút "chạy cả vòng" nhưng **không chạy được từng việc** — callback
+kẹt thì operator phải chọn giữa chạy tất cả (đẩy đơn, thu tiền thuê, gửi mail)
+hoặc không chạy gì.
+
+**Đã làm.** `/admin/cron`: trạng thái scheduler, địa chỉ endpoint, **dòng
+crontab dán được thẳng**, cho biết `CRON_SECRET` đã đặt hay chưa, 10 việc mỗi
+việc một nút chạy riêng kèm mô tả nó làm gì, và 8 vòng chạy gần nhất.
+
+Mỗi việc có nhãn cho biết nó **động tới tiền** hay **gửi đơn đi**, để người
+đang chẩn đoán biết nút nào bấm vô hại và nút nào tiêu tiền. Kết quả in ngay
+dưới đúng dòng vừa bấm chứ không dồn vào một banner chung — bấm liên tiếp mấy
+lần thì banner chung sẽ ghi đè câu trả lời trước.
+
+**Secret vẫn nằm ở biến môi trường, cố ý.** Nó bảo vệ chính cái endpoint chạy
+mọi thứ; một giá trị sửa được ngay từ màn hình mà nó bảo vệ là một secret yếu
+hơn.
+
+**Chứng minh.** Bấm thật cả 10 nút trong trình duyệt, mỗi nút in ra kết quả của
+chính nó; "chạy tất cả" ghi một dòng `SyncRun` mới, đóng lại, và đóng dấu tên
+người bấm.
 
 ## Đã cân nhắc và loại
 

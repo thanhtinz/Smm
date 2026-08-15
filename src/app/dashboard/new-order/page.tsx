@@ -113,6 +113,8 @@ export default async function NewOrderPage() {
                 addFunds: t("dash.addFunds"),
                 selectCategory: t("order.selectCategory"),
                 selectService: t("order.selectService"),
+                fromTitle: t("order.fromTitle"),
+                fromHint: t("order.fromHint"),
                 selectPlatformFirst: t("order.selectPlatformFirst"),
                 selectCategoryFirst: t("order.selectCategoryFirst"),
                 searchService: t("common.search"),
