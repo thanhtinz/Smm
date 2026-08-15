@@ -95,6 +95,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/tiers", label: t("tier.title"), icon: "trending" },
         { href: "/admin/blocklist", label: t("block.title"), icon: "shield" },
         { href: "/admin/keywords", label: t("rank.title"), icon: "trending" },
+        { href: "/admin/cron", label: t("cron.title"), icon: "clock", badge: undefined },
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
         { href: "/admin/inbox", label: t("inbox.title"), icon: "mail" },
         { href: "/admin/announcements", label: t("announcement.title"), icon: "megaphone" },
