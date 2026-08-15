@@ -303,11 +303,22 @@ hành thật, và số đo ở mục 2. Nối vào sitemap và IndexNow sẵn c�
 
 **Cỡ.** Nhỏ. Hạ tầng SEO đã xong từ trước.
 
+**Đã dựng xong rồi bỏ theo yêu cầu.** Trang
+`/services/<nền-tảng>/<danh-mục>/<dịch-vụ>` đã chạy được — giá thật, ba con số
+tự khai kèm số đo ở mục 2, nút mua mở thẳng form đã điền, có trong sitemap,
+slug sai trả 404 — nhưng bạn quyết định **panel không cần mặt công khai nào**,
+nên nó bị xoá cùng cả nhánh `/services`. Xoá luôn `Service.slug` và ba trường
+SEO của Platform/Category/Service vì chúng chỉ để điền cho những trang đó.
+
+Hệ quả cần biết: **người từ tìm kiếm không xem được giá trước khi đăng ký**, và
+phần theo dõi thứ hạng giờ chỉ còn trang chủ với các trang operator tự viết để
+đo. Muốn dựng lại thì đây là mô tả của nó.
+
 ---
 
 ## Thứ tự đề xuất
 
-**1 → 3 → 4 → 2 → 5.**
+**1 → 3 → 4 → 2 → 5.** Cả năm đã xong; mục 5 làm xong rồi bỏ theo yêu cầu.
 
 Lý do: (1) là khách không trả tiền được, mất doanh thu ngay hôm nay, sửa trước
 mọi thứ. (3) và (4) rẻ và chạm vào mọi khách, mọi lần đặt. (2) là thứ làm panel
