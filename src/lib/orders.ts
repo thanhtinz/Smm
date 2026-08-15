@@ -1,3 +1,5 @@
+import { queueCallback, type QueueClient } from "./callbacks";
+
 /** Charge for a service, in the panel's base currency. */
 export function calculateCharge(ratePer1000: number, quantity: number): number {
   return Math.round((ratePer1000 * quantity) / 1000);
@@ -59,6 +61,29 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * of honest customers who trip these rules by accident.
  */
 export const CUSTOMER_ORDER_STATUSES = ORDER_STATUSES.filter((s) => s !== "held");
+
+/**
+ * The title-case names the API standard uses.
+ *
+ * Shared by the `status` action and the callback body so a reseller can
+ * switch on one string in both places. Held is reported as Pending: the
+ * standard has no word for it, a reseller can do nothing about it, and
+ * inventing one would break client code that switches on this.
+ */
+const API_STATUS: Record<string, string> = {
+  held: "Pending",
+  pending: "Pending",
+  processing: "Processing",
+  inprogress: "In progress",
+  completed: "Completed",
+  partial: "Partial",
+  canceled: "Canceled",
+  refunded: "Refunded",
+};
+
+export function apiStatus(status: string): string {
+  return API_STATUS[status] ?? status;
+}
 
 /** A held order reads as pending to whoever placed it. */
 export function customerStatus(status: string): string {
@@ -223,7 +248,7 @@ type StepRow = {
 
 type EventClient = {
   orderEvent: { create: (args: { data: StepRow }) => Promise<unknown> };
-};
+} & QueueClient;
 
 /**
  * Records a step in an order's life.
@@ -239,12 +264,24 @@ type EventClient = {
  */
 export async function recordOrderStep(
   client: EventClient,
-  before: { id: string; panelId: string; status: string; startCount: number; remains: number },
+  before: {
+    id: string;
+    panelId: string;
+    publicId: number;
+    userId: string;
+    charge: number;
+    status: string;
+    startCount: number;
+    remains: number;
+  },
   next: { status?: unknown; startCount?: unknown; remains?: unknown; note?: unknown },
   actor: string,
 ): Promise<void> {
   const to = typeof next.status === "string" ? next.status : before.status;
   if (to === before.status) return;
+
+  const startCount = typeof next.startCount === "number" ? next.startCount : before.startCount;
+  const remains = typeof next.remains === "number" ? next.remains : before.remains;
 
   await client.orderEvent.create({
     data: {
@@ -254,10 +291,14 @@ export async function recordOrderStep(
       to,
       // The counts as they stand after this step, falling back to what the
       // order already held when this step did not touch them.
-      startCount: typeof next.startCount === "number" ? next.startCount : before.startCount,
-      remains: typeof next.remains === "number" ? next.remains : before.remains,
+      startCount,
+      remains,
       actor,
       note: typeof next.note === "string" ? next.note : "",
     },
   });
+
+  // The same choke point, for the same reason: every status decision passes
+  // through here, so a reseller cannot be told about five of the six.
+  await queueCallback(client, before, { status: to, startCount, remains });
 }

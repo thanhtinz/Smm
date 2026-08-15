@@ -126,6 +126,10 @@ model User {
   colorMode     String    @default("dark") // dark | light | system
   timezone      String    @default("Asia/Ho_Chi_Minh")
   apiKey        String    @unique @default(cuid())
+  /// Where to POST when one of this account's orders finishes. Set by the
+  /// reseller on their own API page; empty means they poll instead, which is
+  /// what every account does until it asks not to.
+  callbackUrl   String    @default("")
   emailVerified Boolean   @default(false)
   /// Base32 TOTP secret. Present but with no totpEnabledAt means setup was
   /// started and never confirmed, so it does not yet guard anything.
@@ -141,6 +145,7 @@ model User {
   authTokens      AuthToken[]
   recoveryCodes   RecoveryCode[]
   orders          Order[]
+  callbacks       Callback[]
   transactions    Transaction[]
   tickets         Ticket[]           @relation("TicketAuthor")
   assignedTickets Ticket[]           @relation("TicketAssignee")
@@ -645,6 +650,44 @@ model OrderEvent {
   @@index([panelId])
 }
 
+/// One outbound notification to a reseller's own server.
+///
+/// A row rather than a fetch at the moment the order settles: the reseller's
+/// server will be down sometimes, and losing the one message that says their
+/// customer's order is finished is worse than any amount of retrying. Written
+/// inside the same transaction as the status change, so a delivered status and
+/// a queued callback cannot disagree.
+model Callback {
+  id            String    @id @default(cuid())
+  panelId       String    @default("")
+  panel         Panel     @relation("PanelCallbacks", fields: [panelId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId       String
+  /// The order's public id, copied in: it is what the reseller knows the order
+  /// by, and it has to survive the order being deleted.
+  publicId      Int
+  /// pending | delivered | failed
+  status        String    @default("pending")
+  /// The exact bytes that were signed. Kept rather than rebuilt at send time so
+  /// a retry sends what the first attempt promised, even if the order has
+  /// moved on since.
+  payload       String
+  attempts      Int       @default(0)
+  /// Backs off exponentially. The delivery pass only looks at rows due now.
+  nextAttemptAt DateTime  @default(now())
+  /// The last HTTP status, or 0 when the request never completed.
+  lastCode      Int       @default(0)
+  lastError     String    @default("")
+  deliveredAt   DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([userId, createdAt])
+  @@index([panelId])
+}
+
 /// Links and accounts the operator has decided this panel will not serve.
 ///
 /// Deliberately not a rule that holds an order for review: someone typed this
@@ -1031,6 +1074,7 @@ model Panel {
   inboxMessages  InboxMessage[]     @relation("PanelInboxMessages")
   orderEvents    OrderEvent[]       @relation("PanelOrderEvents")
   blocklist      Blocklist[]        @relation("PanelBlocklist")
+  callbacks      Callback[]         @relation("PanelCallbacks")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
   createdAt      DateTime           @default(now())

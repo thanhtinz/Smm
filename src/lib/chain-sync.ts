@@ -11,6 +11,7 @@ import { notification, requestKey } from "./notify";
 import { englishMessage } from "./fault";
 import { sendPendingNotificationMails } from "./notify-mail";
 import { withSettled, recordOrderStep } from "./orders";
+import { deliverCallbacks } from "./callbacks";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -187,6 +188,10 @@ export async function runSyncCycle(trigger = "cron") {
 
   const chain = await propagateChainStatuses();
   const requests = await propagateRequestDecisions();
+
+  // After the chain pass, so a status that walked down three panels tells
+  // every reseller on the way in the same cycle it arrived.
+  const callbacks = await deliverCallbacks();
   const rent = await billPanelRent();
 
   // Last: everything above may have written notifications, and each of them
@@ -215,6 +220,7 @@ export async function runSyncCycle(trigger = "cron") {
     mailed: mailed.sent,
     chain,
     requests,
+    callbacks,
     rent,
     rates,
     auto: { refills: auto.refills, cancels: auto.cancels, stuck: auto.stuck },

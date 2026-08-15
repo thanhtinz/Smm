@@ -18,6 +18,7 @@ export default async function ApiDocsPage() {
   const ctx = await getAppContext();
   const { t } = ctx;
   const enabled = await getSetting("api.enabled");
+  const callbacksOn = await getSetting("api.callbacksEnabled");
   const endpoint = `${await panelBaseUrl()}/api/v2`;
 
   // The sample response shows a service this panel actually sells; a
@@ -175,9 +176,49 @@ export default async function ApiDocsPage() {
           </section>
         ))}
       </div>
+
+      {callbacksOn && (
+        <section className="card mt-8 max-w-3xl overflow-hidden">
+          <header className="border-b border-[var(--border)] px-5 py-4">
+            <h2 className="font-semibold">{t("api.callback.title")}</h2>
+            <p className="muted mt-1 text-sm">{t("api.callback.docs")}</p>
+          </header>
+          <div className="space-y-4 p-5">
+            <div>
+              <h3 className="muted mb-2 text-[0.68rem] font-semibold tracking-widest uppercase">{t("api.callback.body")}</h3>
+              <pre className="surface-2 scroll-x rounded-xl p-3.5 font-mono text-[0.72rem] leading-relaxed">
+                {JSON.stringify({ order: 100234, status: "Completed", start_count: 1200, remains: 0, charge: 24000 }, null, 2)}
+              </pre>
+            </div>
+            <div>
+              <h3 className="muted mb-2 text-[0.68rem] font-semibold tracking-widest uppercase">{t("api.callback.verify")}</h3>
+              {/* Node because that is what most resellers here run, and the
+                  point is the two rules that are easy to get wrong: hash the
+                  raw bytes, and compare in constant time. */}
+              <pre className="surface-2 scroll-x rounded-xl p-3.5 font-mono text-[0.72rem] leading-relaxed">
+                {CALLBACK_EXAMPLE}
+              </pre>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
+
+const CALLBACK_EXAMPLE = `const raw = await request.text();          // the raw body, not JSON.parse'd
+const mine = crypto
+  .createHmac("sha256", MY_API_KEY)
+  .update(raw)
+  .digest("hex");
+
+const theirs = request.headers.get("x-signature");
+if (mine.length !== theirs.length ||
+    !crypto.timingSafeEqual(Buffer.from(mine), Buffer.from(theirs))) {
+  return new Response("bad signature", { status: 401 });
+}
+
+const { order, status, remains } = JSON.parse(raw);`;
 
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (

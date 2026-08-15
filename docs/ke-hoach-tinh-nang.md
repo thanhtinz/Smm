@@ -108,6 +108,37 @@ máy chủ trả 500 và xem nó thử lại rồi bỏ cuộc.
 
 **Cỡ.** Vừa. Phần khó là hàng đợi thử lại, không phải phần gửi.
 
+**Đã làm xong.** Bảng `Callback` là hàng đợi, không phải gọi thẳng lúc đơn
+chốt — server của đại lý sẽ có lúc sập, và đó đúng là lúc cái tin nhắn này quan
+trọng nhất. Hàng đợi được ghi **trong cùng transaction** với việc đổi trạng
+thái, nên không có khe hở nào mà đơn đã completed còn hàng đợi thì trống. Ghi
+từ đúng một chỗ: `recordOrderStep`, chính là nút thắt đã dựng ở mục 2.
+
+Chữ ký HMAC-SHA256 trên **đúng chuỗi byte gửi đi**, khoá là API key của đại lý —
+họ đã có sẵn khoá đó, không phải nhớ thêm bí mật thứ hai. Trạng thái trong
+payload dùng đúng chữ hoa như action `status` trả về (`Completed`, chứ không
+phải `completed`), để đại lý chỉ phải xử lý một bộ chuỗi.
+
+Thử lại giãn theo cấp số nhân (1, 2, 4, 8… phút, trần 60), bỏ cuộc sau N lần
+cấu hình được, và **mã lỗi hiện ngay trên trang API của đại lý** để họ tự sửa.
+
+**Một thứ kế hoạch không nói tới mà bắt buộc phải có.** Địa chỉ callback do
+khách gõ, còn request thì đi ra từ server của panel — nên nếu không chặn, mỗi
+tài khoản đại lý trở thành một đường để dò mạng nội bộ của panel: endpoint
+metadata của nhà cung cấp đám mây, database trên localhost, bất cứ thứ gì server
+với tới được. Panel từ chối địa chỉ trỏ vào dải riêng, loopback, link-local
+(`169.254.169.254`), CGNAT — **kiểm tra trên địa chỉ đã phân giải**, vì một tên
+miền của kẻ tấn công có thể trỏ về 127.0.0.1 bất cứ lúc nào — và không đi theo
+redirect. Bật sẵn; panel nào thật sự cần gọi vào mạng nhà thì tắt được.
+
+**Chứng minh.** Gõ vào form thật trên `/dashboard/api`: loopback, metadata đám
+mây, dải riêng, và `localhost` bằng tên — cả bốn đều bị từ chối, không lưu. Tắt
+chặn thì lưu được. Đặt đơn qua API thật, chốt qua cron thật với nguồn giả:
+callback vào hàng đợi, gửi đi, **máy chủ nhận tự kiểm chữ ký bằng API key và
+khớp**; đổi một byte thì chữ ký sai. Cho máy chủ trả 500: thử lại đúng ba lần
+theo cấu hình, giãn 2 → 4 phút, rồi chuyển `failed` với `HTTP 500` ghi trên
+dòng, và **không thử lại nữa**.
+
 ---
 
 ## 4. Chỉ có hai lớp chống lợi dụng
