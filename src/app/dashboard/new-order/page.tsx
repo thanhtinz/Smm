@@ -160,8 +160,6 @@ export default async function NewOrderPage() {
                 factYes: t("order.factYes"),
                 factNo: t("order.factNo"),
                 listPrice: t("order.listPrice"),
-                fromTitle: t("order.fromTitle"),
-                fromHint: t("order.fromHint"),
                 selectPlatformFirst: t("order.selectPlatformFirst"),
                 selectCategoryFirst: t("order.selectCategoryFirst"),
                 searchService: t("common.search"),
