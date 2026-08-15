@@ -8,6 +8,7 @@ import Combobox from "@/components/ui/combobox";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
+import OrderFacts, { type Fact } from "@/components/orders/order-facts";
 import { SUBSCRIPTION_DELAYS } from "@/lib/orders";
 
 export type ServiceOption = {
@@ -15,7 +16,10 @@ export type ServiceOption = {
   publicId: number;
   name: string;
   categoryId: string;
+  /** What this customer pays, after their tier discount. */
   rate: number;
+  /** The list price, so a discount can be shown as a saving. */
+  listRate: number;
   min: number;
   max: number;
   refill: boolean;
@@ -46,6 +50,20 @@ export type OrderLabels = Record<
   | "addFunds"
   | "selectCategory"
   | "selectService"
+  | "id"
+  | "limits"
+  | "quickFind"
+  | "quickFindHint"
+  | "quickFindPlaceholder"
+  | "factStatus"
+  | "factOn"
+  | "factTime"
+  | "factUnknown"
+  | "factCancel"
+  | "factWarranty"
+  | "factYes"
+  | "factNo"
+  | "listPrice"
   | "fromTitle"
   | "fromHint"
   | "selectPlatformFirst"
@@ -103,6 +121,7 @@ export default function NewOrderForm({
   services,
   balance,
   currency,
+  accountCard,
   labels,
 }: {
   platforms: PlatformOption[];
@@ -110,6 +129,8 @@ export default function NewOrderForm({
   services: ServiceOption[];
   balance: number;
   currency: Currency;
+  /** Rendered on the server: it formats money and reads the customer tier. */
+  accountCard?: React.ReactNode;
   labels: OrderLabels;
 }) {
   const [state, action] = useActionState<OrderState, FormData>(placeOrderAction, {});
@@ -172,6 +193,59 @@ export default function NewOrderForm({
    * making them answer three questions before it appears is answering the
    * wrong one. Derived from the services already loaded, so it costs nothing.
    */
+  /**
+   * Everything, searchable, for customers who already know what they want.
+   *
+   * The cascade is right for browsing and wrong for the buyer who orders the
+   * same thing every week: three selects to reach a service they can name.
+   * Picking here fills the cascade in behind them.
+   */
+  const everything = useMemo(
+    () =>
+      services.map((service) => {
+        const category = categories.find((c) => c.id === service.categoryId);
+        return { service, category, platformId: category?.platformId ?? "" };
+      }),
+    [services, categories],
+  );
+
+  const jumpTo = (id: string) => {
+    const hit = everything.find((row) => row.service.id === id);
+    if (!hit) return;
+    setPlatformId(hit.platformId);
+    setCategoryId(hit.service.categoryId);
+    setServiceId(id);
+  };
+
+  const facts: Fact[] = service
+    ? [
+        { key: "status", label: labels.factStatus, value: labels.factOn, tone: "good", icon: "checkCircle" },
+        {
+          key: "time",
+          label: labels.factTime,
+          // Free text from the provider, so it is shown as written rather than
+          // parsed into a number this panel cannot vouch for.
+          value: service.averageTime || labels.factUnknown,
+          tone: service.averageTime ? "neutral" : "neutral",
+          icon: "clock",
+        },
+        {
+          key: "cancel",
+          label: labels.factCancel,
+          value: service.cancel ? labels.factYes : labels.factNo,
+          tone: service.cancel ? "good" : "bad",
+          icon: service.cancel ? "checkCircle" : "close",
+        },
+        {
+          key: "warranty",
+          label: labels.factWarranty,
+          value: service.refill ? labels.factYes : labels.factNo,
+          tone: service.refill ? "good" : "bad",
+          icon: service.refill ? "shield" : "close",
+        },
+      ]
+    : [];
+
   const cheapest = useMemo(() => {
     const byPlatform = new Map<string, number>();
     for (const service of services) {
@@ -219,6 +293,26 @@ export default function NewOrderForm({
             <span>{state.error}</span>
           </div>
         )}
+
+        {/* For the buyer who already knows the service. Above the cascade
+            because it replaces it, not because it refines it. */}
+        <Field name="quickFind" label={labels.quickFind} hint={labels.quickFindHint}>
+          <Combobox
+            name="quickFind"
+            value=""
+            onChange={jumpTo}
+            placeholder={labels.quickFindPlaceholder}
+            searchPlaceholder={labels.searchService}
+            emptyLabel={labels.noResults}
+            options={everything.map(({ service }) => ({
+              value: service.id,
+              label: service.name,
+              code: String(service.publicId),
+              meta: fmt(service.rate),
+              keywords: service.description,
+            }))}
+          />
+        </Field>
 
         {/* Platform is a chip row rather than a select — it is the widest
             branch of the choice and benefits from being visible at a glance. */}
@@ -296,6 +390,14 @@ export default function NewOrderForm({
             }))}
           />
         </Field>
+
+        {service && <OrderFacts facts={facts} />}
+
+        {service?.description && (
+          <div className="surface-2 rounded-xl p-3.5">
+            <p className="text-sm leading-relaxed whitespace-pre-line">{service.description}</p>
+          </div>
+        )}
 
         {subscription ? (
           <>
@@ -521,30 +623,39 @@ export default function NewOrderForm({
       </div>
 
       {/* ------------------------------------------------------ summary */}
-      <aside className="min-w-0">
-        <div className="card card-pad lg:sticky lg:top-20">
+      <aside className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
+        {accountCard}
+
+        <div className="card card-pad">
           {service ? (
             <>
               <p className="text-sm font-semibold">{service.name}</p>
               <p className="muted mt-0.5 font-mono text-xs">#{service.publicId}</p>
 
-              {service.description && (
-                <p className="muted mt-3 border-l-2 border-[var(--border)] pl-3 text-xs leading-relaxed">
-                  {service.description}
-                </p>
+              {!subscription && service.dripfeed && (
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  <Flag on label={labels.dripfeed} />
+                </div>
               )}
-
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                <Flag on={service.refill} label={labels.refillLabel} />
-                <Flag on={service.cancel} label={labels.cancelLabel} />
-                {!subscription && <Flag on={service.dripfeed} label={labels.dripfeed} />}
-              </div>
 
               <div className="divider my-4" />
 
               <dl className="space-y-2.5 text-sm">
-                <Row label={labels.rate} value={fmt(service.rate)} />
-                {service.averageTime && <Row label={labels.averageTime} value={service.averageTime} />}
+                <Row label={labels.id} value={<span className="font-mono text-xs">#{service.publicId}</span>} />
+                <Row label={labels.limits} value={`${service.min.toLocaleString()} – ${service.max.toLocaleString()}`} />
+                {/* A discount nobody can compare against is not persuasive, so
+                    the list price stays visible with a line through it. */}
+                {service.listRate > service.rate ? (
+                  <div className="flex items-baseline justify-between gap-3">
+                    <dt className="muted">{labels.rate}</dt>
+                    <dd className="flex items-baseline gap-2">
+                      <span className="muted text-xs line-through">{fmt(service.listRate)}</span>
+                      <span className="font-semibold text-[var(--success)]">{fmt(service.rate)}</span>
+                    </dd>
+                  </div>
+                ) : (
+                  <Row label={labels.rate} value={fmt(service.rate)} />
+                )}
                 {subscription ? (
                   <>
                     <Row label={labels.posts} value={Number(posts) > 0 ? Number(posts).toLocaleString() : "—"} />
@@ -567,11 +678,6 @@ export default function NewOrderForm({
                 <span className="muted text-xs tracking-wide uppercase">{labels.charge}</span>
                 <p className="mt-0.5 text-2xl leading-tight font-bold tabular-nums">{fmt(charge)}</p>
               </div>
-
-              <p className="muted mt-2 flex items-center justify-between text-xs">
-                <span>{labels.balance}</span>
-                <span className="tabular-nums">{fmt(balance)}</span>
-              </p>
 
               {!affordable && charge > 0 && (
                 <div className="alert alert-danger mt-4" role="alert">

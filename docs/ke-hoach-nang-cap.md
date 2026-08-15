@@ -167,8 +167,27 @@ mở trang lần đầu:
   mép phải mà không có dấu hiệu nào cho biết còn nữa: **Facebook, X/Twitter,
   Telegram, Spotify đều không nhìn thấy được**. Giờ cả 8 nền tảng hiện hết.
 
-Phần bảo hành/thời gian bắt đầu trong dòng dịch vụ phải chờ mục 2 — hiện panel
-chưa có số liệu đó dưới dạng dữ liệu.
+**Làm lại lần hai sau khi bạn đưa ảnh một panel VN thật.** Proxy chặn hết nên
+tôi không tự xem được cái nào; ảnh bạn gửi là thứ tôi thiếu. Đọc nó ra bốn thứ
+panel này không có, và lấy về đủ bốn:
+
+- **Ô "tìm nhanh dịch vụ" trên cùng.** Gõ tên hoặc mã là nhảy thẳng tới dịch
+  vụ, ba ô bên dưới tự điền theo. Cascade đúng cho người đi tìm, sai cho khách
+  tuần nào cũng mua đúng một thứ họ gọi tên được.
+- **Bốn ô thông số hiện ngay khi chọn xong dịch vụ**: trạng thái, bắt đầu sau,
+  huỷ được, bảo hành. Trước đó ba cái nằm dưới dạng pill xám nhỏ và một dòng
+  trong danh sách — chỗ mắt nhìn tới sau cùng. Dấu X đỏ ở "không bảo hành" là
+  câu trả lời thật, không phải lỗi, và khách cần thấy rõ trước khi trả tiền.
+- **Thẻ tài khoản ở cột phải**: số dư, tổng đã nạp, cấp bậc kèm mức giảm, hai
+  nút nạp tiền / hồ sơ. Số dư đã có trên thanh trên cùng, nhưng đây là cột
+  khách đọc lúc đang cân nhắc — "đủ tiền không" nên nằm cạnh giá.
+- **Giá gốc gạch ngang cạnh giá sau chiết khấu.** Panel có giá theo cấp bậc từ
+  lâu nhưng chưa bao giờ cho khách thấy họ đang được giảm; một mức giảm không
+  ai đối chiếu được thì không thuyết phục được ai.
+
+Hai lỗi tự bắt khi chụp lại: khoá `dash.balance` không tồn tại nên in ra chữ
+`dash.balance` thô trên màn hình, và bốn ô thông số xếp ngang thì nhãn xuống ba
+dòng rồi cắt cụt mất chính câu trả lời — đã đổi sang xếp dọc.
 
 ---
 
