@@ -3,18 +3,28 @@ import { redirect } from "next/navigation";
 import LoginForm from "@/components/auth/login-form";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
+import { safeNext } from "@/lib/next-path";
 
 export const metadata: Metadata = { title: "Sign in" };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ reset?: string }> }) {
-  const { reset } = await searchParams;
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ reset?: string; next?: string }>;
+}) {
+  const { reset, next } = await searchParams;
   const ctx = await getAppContext();
+  // Where they were headed when they were stopped, if it is a page on this
+  // site. Checked here as well as in the action: a link that cannot be
+  // honoured should not put a hidden field on the form at all.
+  const wanted = safeNext(next);
   // Someone already signed in has no use for a sign-in form.
-  if (ctx.user) redirect(ctx.user.role === "admin" ? "/admin" : "/dashboard");
+  if (ctx.user) redirect(wanted ?? (ctx.user.role === "admin" ? "/admin" : "/dashboard"));
   const { t } = ctx;
 
   return (
     <LoginForm
+      next={wanted ?? ""}
       notice={reset ? t("auth.reset.done") : ""}
       captcha={await captchaFor("login")}
       labels={{

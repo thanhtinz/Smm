@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { safeNext, nextQuery } from "@/lib/next-path";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSession, destroySession, hashPassword, logActivity, verifyPassword } from "@/lib/auth";
@@ -73,17 +74,22 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
     return { unverified: user.email, values: { identifier: raw.identifier } };
   }
 
+  // Checked again here, not trusted from the form: the hidden field is as
+  // editable as any other, and this is the value that gets followed.
+  const wanted = safeNext(formData.get("next"));
+
   // A staff account with a second factor gets no session yet — only a ticket
-  // that is worth nothing without the code.
+  // that is worth nothing without the code. The destination has to survive
+  // that step or the second factor would cost them their place.
   if (twoFactorActive(user)) {
     await startPendingLogin(user.id);
     await logActivity(user.id, "login.2fa.pending");
-    redirect("/two-factor");
+    redirect(`/two-factor${nextQuery(wanted)}`);
   }
 
   await createSession(user.id);
   await logActivity(user.id, "login.success");
-  redirect(user.role === "admin" ? "/admin" : "/dashboard");
+  redirect(wanted ?? (user.role === "admin" ? "/admin" : "/dashboard"));
 }
 
 const registerSchema = (t: Translator) =>

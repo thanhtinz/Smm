@@ -7,6 +7,9 @@ import PanelSuspended from "@/components/panel-suspended";
 import MaintenanceNotice from "@/components/maintenance-notice";
 import { maintenanceState } from "@/lib/maintenance";
 import { db } from "@/lib/db";
+import { headers } from "next/headers";
+import { nextQuery } from "@/lib/next-path";
+import { PATHNAME_HEADER } from "@/lib/panel-host";
 import AnnouncementBanner from "@/components/announcement-banner";
 import ContactDock from "@/components/landing/contact-dock";
 
@@ -27,7 +30,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const ctx = await getAppContext();
-  if (!ctx.user) redirect("/login");
+  // Carrying the path they asked for, so signing in puts them on it rather
+  // than on the dashboard they did not ask for.
+  if (!ctx.user) redirect(`/login${nextQuery((await headers()).get(PATHNAME_HEADER))}`);
 
   const { t } = ctx;
   const [openTickets, platforms] = await Promise.all([
