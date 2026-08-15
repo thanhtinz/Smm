@@ -7,6 +7,7 @@
 export const en = {
   "nav.home": "Home",
   "nav.services": "Services",
+  "nav.allOf": "All {name}",
   "nav.pricing": "Pricing",
   "nav.api": "API",
   "nav.support": "Support",
@@ -15,6 +16,7 @@ export const en = {
   "nav.signup": "Create account",
   "nav.dashboard": "Dashboard",
   "nav.menu": "Menu",
+  "nav.more": "More",
   "nav.wallet": "Wallet",
   "nav.signout": "Sign out",
 
@@ -1158,6 +1160,7 @@ export const en = {
   "service.typeDefault": "Quantity",
   "service.typeCustomComments": "Custom comments",
   "service.typeSubscription": "Subscription",
+  "services.signInToOrder": "Sign in to order from this page.",
   "service.autoPrice": "Follow the provider price",
   "service.backupProvider": "Backup provider",
   "service.backupHint": "Tried only when the first one refuses",
@@ -1344,6 +1347,7 @@ export const en = {
   "admin.disabled": "Disabled",
   "admin.position": "Sort order",
   "admin.slug": "Slug",
+  "admin.categorySlugHint": "The category's own address, under its platform. Changing it breaks old links.",
   "admin.icon": "Icon",
   "admin.color": "Colour",
   "admin.name": "Name",
@@ -1429,6 +1433,7 @@ export const en = {
 export const vi: Partial<Record<keyof typeof en, string>> = {
   "nav.home": "Trang chủ",
   "nav.services": "Dịch vụ",
+  "nav.allOf": "Tất cả {name}",
   "nav.pricing": "Bảng giá",
   "nav.api": "API",
   "nav.support": "Hỗ trợ",
@@ -1437,6 +1442,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "nav.signup": "Tạo tài khoản",
   "nav.dashboard": "Bảng điều khiển",
   "nav.menu": "Menu",
+  "nav.more": "Thêm",
   "nav.wallet": "Ví tiền",
   "nav.signout": "Đăng xuất",
 
@@ -2568,6 +2574,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "service.typeDefault": "Theo số lượng",
   "service.typeCustomComments": "Custom comments",
   "service.typeSubscription": "Subscription",
+  "services.signInToOrder": "Đăng nhập để đặt đơn ngay trên trang này.",
   "service.autoPrice": "Giá bán chạy theo giá nhà cung cấp",
   "service.backupProvider": "NCC dự phòng",
   "service.backupHint": "Chỉ dùng khi NCC chính từ chối",
@@ -2754,6 +2761,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "admin.disabled": "Đang tắt",
   "admin.position": "Thứ tự",
   "admin.slug": "Đường dẫn",
+  "admin.categorySlugHint": "Địa chỉ riêng của danh mục, nằm dưới nền tảng. Đổi là link cũ hỏng.",
   "admin.icon": "Biểu tượng",
   "admin.color": "Màu",
   "admin.name": "Tên",

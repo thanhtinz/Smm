@@ -22,6 +22,7 @@ export default async function AdminCategoriesPage() {
         rows={categories.map((c) => ({
           id: c.id,
           name: c.name,
+          slug: c.slug,
           description: c.description,
           platformId: c.platformId,
           visible: c.visible,
@@ -39,6 +40,8 @@ export default async function AdminCategoriesPage() {
           confirmDelete: t("admin.confirmDelete"),
           empty: t("common.none"),
           name: t("admin.name"),
+          slug: t("admin.slug"),
+          slugHint: t("admin.categorySlugHint"),
           description: t("admin.description"),
           position: t("admin.position"),
           visible: t("admin.visible"),
