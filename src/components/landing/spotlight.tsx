@@ -116,7 +116,7 @@ export default function Spotlight(props: LayoutProps) {
           className="block h-full rounded-full"
           style={{
             width: order.seconds === null ? "45%" : "100%",
-            background: order.seconds === null ? "var(--info)" : "var(--success)",
+            background: order.seconds === null ? "var(--accent)" : "var(--success)",
           }}
         />
       </span>

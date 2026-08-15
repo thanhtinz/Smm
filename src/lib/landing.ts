@@ -9,7 +9,7 @@
 import { db } from "./db";
 import { priceServices, resolveTier } from "./pricing";
 
-export const LANDING_LAYOUTS = ["priceBoard", "orderFirst", "proof", "editorial", "catalogue", "spotlight"] as const;
+export const LANDING_LAYOUTS = ["priceBoard", "orderFirst", "proof", "editorial", "catalogue", "spotlight", "grid", "showcase", "midnight"] as const;
 export type LandingLayout = (typeof LANDING_LAYOUTS)[number];
 
 export type PlatformLine = {
