@@ -12,6 +12,7 @@ import { englishMessage } from "./fault";
 import { sendPendingNotificationMails } from "./notify-mail";
 import { withSettled, recordOrderStep } from "./orders";
 import { deliverCallbacks } from "./callbacks";
+import { checkDueRanks } from "./rank/tracker";
 
 /**
  * Carries status and money back down the wholesale chain.
@@ -200,6 +201,12 @@ export async function runSyncCycle(trigger = "cron") {
   failures.push(...mailed.failures);
   const rates = await updateExchangeRates();
 
+  // Rankings move slowly and cost money to ask about, so this rides the same
+  // cycle rather than a schedule of its own; the interval setting is what
+  // decides whether a given tick actually reads anything.
+  const ranks = await checkDueRanks();
+  failures.push(...ranks.failures);
+
   // Last: a repriced catalogue should not change what the orders dispatched a
   // moment ago were charged at.
   const catalogue = await syncDueProviders();
@@ -221,6 +228,7 @@ export async function runSyncCycle(trigger = "cron") {
     chain,
     requests,
     callbacks,
+    ranks,
     rent,
     rates,
     auto: { refills: auto.refills, cancels: auto.cancels, stuck: auto.stuck },

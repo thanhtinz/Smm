@@ -196,9 +196,43 @@ về ví đủ.
 
 ---
 
+## 6. Theo dõi thứ hạng tìm kiếm
+
+**Làm gì.** Admin nhập từ khoá; cron sẵn có tự đi đo theo lịch cấu hình được.
+Hai nguồn, chọn trong admin, **không hardcode gì cả**:
+
+- **Search Console** — Google nói về chính site của bạn. Miễn phí, chính xác,
+  nhưng chỉ thấy từ khoá bạn **đã** có mặt; nó không nói được "bạn không nằm ở
+  đâu cả". Xác thực bằng **service account**, không phải OAuth cá nhân — báo
+  cáo chạy không người trông, mà token gắn với tài khoản Google của một người
+  thì hỏng đúng hôm người đó nghỉ việc.
+- **SERP API trả phí** — thấy cả từ khoá bạn chưa lọt top. Không gắn cứng vào
+  hãng nào: endpoint có `{query}`, `{country}`, `{key}`, thêm hai ô chỉ đường
+  tới danh sách kết quả trong JSON. Bạn mua dịch vụ nào cũng trỏ vào được.
+
+**Cố ý không có nguồn thứ ba tự vào google.com đọc.** Vi phạm điều khoản của
+Google, bị chặn sau vài chục lượt, và một panel để IP máy chủ của mình bị gắn
+cờ là đã đổi một bản báo cáo lấy chính khả năng hiển thị của nó.
+
+**Chứng minh.** Dựng hai máy chủ nói đúng giao thức của từng nguồn. Phía Google:
+sinh khoá RSA thật, **máy chủ tự xác minh chữ ký JWT panel ký** — đúng chữ ký,
+đúng scope read-only, đúng property, đúng chiều `["query","page"]`, và cửa sổ
+ngày kết thúc **trước hôm nay** (Search Console trễ vài ngày). Hạng 4,4 làm tròn
+thành 4; một từ khoá ra hai trang thì trang tốt hơn thắng. Chạy cron lần hai
+trong khoảng thời gian chờ: **không gọi lại**, không ghi trùng lịch sử. Đẩy
+`checkedAt` về quá khứ rồi chạy lại: hạng mới thay hạng cũ, hạng cũ giữ lại để
+vẽ mũi tên. Làm hỏng cấu hình: lý do hiện trên đúng dòng đó, **hạng tốt cuối
+cùng không bị xoá**. Đổi sang SERP API: mỗi từ khoá một lượt tìm, `{country}` và
+`{key}` truyền đúng, tìm ra site trong danh sách, lỗi cũ tự hết, và bản ghi mới
+ghi tên đúng nguồn chứ không phải Google.
+
+**Cỡ.** Vừa.
+
+---
+
 ## Thứ tự đề xuất
 
-1 → 2 → 4 → 3. **Đã làm xong cả bốn.**
+1 → 2 → 4 → 3, rồi (6). **Đã làm xong cả năm.**
 
 Lý do thứ tự: (1) là chế độ hỏng im lặng, sửa trước mọi thứ. (2) là thứ (4) và
 bộ phận hỗ trợ đều cần để làm việc. (3) mang lại doanh thu đại lý nhưng không
@@ -214,5 +248,5 @@ cứu ai khi hỏng.
 - **Công cụ miễn phí** — đã làm rồi bạn bảo bỏ, đã xoá sạch.
 - **Biên lai nạp tiền** — làm xong rồi bạn bảo bỏ, đã gỡ sạch: trang in, cột
   thông tin xuất biên lai trên `User`, cấu hình bên phát hành, và migration.
-- **Rank tracker** — chờ bạn chọn: Search Console (chính xác, cần OAuth bạn tự
-  tạo) hay SERP API trả phí (bạn cấp key).
+- **Rank tracker** — **đã làm**, không bắt bạn chọn nữa: cả hai nguồn đều cấu
+  hình trong admin, điền xong là cron tự chạy. Xem mục 6.
