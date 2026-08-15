@@ -6,6 +6,7 @@ import { getSetting } from "./settings";
 import { nextPublicId } from "./ids";
 import { subtreeOf } from "./panels";
 import { notification } from "./notify";
+import { formatLocalDay } from "./dates";
 
 /**
  * Rent for child panels.
@@ -115,8 +116,13 @@ async function chargeRent(
 
   // One period, one reference. It is what makes a re-run after a crash between
   // the charge and the date bump find the payment instead of taking it twice.
+  // Deliberately UTC, unlike everything below: this is an idempotency key,
+  // not a date anybody reads, and it has to name the same period from every
+  // process on every host.
   const reference = `${panel.slug}@${due.toISOString().slice(0, 10)}`;
   const publicId = await runAsPanel(parentId, () => nextPublicId("transaction"));
+  // The owner reads this one, and they read it on the parent panel.
+  const timezone = await runAsPanel(parentId, async () => String(await getSetting("locale.timezone")) || "UTC");
 
   const charged = await runAsPanel(parentId, async () => {
     try {
@@ -151,7 +157,7 @@ async function chargeRent(
           data: notification({
             userId: panel.ownerUserId,
             key: "panel.rent",
-            params: { panel: panel.name, until: nextDueAt.toISOString().slice(0, 10) },
+            params: { panel: panel.name, until: formatLocalDay(nextDueAt, timezone) },
             href: "/dashboard/transactions",
           }),
         });
