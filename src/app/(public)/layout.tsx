@@ -25,8 +25,12 @@ export default async function PublicLayout({ children }: { children: React.React
   }
 
   const ctx = await getAppContext();
+  // The midnight landing is dark whatever the reader's mode says, and the
+  // header and footer have to come with it.
+  const midnight = ctx.settings["appearance.landingLayout"] === "midnight";
+
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className={`flex min-h-dvh flex-col${midnight ? " landing-midnight" : ""}`}>
       <SiteHeader ctx={ctx} />
       <main className="flex-1">{children}</main>
       <SiteFooter ctx={ctx} />
