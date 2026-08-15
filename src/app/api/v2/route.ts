@@ -163,6 +163,9 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
       // A reseller posts an end date as a bare day, and the day it means is
       // the panel's, not whatever zone this process happens to run in.
       String(await getSetting("locale.timezone")) || "UTC",
+      // English, like every other answer on this endpoint: a client library
+      // reads it, and its wording is part of the contract.
+      "en",
     );
     // The standard answers with the name of the offending field, not a
     // sentence, so the first error is reported the way callers expect.

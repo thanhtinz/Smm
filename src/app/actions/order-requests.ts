@@ -5,7 +5,12 @@ import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { openRequest, resolveRequest } from "@/lib/requests";
 import { readerMessages } from "@/lib/context";
 
-export type RequestState = { error?: string; ok?: true };
+export type RequestState = {
+  error?: string;
+  ok?: true;
+  /** The order was cancelled outright rather than queued for an operator. */
+  cancelled?: true;
+};
 
 export async function createOrderRequestAction(orderId: string, type: string): Promise<RequestState> {
   const t = await readerMessages();
@@ -18,7 +23,10 @@ export async function createOrderRequestAction(orderId: string, type: string): P
 
   revalidatePath("/dashboard/orders");
   revalidatePath("/admin/requests");
-  return { ok: true };
+  // A scheduled order that had not started is already cancelled and refunded;
+  // there is no request for anyone to approve, and saying "waiting for
+  // approval" would send the customer looking for one.
+  return outcome.cancelled ? { ok: true, cancelled: true } : { ok: true };
 }
 
 export async function resolveOrderRequestAction(id: string, decision: string, note = ""): Promise<RequestState> {

@@ -7,7 +7,7 @@ import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import OrderActions from "@/components/orders/order-actions";
-import { CUSTOMER_ORDER_STATUSES, customerStatus } from "@/lib/orders";
+import { CUSTOMER_ORDER_STATUSES, customerStatus, notStartedYet } from "@/lib/orders";
 import { reorderHref } from "@/lib/reorder";
 import { formatCount } from "@/lib/numbers";
 
@@ -75,13 +75,16 @@ export default async function OrdersPage({
     cancel: t("order.cancel"),
     refillPending: t("order.refillPending"),
     cancelPending: t("order.cancelPending"),
+    cancelled: t("order.cancelled"),
     reorder: t("order.reorder"),
   };
 
   const actionsFor = (o: (typeof orders)[number]) => ({
     orderId: o.id,
     canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
-    canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
+    // A booking can always be called off: nothing was sent anywhere, so
+    // whether the provider supports cancellations does not come into it.
+    canCancel: notStartedYet(o) || (o.service.cancel && ["pending", "processing"].includes(o.status)),
     openRequest: o.requests[0]?.type ?? null,
     reorderHref: o.service.enabled ? reorderHref(o, timezone) : null,
   });

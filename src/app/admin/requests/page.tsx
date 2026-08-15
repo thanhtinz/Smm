@@ -5,6 +5,7 @@ import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import RequestManager from "@/components/admin/request-manager";
+import { AUTO_CANCEL_NOTE } from "@/lib/requests";
 
 export const metadata: Metadata = { title: "Requests" };
 
@@ -66,7 +67,8 @@ export default async function AdminRequestsPage({
           serviceName: r.order.service.name,
           link: r.order.link,
           charge: displayMoney(r.order.charge, currency, locale),
-          note: r.note,
+          // The panel's own note travels as a key; an operator's is prose.
+          note: r.note === AUTO_CANCEL_NOTE ? t(r.note) : r.note,
           createdAt: fmtDate.format(r.createdAt),
         }))}
         labels={{

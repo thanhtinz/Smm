@@ -1,6 +1,7 @@
 import { queueCallback, type QueueClient } from "./callbacks/queue";
 import { formatLocalDay, parseLocalTime } from "./dates";
 import type { Fault } from "./fault";
+import { formatCount } from "./numbers";
 
 /** Charge for a service, in the panel's base currency. */
 export function calculateCharge(ratePer1000: number, quantity: number): number {
@@ -79,6 +80,18 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * of honest customers who trip these rules by accident.
  */
 export const CUSTOMER_ORDER_STATUSES = ORDER_STATUSES.filter((s) => s !== "held");
+
+/**
+ * An order that is only a booking: scheduled for a time still ahead, still
+ * pending, and never sent anywhere.
+ *
+ * The pages that offer a cancel button and the action that honours it read
+ * the same function, so a button cannot appear for an order the action would
+ * refuse — or fail to appear for one it would accept.
+ */
+export function notStartedYet(order: { status: string; startAt: Date | null; providerOrderId: string }): boolean {
+  return order.status === "pending" && order.startAt !== null && order.startAt > new Date() && !order.providerOrderId;
+}
 
 /** A held order reads as pending to whoever placed it. */
 export function customerStatus(status: string): string {
@@ -189,6 +202,8 @@ export function parseSubscription(
   service: { min: number; max: number },
   /** The panel's zone, which is the one the end date is written in. */
   timeZone: string,
+  /** Whose digit grouping the per-post limits are quoted in. */
+  locale: string,
 ): { sub: Subscription; quantity: number } | { fieldErrors: Record<string, Fault> } {
   const fieldErrors: Record<string, Fault> = {};
 
@@ -202,10 +217,10 @@ export function parseSubscription(
   const minPerPost = Number(raw.min);
   const maxPerPost = Number(raw.max);
   if (!Number.isInteger(minPerPost) || minPerPost < service.min) {
-    fieldErrors.min = { key: "err.subMin", vars: { min: service.min } };
+    fieldErrors.min = { key: "err.subMin", vars: { min: formatCount(service.min, locale) } };
   }
   if (!Number.isInteger(maxPerPost) || maxPerPost > service.max) {
-    fieldErrors.max = { key: "err.subMax", vars: { max: service.max } };
+    fieldErrors.max = { key: "err.subMax", vars: { max: formatCount(service.max, locale) } };
   }
   if (!fieldErrors.min && !fieldErrors.max && minPerPost > maxPerPost) {
     fieldErrors.max = { key: "err.subMaxBelowMin" };
