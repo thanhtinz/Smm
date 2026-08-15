@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import { displayMoney } from "@/lib/currency";
-import Artwork from "./artwork";
+import PlatformCluster from "./platform-cluster";
 import { ClosingCta, Faqs, PaymentStrip, Quotes, Steps } from "./sections";
 import type { LayoutProps } from "./types";
 import type { IconName } from "@/components/icons";
@@ -110,26 +110,29 @@ export default function Showcase(props: LayoutProps) {
 
           <div>
             {heroImage ? (
-              <Image
-                src={heroImage}
-                alt=""
-                width={720}
-                height={720}
-                className="mx-auto w-full max-w-[28rem] rounded-3xl object-cover"
-                priority
-              />
+              <>
+                <Image
+                  src={heroImage}
+                  alt=""
+                  width={720}
+                  height={720}
+                  className="mx-auto w-full max-w-[28rem] rounded-3xl object-cover"
+                  priority
+                />
+                {/* Under the photograph, where this shape always puts them —
+                    and only there. Beneath the cluster they would be the same
+                    logos twice. */}
+                <ul className="mt-6 flex flex-wrap justify-center gap-2.5">
+                  {data.platforms.slice(0, 7).map((p) => (
+                    <li key={p.id}>
+                      <PlatformMark platform={p} size={22} box={44} />
+                    </li>
+                  ))}
+                </ul>
+              </>
             ) : (
-              <Artwork platforms={data.platforms} />
+              <PlatformCluster platforms={data.platforms} />
             )}
-
-            {/* Under the picture, where this shape always puts them. */}
-            <ul className="mt-6 flex flex-wrap justify-center gap-2.5">
-              {data.platforms.slice(0, 7).map((p) => (
-                <li key={p.id}>
-                  <PlatformMark platform={p} size={20} box={42} />
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </section>
