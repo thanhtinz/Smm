@@ -15,7 +15,7 @@ import {
 } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
-import { duplicateOrder, guardOrder, orderRateLimit } from "@/lib/order-guard";
+import { duplicateOrder, duplicateWindow, findDuplicate, guardOrder, orderRateLimit } from "@/lib/order-guard";
 import { maintenanceState } from "@/lib/maintenance";
 import { readerMessages } from "@/lib/context";
 import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
@@ -160,12 +160,22 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   // the transaction opens — writing to it mid-transaction risks SQLITE_BUSY.
   const [orderPublicId, txPublicId] = await Promise.all([nextPublicId("order"), nextPublicId("transaction")]);
 
+  // Read out here so the transaction below does no settings lookup of its own.
+  const dedupe = await duplicateWindow();
+
   // Re-read the balance inside the transaction so two concurrent submissions
   // cannot both pass the check and overdraw the account.
   try {
     const result = await db.$transaction(async (tx) => {
       const fresh = await tx.user.findUniqueOrThrow({ where: { id: user.id }, select: { balance: true, spent: true } });
       if (fresh.balance < charge) throw new Error("INSUFFICIENT_FUNDS");
+
+      // Asked again in here, because the check before pricing loses the race
+      // it exists to win: two submissions milliseconds apart both read "no
+      // duplicate" and the customer pays twice for one delivery.
+      if (dedupe && (await findDuplicate(tx, user.id, service.id, link, dedupe.since))) {
+        throw new Error("DUPLICATE");
+      }
 
       const order = await tx.order.create({
         data: {
@@ -233,6 +243,11 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   } catch (e) {
     if (e instanceof Error && e.message === "INSUFFICIENT_FUNDS") {
       return { error: t("err.balanceOrder") };
+    }
+    // The losing half of a double-click. Nothing was charged, and the order
+    // the other half placed is already on its way.
+    if (e instanceof Error && e.message === "DUPLICATE") {
+      return { error: t("err.duplicateRace") };
     }
     if (e instanceof Error && e.message === "UPSTREAM_FUNDS") {
       // The customer is not the one short of money, and should not be told

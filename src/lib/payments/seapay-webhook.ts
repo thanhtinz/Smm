@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { creditDeposit } from "./credit";
@@ -9,11 +10,22 @@ import { parseConfig } from "./index";
  * for, then credit — idempotently, because SePay retries.
  *
  * Auth: `Authorization: Apikey <webhookSecret>`, compared against the value
- * stored on the payment method in the admin area.
+ * stored on the payment method in the admin area. With no secret stored the
+ * route refuses outright rather than accepting anything: this endpoint hands
+ * out real balance, and an unauthenticated one lets anybody who can reach the
+ * panel mint it. A deposit that has to be credited by hand is a nuisance; a
+ * deposit that never happened being credited automatically is theft.
  *
  * Runs against whichever panel the caller established, either from the host or
  * from the token in the URL.
  */
+/** Constant-time, and length-safe: timingSafeEqual throws on a mismatch. */
+function secretMatches(expected: string, provided: string): boolean {
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(provided, "utf8");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function handleSePayWebhook(request: Request) {
   const method = await db.paymentMethod.findFirst({ where: { code: "seapay" } });
   if (!method || !method.enabled) {
@@ -22,12 +34,14 @@ export async function handleSePayWebhook(request: Request) {
 
   const config = parseConfig(method.config);
   const expected = config.webhookSecret?.trim();
-  if (expected) {
-    const header = request.headers.get("authorization") ?? "";
-    const provided = header.replace(/^Apikey\s+/i, "").trim();
-    if (provided !== expected) {
-      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
-    }
+  if (!expected) {
+    return NextResponse.json({ success: false, message: "Not configured" }, { status: 503 });
+  }
+
+  const header = request.headers.get("authorization") ?? "";
+  const provided = header.replace(/^Apikey\s+/i, "").trim();
+  if (!secretMatches(expected, provided)) {
+    return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
   }
 
   let payload: SePayPayload;

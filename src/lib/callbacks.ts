@@ -5,7 +5,10 @@ import { db } from "./db";
 import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
 import { getSetting } from "./settings";
-import { apiStatus } from "./orders";
+
+// Re-exported so the queue and its delivery stay one thing to import from,
+// even though only one half of them can be reached from a client bundle.
+export { queueCallback, type QueueClient, type CallbackBody } from "./callbacks/queue";
 
 /**
  * Telling a reseller their order is finished.
@@ -22,17 +25,6 @@ import { apiStatus } from "./orders";
  */
 
 const TIMEOUT_MS = 10_000;
-
-/** Only these are worth a call: the rest are steps along the way. */
-const NOTIFIED = new Set(["completed", "partial", "canceled", "refunded"]);
-
-export type CallbackBody = {
-  order: number;
-  status: string;
-  start_count: number;
-  remains: number;
-  charge: number;
-};
 
 /**
  * HMAC-SHA256 over the exact bytes sent, keyed by the reseller's API key.
@@ -146,63 +138,6 @@ export async function resolveCallbackUrl(raw: string): Promise<UrlCheck> {
     return { ok: false, reason: "unresolved" };
   }
   return shape;
-}
-
-/**
- * Queues a callback, if this order's owner asked for them.
- *
- * Called from inside the transaction that writes the status, with that
- * transaction's client — the row and the status commit together or not at all.
- * Silent when the account has no callback URL, which is nearly every account.
- */
-/** Prisma checks create data against an exact shape, so it is spelled out. */
-type CallbackRow = {
-  panelId: string;
-  userId: string;
-  orderId: string;
-  publicId: number;
-  payload: string;
-};
-
-export type QueueClient = {
-  user: {
-    findUnique: (args: {
-      where: { id: string };
-      select: { callbackUrl: true };
-    }) => Promise<{ callbackUrl: string } | null>;
-  };
-  callback: { create: (args: { data: CallbackRow }) => Promise<unknown> };
-};
-
-export async function queueCallback(
-  client: QueueClient,
-  order: { id: string; panelId: string; publicId: number; userId: string; charge: number },
-  next: { status: string; startCount: number; remains: number },
-): Promise<void> {
-  if (!NOTIFIED.has(next.status)) return;
-
-  const owner = await client.user.findUnique({ where: { id: order.userId }, select: { callbackUrl: true } });
-  if (!owner?.callbackUrl) return;
-
-  const body: CallbackBody = {
-    order: order.publicId,
-    // The same wording the `status` action answers with, so a reseller has
-    // one set of strings to handle rather than two.
-    status: apiStatus(next.status),
-    start_count: next.startCount,
-    remains: next.remains,
-    charge: order.charge,
-  };
-
-  await client.callback.create({
-    data: {
-      panelId: order.panelId,
-      userId: order.userId,
-      orderId: order.id,
-      publicId: order.publicId,
-      payload: JSON.stringify(body),
-    },
-  });
 }
 
 /** Doubling, from one minute: 1, 2, 4, 8, 16, 32… */

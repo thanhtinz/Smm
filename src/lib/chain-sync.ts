@@ -77,6 +77,7 @@ export async function propagateChainStatuses(limit = 200) {
             downstream.publicId,
             withSettled(data),
             `Refund for order #${downstream.publicId}`,
+            downstream.charge,
           );
           refunded += 1;
         } else {

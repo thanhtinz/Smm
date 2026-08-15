@@ -1,4 +1,4 @@
-import { queueCallback, type QueueClient } from "./callbacks";
+import { queueCallback, type QueueClient } from "./callbacks/queue";
 
 /** Charge for a service, in the panel's base currency. */
 export function calculateCharge(ratePer1000: number, quantity: number): number {
@@ -17,7 +17,23 @@ export function orderCost(providerRate: number, quantity: number): number | null
   return providerRate > 0 ? Math.round((providerRate * quantity) / 1000) : null;
 }
 
-export const ACTIVE_ORDER_STATUSES = ["pending", "processing", "inprogress"] as const;
+/**
+ * Orders the panel is still working on.
+ *
+ * Held is absent: nothing is being done with a held order until somebody
+ * decides. Every count of "in flight" reads this rather than writing the list
+ * out again, which is how `held` came to be missing from some of them.
+ */
+export const ACTIVE_ORDER_STATUSES = ["pending", "processing", "inprogress"];
+
+/**
+ * The same thing from the customer's side, where held reads as pending.
+ *
+ * Without this a customer with a held order sees it listed under "pending" in
+ * their orders but not counted among their active ones — the panel visibly
+ * disagreeing with itself about an order they can see.
+ */
+export const CUSTOMER_ACTIVE_STATUSES = [...ACTIVE_ORDER_STATUSES, "held"];
 
 /** Statuses an order does not move on from. */
 export const SETTLED_ORDER_STATUSES = ["completed", "partial", "canceled", "refunded"] as const;
@@ -61,29 +77,6 @@ export type OrderStatus = (typeof ORDER_STATUSES)[number];
  * of honest customers who trip these rules by accident.
  */
 export const CUSTOMER_ORDER_STATUSES = ORDER_STATUSES.filter((s) => s !== "held");
-
-/**
- * The title-case names the API standard uses.
- *
- * Shared by the `status` action and the callback body so a reseller can
- * switch on one string in both places. Held is reported as Pending: the
- * standard has no word for it, a reseller can do nothing about it, and
- * inventing one would break client code that switches on this.
- */
-const API_STATUS: Record<string, string> = {
-  held: "Pending",
-  pending: "Pending",
-  processing: "Processing",
-  inprogress: "In progress",
-  completed: "Completed",
-  partial: "Partial",
-  canceled: "Canceled",
-  refunded: "Refunded",
-};
-
-export function apiStatus(status: string): string {
-  return API_STATUS[status] ?? status;
-}
 
 /** A held order reads as pending to whoever placed it. */
 export function customerStatus(status: string): string {

@@ -6,6 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { resolveTier } from "@/lib/pricing";
+import { CUSTOMER_ACTIVE_STATUSES } from "@/lib/orders";
 import { renderNotification } from "@/lib/notify";
 
 export default async function DashboardPage() {
@@ -14,7 +15,7 @@ export default async function DashboardPage() {
   const { t, currency, locale } = ctx;
 
   const [activeCount, completedCount, recentOrders, notifications] = await Promise.all([
-    db.order.count({ where: { userId: user.id, status: { in: ["pending", "processing", "inprogress"] } } }),
+    db.order.count({ where: { userId: user.id, status: { in: CUSTOMER_ACTIVE_STATUSES } } }),
     db.order.count({ where: { userId: user.id, status: "completed" } }),
     db.order.findMany({
       where: { userId: user.id },

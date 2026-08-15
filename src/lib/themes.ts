@@ -225,22 +225,33 @@ export const builtinThemes: ThemeDefinition[] = [
 ];
 
 /** Renders a theme into the CSS custom properties consumed by globals.css. */
+/**
+ * Theme values go straight into a <style> tag, so a value carrying `}` or a
+ * `<` would close the declaration or the tag and put whatever follows into the
+ * page. Only an admin can set these and an admin can already write raw HTML
+ * into a page — but a token is meant to be a colour or a length, and nothing
+ * legitimate here needs those characters.
+ */
+function safeValue(value: string): string {
+  return value.replace(/[<>{};]/g, "").trim();
+}
+
 export function themeToCss(slug: string, tokens: ThemeTokens): string {
   const block = (vars: Record<string, string>) =>
     Object.entries(vars)
-      .map(([k, v]) => `  --${kebab(k)}: ${v};`)
+      .map(([k, v]) => `  --${kebab(k)}: ${safeValue(String(v))};`)
       .join("\n");
 
   return [
-    `[data-theme="${slug}"][data-mode="dark"] {`,
+    `[data-theme="${safeValue(slug)}"][data-mode="dark"] {`,
     block(tokens.dark),
-    `  --radius: ${tokens.radius};`,
-    `  --font-sans: ${tokens.font};`,
+    `  --radius: ${safeValue(tokens.radius)};`,
+    `  --font-sans: ${safeValue(tokens.font)};`,
     `}`,
-    `[data-theme="${slug}"][data-mode="light"] {`,
+    `[data-theme="${safeValue(slug)}"][data-mode="light"] {`,
     block(tokens.light),
-    `  --radius: ${tokens.radius};`,
-    `  --font-sans: ${tokens.font};`,
+    `  --radius: ${safeValue(tokens.radius)};`,
+    `  --font-sans: ${safeValue(tokens.font)};`,
     `}`,
   ].join("\n");
 }
