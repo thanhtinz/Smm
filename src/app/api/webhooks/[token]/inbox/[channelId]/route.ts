@@ -33,6 +33,23 @@ export async function POST(
   const driver = driverFor(channel.kind);
   if (!driver) return NextResponse.json({ ok: true });
 
+  // The URL is an address, not a credential: it holds the panel's token and
+  // the channel's id, both of which sit in an admin page and in whatever the
+  // operator pasted them into. Without a secret on top, anyone who came by
+  // either could post into the inbox as any customer.
+  //
+  // A channel connected before there was a secret has none stored, and is
+  // accepted rather than cut off: refusing would drop real customer messages
+  // on the floor at the moment of deploy, silently, because these platforms
+  // do not retry a 401. Reconnecting the channel registers one — which is
+  // what the warning on the channels page asks the operator to do.
+  const config = JSON.parse(channel.config || "{}") as Record<string, string>;
+  if (driver.verify && config.secret) {
+    if (!driver.verify(config, request, config.secret)) {
+      return NextResponse.json({ ok: false }, { status: 401 });
+    }
+  }
+
   let payload: unknown;
   try {
     payload = await request.json();

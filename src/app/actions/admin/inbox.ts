@@ -1,11 +1,12 @@
 "use server";
 
+import { randomBytes } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { basePrisma } from "@/lib/db-base";
 import { requireAdmin, getCurrentUser, logActivity } from "@/lib/auth";
 import { readerMessages } from "@/lib/context";
-import { currentPanelId } from "@/lib/tenancy";
+import { currentPanelId, panelBaseUrl } from "@/lib/tenancy";
 import { STAFF_ROLES } from "@/lib/two-factor";
 import { driverFor } from "@/lib/inbox/drivers";
 import { reply as sendReply } from "@/lib/inbox/store";
@@ -44,7 +45,7 @@ export async function connectChannelAction(_prev: ActionResult, form: FormData):
 
   const name = String(form.get("name") ?? "").trim() || checked.name;
 
-  await db.channel.upsert({
+  const channel = await db.channel.upsert({
     where: { panelId_kind_externalId: { panelId: await currentPanelId(), kind, externalId: checked.externalId } },
     create: { kind, name, externalId: checked.externalId, config: JSON.stringify(config), enabled: true },
     update: { name, config: JSON.stringify(config), enabled: true },
@@ -52,7 +53,37 @@ export async function connectChannelAction(_prev: ActionResult, form: FormData):
 
   await logActivity(admin.id, "admin.channel.connect", `${kind} ${checked.name}`);
   revalidateInbox();
+
+  // The address exists only once the row does, so the platform is told about
+  // it here rather than before. A fresh secret each time: the old one stops
+  // being accepted the moment this call succeeds, so a token that leaked
+  // stops working when the operator reconnects.
+  if (!driver.register) return { ok: true };
+
+  const secret = randomBytes(24).toString("hex");
+  const registered = await driver.register(
+    config,
+    `${await panelBaseUrl()}/api/webhooks/${await webhookToken()}/inbox/${channel.id}`,
+    secret,
+  );
+  // Stored only after the platform has taken it, so what the panel expects on
+  // the way in is what was actually handed over. A failure here leaves a
+  // working channel that has not been told where to post — which is what the
+  // operator needs to read, not a silent success.
+  if (!registered.ok) return { error: registered.error };
+
+  await db.channel.update({
+    where: { id: channel.id },
+    data: { config: JSON.stringify({ ...config, secret }) },
+  });
+  revalidateInbox();
   return { ok: true };
+}
+
+/** This panel's webhook token, which is the panel's name in a callback URL. */
+async function webhookToken(): Promise<string> {
+  const panel = await basePrisma.panel.findFirst({ where: { id: await currentPanelId() } });
+  return panel?.webhookToken ?? "";
 }
 
 export async function setChannelEnabledAction(id: string, enabled: boolean): Promise<ActionResult> {
@@ -134,20 +165,4 @@ export async function setThreadStatusAction(conversationId: string, status: stri
   await logActivity(user.id, "inbox.status", `${conversation.contactName} -> ${status}`);
   revalidateInbox(conversationId);
   return { ok: true };
-}
-
-/**
- * The address this panel's channels are told to post to.
- *
- * Behind an admin check like everything else in this file. Every exported
- * function in a "use server" module is a callable endpoint, and this one
- * hands back the panel's webhook token — the secret that selects which panel
- * an incoming callback runs against. Without the check any visitor to the
- * site could ask for it.
- */
-export async function webhookBaseFor(channelId: string, origin: string): Promise<string> {
-  await requireAdmin();
-  const panelId = await currentPanelId();
-  const panel = await basePrisma.panel.findFirst({ where: { id: panelId } });
-  return `${origin}/api/webhooks/${panel?.webhookToken ?? ""}/inbox/${channelId}`;
 }

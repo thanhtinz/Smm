@@ -42,6 +42,9 @@ export default async function AdminChannelsPage() {
           enabled: c.enabled,
           threads: c._count.conversations,
           webhook: `${origin}/api/webhooks/${panel?.webhookToken ?? ""}/inbox/${c.id}`,
+          // A secret in the config means the platform was handed one and its
+          // deliveries are checked against it.
+          verified: Boolean((JSON.parse(c.config || "{}") as Record<string, string>).secret),
         }))}
         kinds={Object.values(DRIVERS).map((d) => ({
           kind: d.kind,
@@ -51,6 +54,7 @@ export default async function AdminChannelsPage() {
         planned={PLANNED_KINDS.map((k) => t(`inbox.kind.${k}`))}
         labels={{
           connected: t("inbox.connected"),
+          unverified: t("inbox.unverified"),
           connect: t("inbox.connect"),
           none: t("inbox.noChannels"),
           platform: t("order.platform"),
