@@ -17,6 +17,7 @@ import { apiStatus } from "@/lib/api-status";
 import { englishMessage } from "@/lib/fault";
 import { openRequest } from "@/lib/requests";
 import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
+import { parseLocalTime } from "@/lib/dates";
 import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
@@ -203,6 +204,37 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     if (!Number.isInteger(interval) || interval < 1) return fail("Incorrect interval");
   }
 
+  // Scheduling, which the de-facto standard has no word for. Added because
+  // the panel has it and a reseller placing orders through code was the one
+  // customer who could not reach it.
+  //
+  // Two shapes are taken. One carrying a zone — `2026-08-20T14:30:00Z`, or
+  // any offset — is an instant and is read as one. One without — the same
+  // `2026-08-20 14:30` a person would write — is read in the panel's own
+  // timezone, the same rule the order form follows, because a bare wall clock
+  // has no other honest reading.
+  const startAtRaw = String(params.start_at ?? "").trim();
+  let startAt: Date | null = null;
+  if (startAtRaw) {
+    const maxDays = Number(await getSetting("order.scheduleMaxDays")) || 0;
+    if (maxDays <= 0) return fail("Scheduling is disabled");
+
+    const zoned = /(?:Z|[+-]\d{2}:?\d{2})$/.test(startAtRaw);
+    if (zoned) {
+      const parsed = new Date(startAtRaw);
+      startAt = Number.isNaN(parsed.getTime()) ? null : parsed;
+    } else {
+      const timezone = String(await getSetting("locale.timezone")) || "UTC";
+      startAt = parseLocalTime(startAtRaw.replace(" ", "T").slice(0, 16), timezone);
+    }
+
+    if (!startAt) return fail("Incorrect start_at");
+    if (startAt.getTime() <= Date.now()) return fail("start_at is in the past");
+    if (startAt.getTime() > Date.now() + maxDays * 86_400_000) {
+      return fail(`start_at cannot be more than ${maxDays} days ahead`);
+    }
+  }
+
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   const rate = await priceService(await resolveTier(user), service);
   const charge = calculateCharge(rate, totalQuantity);
@@ -252,6 +284,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           comments: comments.join("\n"),
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
+          startAt,
           cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity),
           ...subscriptionFields(subscription),
         },

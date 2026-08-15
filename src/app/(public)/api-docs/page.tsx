@@ -71,6 +71,7 @@ export default async function ApiDocsPage() {
         ["max", "Most per post — Subscriptions"],
         ["delay", "Minutes to wait after a post (optional)"],
         ["expiry", "dd/mm/yyyy end date (optional)"],
+        ["start_at", "Hold until this time (optional). 2026-08-20 14:30 in the panel's timezone, or an ISO 8601 instant"],
       ],
       response: { order: 100007 },
     },
