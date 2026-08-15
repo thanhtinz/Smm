@@ -6,7 +6,7 @@ import { placeOrderAction, type OrderState } from "@/app/actions/orders";
 import { Field, TextInput } from "@/components/ui/field";
 import Combobox from "@/components/ui/combobox";
 import SubmitButton from "@/components/ui/submit-button";
-import { Icon, type IconName } from "@/components/icons";
+import { Icon } from "@/components/icons";
 import OrderFacts, { type Fact } from "@/components/orders/order-facts";
 import ServiceSearch from "@/components/orders/service-search";
 import PlatformMark from "@/components/platform-mark";
@@ -294,6 +294,9 @@ export default function NewOrderForm({
             <Icon name="list" size={15} />
             {labels.track}
           </Link>
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+              a full load on purpose: <Link> keeps this component mounted and
+              the customer would land back on the receipt they just read. */}
           <a href="/dashboard/new-order" className="btn btn-ghost btn-sm">
             <Icon name="plus" size={15} />
             {labels.submit}

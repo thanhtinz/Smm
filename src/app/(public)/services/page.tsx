@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import { displayMoney } from "@/lib/currency";
 import { priceServices, resolveTier } from "@/lib/pricing";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
@@ -74,6 +73,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
           visitor has no tier to price it for. */}
       {ctx.user && (
         <div className="mt-4 flex justify-center">
+          {/* eslint-disable-next-line @next/next/no-html-link-for-pages --
+              this is a file, not a page: <Link> would client-navigate to the
+              route and nothing would ever download. */}
           <a href="/api/export/services" className="btn btn-ghost btn-sm">
             <Icon name="download" size={15} />
             {t("common.export")}

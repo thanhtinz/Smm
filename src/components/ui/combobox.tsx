@@ -181,6 +181,11 @@ export default function Combobox({
           }
           if (open) onKeyDown(e);
         }}
+        // The select-only combobox pattern: a button carrying the combobox
+        // role. Without the role this is a plain button, and a plain button
+        // has nowhere to put aria-invalid — the field would go red for a
+        // sighted reader and stay silently valid for a screen reader.
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
