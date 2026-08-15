@@ -7,7 +7,6 @@
 export const en = {
   "nav.home": "Home",
   "nav.services": "Services",
-  "nav.allOf": "All {name}",
   "nav.pricing": "Pricing",
   "nav.api": "API",
   "nav.support": "Support",
@@ -16,7 +15,6 @@ export const en = {
   "nav.signup": "Create account",
   "nav.dashboard": "Dashboard",
   "nav.menu": "Menu",
-  "nav.more": "More",
   "nav.wallet": "Wallet",
   "nav.signout": "Sign out",
 
@@ -1436,7 +1434,6 @@ export const en = {
 export const vi: Partial<Record<keyof typeof en, string>> = {
   "nav.home": "Trang chủ",
   "nav.services": "Dịch vụ",
-  "nav.allOf": "Tất cả {name}",
   "nav.pricing": "Bảng giá",
   "nav.api": "API",
   "nav.support": "Hỗ trợ",
@@ -1445,7 +1442,6 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "nav.signup": "Tạo tài khoản",
   "nav.dashboard": "Bảng điều khiển",
   "nav.menu": "Menu",
-  "nav.more": "Thêm",
   "nav.wallet": "Ví tiền",
   "nav.signout": "Đăng xuất",
 
