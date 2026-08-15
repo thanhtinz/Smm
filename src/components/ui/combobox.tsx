@@ -13,6 +13,8 @@ export type ComboOption = {
   meta?: string;
   /** Extra text matched by the filter but not displayed. */
   keywords?: string;
+  /** Drawn before the label, in the trigger and in the list. */
+  icon?: React.ReactNode;
 };
 
 /**
@@ -31,6 +33,7 @@ export default function Combobox({
   disabled,
   disabledLabel,
   invalid,
+  searchable = true,
 }: {
   name: string;
   value: string;
@@ -42,6 +45,11 @@ export default function Combobox({
   disabled?: boolean;
   disabledLabel?: string;
   invalid?: boolean;
+  /**
+   * A search field earns its place over dozens of entries and gets in the way
+   * under a dozen, where the whole list is on screen already.
+   */
+  searchable?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -162,12 +170,24 @@ export default function Combobox({
         id={name}
         disabled={disabled}
         onClick={() => setOpen((v) => !v)}
+        // Without a search field there is no input to carry the arrow keys, so
+        // the trigger does. A list you can only reach with a mouse is not one.
+        onKeyDown={(e) => {
+          if (searchable) return;
+          if (!open && (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ")) {
+            e.preventDefault();
+            setOpen(true);
+            return;
+          }
+          if (open) onKeyDown(e);
+        }}
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
         aria-invalid={invalid || undefined}
         className="field flex items-center justify-between gap-2 text-left"
       >
+        {selected?.icon && <span className="flex shrink-0 items-center">{selected.icon}</span>}
         <span className={`min-w-0 flex-1 truncate ${selected ? "" : "muted"}`}>
           {disabled ? disabledLabel : selected ? selected.label : placeholder}
         </span>
@@ -184,6 +204,7 @@ export default function Combobox({
             style={{ top: box.top, bottom: box.bottom, left: box.left, width: box.width }}
             ref={panelRef}
           >
+          {searchable && (
           <div className="relative border-b border-[var(--border)]">
             <span className="muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">
               <Icon name="search" size={15} />
@@ -202,6 +223,7 @@ export default function Combobox({
               aria-controls={listId}
             />
           </div>
+          )}
 
           {filtered.length === 0 ? (
             <p className="muted px-3 py-6 text-center text-sm">{emptyLabel}</p>
@@ -211,7 +233,7 @@ export default function Combobox({
               ref={listRef}
               role="listbox"
               className="overflow-y-auto py-1"
-              style={{ maxHeight: box.maxHeight - 46 }}
+              style={{ maxHeight: box.maxHeight - (searchable ? 46 : 4) }}
             >
               {filtered.map((o, i) => (
                 <li
@@ -224,6 +246,7 @@ export default function Combobox({
                     i === cursor ? "bg-[var(--surface2)]" : ""
                   }`}
                 >
+                  {o.icon && <span className="flex shrink-0 items-center">{o.icon}</span>}
                   {o.code && <span className="muted shrink-0 font-mono text-xs">{o.code}</span>}
                   <span className="min-w-0 flex-1 truncate">{o.label}</span>
                   {o.meta && <span className="shrink-0 text-xs font-semibold tabular-nums">{o.meta}</span>}
