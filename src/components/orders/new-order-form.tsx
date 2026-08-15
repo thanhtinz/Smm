@@ -7,8 +7,8 @@ import { Field, TextInput } from "@/components/ui/field";
 import Combobox from "@/components/ui/combobox";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
-import PlatformMark from "@/components/platform-mark";
 import OrderFacts, { type Fact } from "@/components/orders/order-facts";
+import ServiceSearch from "@/components/orders/service-search";
 import { SUBSCRIPTION_DELAYS } from "@/lib/orders";
 
 export type ServiceOption = {
@@ -52,6 +52,7 @@ export type OrderLabels = Record<
   | "selectService"
   | "id"
   | "limits"
+  | "selectPlatform"
   | "quickFind"
   | "quickFindHint"
   | "quickFindPlaceholder"
@@ -273,13 +274,7 @@ export default function NewOrderForm({
         {/* For the buyer who already knows the service. Above the cascade
             because it replaces it, not because it refines it. */}
         <Field name="quickFind" label={labels.quickFind} hint={labels.quickFindHint}>
-          <Combobox
-            name="quickFind"
-            value=""
-            onChange={jumpTo}
-            placeholder={labels.quickFindPlaceholder}
-            searchPlaceholder={labels.searchService}
-            emptyLabel={labels.noResults}
+          <ServiceSearch
             options={everything.map(({ service }) => ({
               value: service.id,
               label: service.name,
@@ -287,41 +282,35 @@ export default function NewOrderForm({
               meta: fmt(service.rate),
               keywords: service.description,
             }))}
+            onPick={jumpTo}
+            placeholder={labels.quickFindPlaceholder}
+            emptyLabel={labels.noResults}
           />
         </Field>
 
-        {/* Platform is a chip row rather than a select — it is the widest
-            branch of the choice and benefits from being visible at a glance. */}
-        <div>
-          <span className="label">{labels.platform}</span>
-          {/* Wraps rather than scrolling sideways: the strip used to cut its
-              last chip off at the edge with nothing to say it continued, so a
-              platform the panel sells could simply not be seen. */}
-          <div>
-            <div className="flex flex-wrap gap-2 pb-1">
-              {platforms.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => {
-                    setPlatformId(p.id);
-                    setCategoryId("");
-                    setServiceId("");
-                  }}
-                  aria-pressed={p.id === platformId}
-                  className={`flex items-center gap-2 rounded-full border px-3.5 py-2 text-sm font-medium transition-colors ${
-                    p.id === platformId
-                      ? "border-[var(--primary)] bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] text-[var(--primary)]"
-                      : "muted border-[var(--border)] hover:bg-[var(--surface2)] hover:text-[var(--text)]"
-                  }`}
-                >
-                  <PlatformMark platform={p} size={16} />
-                  {p.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
+        {/* A select, like the two steps below it. It was a row of chips,
+            which had to wrap, could not show which was chosen without colour,
+            and made the first step of the cascade look unlike the rest of it. */}
+        <Field name="platformId" label={labels.platform}>
+          <select
+            id="platformId"
+            name="platformId"
+            className="field"
+            value={platformId}
+            onChange={(e) => {
+              setPlatformId(e.target.value);
+              setCategoryId("");
+              setServiceId("");
+            }}
+          >
+            <option value="">{labels.selectPlatform}</option>
+            {platforms.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
+            ))}
+          </select>
+        </Field>
 
         <Field name="categoryId" label={labels.category}>
           <select
