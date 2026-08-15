@@ -97,6 +97,7 @@ export default async function PlatformPage({ params }: { params: Promise<{ platf
           categories={platform.categories.map((c) => ({
             id: c.id,
             name: c.name,
+            href: `/services/${platform.slug}/${c.slug}`,
             description: c.description,
             platform: null,
             services: c.services.map((s) => ({

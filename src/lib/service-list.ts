@@ -1,4 +1,4 @@
-/** The six words the price list needs, in one place for both pages that use it. */
+/** The words the price list needs, in one place for every page that uses it. */
 export function serviceListLabels(t: (key: string) => string): Record<string, string> {
   return {
     id: t("service.id"),
@@ -9,5 +9,6 @@ export function serviceListLabels(t: (key: string) => string): Record<string, st
     status: t("common.status"),
     refill: t("service.refill"),
     standard: t("service.standard"),
+    order: t("order.submit"),
   };
 }

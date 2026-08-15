@@ -47,7 +47,14 @@ export async function publicUrls(): Promise<SitemapEntry[]> {
     db.platform.findMany({
       where: { visible: true, categories: { some: { services: { some: { enabled: true } } } } },
       orderBy: { position: "asc" },
-      select: { slug: true },
+      select: {
+        slug: true,
+        categories: {
+          where: { visible: true, services: { some: { enabled: true } } },
+          orderBy: [{ position: "asc" }, { name: "asc" }],
+          select: { slug: true },
+        },
+      },
     }),
     db.page.findMany({
       where: { published: true },
@@ -62,6 +69,12 @@ export async function publicUrls(): Promise<SitemapEntry[]> {
     // One address per platform, because that is the page a person searching
     // for "buff follow tiktok" should land on rather than the whole catalogue.
     ...platforms.map((p) => ({ url: at(`/services/${p.slug}`), priority: 0.8 })),
+    // And one per category under it: "tăng follow instagram" and "tăng like
+    // instagram" are different searches, and a single Instagram page competes
+    // with itself for both.
+    ...platforms.flatMap((p) =>
+      p.categories.map((c) => ({ url: at(`/services/${p.slug}/${c.slug}`), priority: 0.7 })),
+    ),
     { url: at("/api-docs"), priority: 0.4 },
     ...pages.map((p) => ({ url: at(`/p/${p.slug}`), lastModified: p.updatedAt, priority: 0.5 })),
   ];

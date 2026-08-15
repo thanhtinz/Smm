@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark, { type PlatformLike } from "@/components/platform-mark";
 import { displayMoney, type CurrencyInfo } from "@/lib/currency";
@@ -16,6 +17,8 @@ export type ListedService = {
 export type ListedCategory = {
   id: string;
   name: string;
+  /** Its own page. Absent on a page that is already about this category. */
+  href?: string;
   description: string;
   platform: PlatformLike | null;
   services: ListedService[];
@@ -52,9 +55,27 @@ export default function CategoryList({
           <header className="flex flex-wrap items-center gap-3 border-b border-[var(--border)] px-5 py-4">
             {showPlatform && category.platform && <PlatformMark platform={category.platform} box={36} />}
             <div className="min-w-0 flex-1">
-              <h2 className="truncate font-semibold">{category.name}</h2>
+              {/* The heading is the way in when the category has a page of
+                  its own: without this the page exists and nothing on the
+                  site points at it, which is a page a search engine never
+                  finds and a visitor never reaches. */}
+              <h2 className="truncate font-semibold">
+                {category.href ? (
+                  <Link href={category.href} className="hover:text-[var(--primary)]">
+                    {category.name}
+                  </Link>
+                ) : (
+                  category.name
+                )}
+              </h2>
               {category.description && <p className="muted truncate text-xs">{category.description}</p>}
             </div>
+            {category.href && (
+              <Link href={category.href} className="btn btn-ghost btn-sm">
+                {labels.order}
+                <Icon name="arrowRight" size={14} />
+              </Link>
+            )}
             <span className="badge badge-muted">{category.services.length}</span>
           </header>
 

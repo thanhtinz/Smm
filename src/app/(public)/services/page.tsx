@@ -125,6 +125,9 @@ export default async function ServicesPage({ searchParams }: { searchParams: Pro
             categories={categories.map((c) => ({
               id: c.id,
               name: c.name,
+              // Its own address, which is the one that ranks: this filtered
+              // view is for somebody already here.
+              href: c.platform ? `/services/${c.platform.slug}/${c.slug}` : undefined,
               description: c.description,
               platform: c.platform,
               services: c.services.map((sv) => ({
