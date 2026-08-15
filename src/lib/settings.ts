@@ -127,6 +127,12 @@ export const settingDefinitions = {
   "order.autoApproveRefill": { group: "order", type: "boolean", value: false },
   "order.autoApproveCancel": { group: "order", type: "boolean", value: false },
   "order.stuckAfterMinutes": { group: "order", type: "number", value: 0 },
+  /// What the customer should know before spending, shown on every category's
+  /// order page. One note per line, "Heading | what it means"; a line with no
+  /// bar is a heading-less note. Blank hides the card entirely rather than
+  /// leaving an empty box, because a panel with nothing to warn about should
+  /// not look like one that forgot to fill this in.
+  "order.notes": { group: "order", type: "textarea", value: "" },
 
   // --- Abuse controls -----------------------------------------------------
   // Every one of these is off at zero, and every one ships at zero. A panel

@@ -365,6 +365,32 @@ cũ), Escape đóng; trang khách chưa đăng nhập có giá mà không có fo
 bán dịch vụ của đúng danh mục đó; **đặt thật một đơn từ trang đó** và đơn rơi
 đúng dịch vụ đã chọn; slug không tồn tại trả 404 chứ không phải trang trắng.
 
+**Làm lại trong panel theo yêu cầu.** Bạn nói đúng: khách đã đăng nhập và nạp
+tiền rồi thì không đi xem trang giới thiệu, họ đi mua — nên chỗ để điều hướng
+đó là **sidebar của panel**, không phải header trang ngoài.
+
+- **Sidebar có mục "Dịch vụ"**: mỗi nền tảng một dòng kèm ảnh, bấm mở ra danh
+  mục của nó, bấm danh mục là vào `/dashboard/order/<nền-tảng>/<danh-mục>`.
+  **Mỗi lúc chỉ mở một nền tảng** — tám nền tảng mở hết cùng lúc là cái sidebar
+  không ai đọc nổi. Nền tảng của trang đang xem thì tự mở sẵn.
+- **Trang đặt đơn nằm trong panel**, cột phải là: thẻ tài khoản (số dư, tổng đã
+  nạp, cấp bậc), **thẻ "Lưu ý trước khi mua hàng"**, và **thẻ "Hỗ trợ nhanh"**.
+- **Cả hai thẻ đó là lời của operator, không phải của file này.** Lưu ý lấy từ
+  một setting `order.notes` (mỗi dòng một mục, `Tiêu đề | Nội dung`); kênh hỗ
+  trợ lấy từ chính setting Zalo/Telegram/Fanpage mà dock liên hệ đang dùng.
+  **Để trống thì thẻ biến mất hẳn** chứ không hiện cái khung rỗng — khung rỗng
+  đọc ra thành "panel quên điền", tệ hơn là không có.
+
+Trang công khai `/services/<nền-tảng>/<danh-mục>` vẫn giữ: đó là mặt SEO, chỗ
+người từ tìm kiếm rơi vào. Hai trang, hai mục đích, nhưng **chỉ một form đặt
+đơn** — cùng một component.
+
+**Chứng minh.** 20/20 điểm: sidebar liệt kê đúng số nền tảng đang bán, mở ra
+đúng số danh mục, mở cái thứ hai thì cái thứ nhất đóng, đánh dấu đúng trang
+đang xem; trang đặt đơn có form + thẻ lưu ý + thẻ hỗ trợ với link thật, chỉ
+chào bán dịch vụ của đúng danh mục, **đặt thật một đơn**; xoá setting lưu ý thì
+thẻ biến mất chứ không còn cái tiêu đề trơ ra; slug sai trả 404.
+
 ---
 
 ## Đã cân nhắc và loại
