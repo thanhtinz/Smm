@@ -52,7 +52,20 @@ export async function creditDeposit(
   }).then(async (outcome) => {
     // Commission is paid outside the balance transaction: it targets a
     // different account, and its own unique constraint makes it idempotent.
-    if (outcome === "credited") await payReferralCommission(transactionId);
+    //
+    // And it cannot fail the deposit. The money is already in the customer's
+    // balance by the time this runs, so throwing here would answer a gateway
+    // "failed" for a payment that succeeded — the gateway retries, the retry
+    // is refused as already credited, and an operator is left reading 500s
+    // against deposits that went through. A commission that did not get paid
+    // is a row somebody can add; a deposit the panel disowns is not.
+    if (outcome === "credited") {
+      try {
+        await payReferralCommission(transactionId);
+      } catch (e) {
+        console.error(`referral commission failed for ${transactionId}:`, e);
+      }
+    }
     return outcome;
   });
 }

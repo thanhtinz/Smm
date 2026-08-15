@@ -224,9 +224,14 @@ function OrderDrawer({
   const [timeline, setTimeline] = useState<{ steps: Step[]; createdAt: string } | null>(null);
   useEffect(() => {
     let live = true;
-    orderStepsAction(row.id).then((result) => {
-      if (live && !result.error) setTimeline({ steps: result.steps, createdAt: result.createdAt });
-    });
+    orderStepsAction(row.id)
+      .then((result) => {
+        if (live && !result.error) setTimeline({ steps: result.steps, createdAt: result.createdAt });
+      })
+      // A dropped connection while the drawer is open leaves the timeline
+      // unshown, which is what an empty one looks like anyway. Without this it
+      // is also an unhandled rejection in the operator's console.
+      .catch(() => {});
     return () => {
       live = false;
     };

@@ -13,7 +13,8 @@
     "tenancy:check": "node scripts/tenancy-check.mjs",
     "translations:sync": "tsx scripts/sync-translations.mjs",
     "keys:check": "tsx scripts/audit-keys.mjs",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "actions:check": "node scripts/audit-actions.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",

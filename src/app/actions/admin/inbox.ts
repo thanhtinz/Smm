@@ -136,8 +136,17 @@ export async function setThreadStatusAction(conversationId: string, status: stri
   return { ok: true };
 }
 
-/** The address this panel's channels are told to post to. */
+/**
+ * The address this panel's channels are told to post to.
+ *
+ * Behind an admin check like everything else in this file. Every exported
+ * function in a "use server" module is a callable endpoint, and this one
+ * hands back the panel's webhook token — the secret that selects which panel
+ * an incoming callback runs against. Without the check any visitor to the
+ * site could ask for it.
+ */
 export async function webhookBaseFor(channelId: string, origin: string): Promise<string> {
+  await requireAdmin();
   const panelId = await currentPanelId();
   const panel = await basePrisma.panel.findFirst({ where: { id: panelId } });
   return `${origin}/api/webhooks/${panel?.webhookToken ?? ""}/inbox/${channelId}`;
