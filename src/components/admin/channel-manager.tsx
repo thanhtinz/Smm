@@ -20,6 +20,8 @@ export type ChannelRow = {
   enabled: boolean;
   threads: number;
   webhook: string;
+  /** Whether incoming messages on this channel are authenticated. */
+  verified: boolean;
 };
 
 export default function ChannelManager({
@@ -109,6 +111,16 @@ export default function ChannelManager({
                     <code className="min-w-0 flex-1 truncate font-mono text-xs">{row.webhook}</code>
                     <CopyButton value={row.webhook} labels={labels} />
                   </div>
+
+                  {/* Connected before the panel started handing the platform a
+                      secret, so anything that reaches this address is taken at
+                      its word. Reconnecting registers one. */}
+                  {!row.verified && (
+                    <p className="alert alert-warning mt-2 text-xs" role="status">
+                      <Icon name="alert" size={14} />
+                      <span>{labels.unverified}</span>
+                    </p>
+                  )}
                 </li>
               ))}
             </ul>

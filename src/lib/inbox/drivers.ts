@@ -1,3 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
+
 /**
  * Messaging channels.
  *
@@ -23,6 +25,9 @@ export type CheckResult =
   | { ok: true; externalId: string; name: string }
   | { ok: false; error: string };
 
+/** Whether the platform accepted the address it was given. */
+export type RegisterResult = { ok: true } | { ok: false; error: string };
+
 export type ChannelDriver = {
   kind: string;
   /** Fields the connect form asks for. Secrets are never read back. */
@@ -33,7 +38,35 @@ export type ChannelDriver = {
   parse(payload: unknown): IncomingMessage[];
   /** Sends a reply; returns the platform's id for it when it gives one. */
   send(config: Record<string, string>, threadId: string, body: string): Promise<{ externalId?: string }>;
+
+  /**
+   * Tells the platform where to post, and gives it a secret to post with.
+   *
+   * Registering and verifying are one decision, not two: the secret is only
+   * worth checking on the way in because it was handed over on the way out.
+   * A driver for a platform that signs its own payloads implements `verify`
+   * alone and leaves this out.
+   */
+  register?(config: Record<string, string>, url: string, secret: string): Promise<RegisterResult>;
+
+  /**
+   * Whether this request really came from the platform.
+   *
+   * The URL alone is not proof. It contains the panel's webhook token and the
+   * channel's id, both of which are addresses rather than credentials — they
+   * appear in an admin page, in a browser history, in whatever the operator
+   * pasted them into. Anyone holding them could otherwise post messages into
+   * the inbox as any customer.
+   */
+  verify?(config: Record<string, string>, request: Request, secret: string): boolean;
 };
+
+/** Constant-time, and length-safe: timingSafeEqual throws on a mismatch. */
+function secretMatches(expected: string, provided: string): boolean {
+  const a = Buffer.from(expected, "utf8");
+  const b = Buffer.from(provided, "utf8");
+  return a.length === b.length && timingSafeEqual(a, b);
+}
 
 /**
  * Telegram.
@@ -89,6 +122,31 @@ const telegram: ChannelDriver = {
         contactHandle: from.username ? `@${from.username}` : "",
       },
     ];
+  },
+
+  /**
+   * Telegram delivers to whatever address setWebhook was last given, and will
+   * send `secret_token` back in a header on every delivery. One call does
+   * both, so the address and the secret can never disagree.
+   */
+  async register(config, url, secret) {
+    try {
+      const res = await fetch(`${apiBase(config)}/setWebhook`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        // Only messages: the panel ignores edits, joins and the rest, and
+        // asking for them is bandwidth spent to drop them.
+        body: JSON.stringify({ url, secret_token: secret, allowed_updates: ["message"] }),
+      });
+      const data = (await res.json()) as { ok?: boolean; description?: string };
+      return data.ok ? { ok: true } : { ok: false, error: data.description ?? "setWebhook failed" };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  },
+
+  verify(_config, request, secret) {
+    return secretMatches(secret, request.headers.get("x-telegram-bot-api-secret-token") ?? "");
   },
 
   async send(config, threadId, body) {
