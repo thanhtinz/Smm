@@ -6,7 +6,7 @@ import SiteMenu from "@/components/site-nav";
 import { Icon } from "@/components/icons";
 import type { AppContext } from "@/lib/context";
 
-export default function SiteHeader({ ctx }: { ctx: AppContext }) {
+export default function SiteHeader({ ctx, showMode = true }: { ctx: AppContext; showMode?: boolean }) {
   const { t, user, settings } = ctx;
 
   const links = [
@@ -62,6 +62,7 @@ export default function SiteHeader({ ctx }: { ctx: AppContext }) {
             currency={ctx.currency.code}
             theme={ctx.theme}
             mode={ctx.mode}
+            showMode={showMode}
             labels={prefLabels}
           />
           <div className="hidden items-center gap-2 sm:flex">{account}</div>
@@ -81,6 +82,7 @@ export default function SiteHeader({ ctx }: { ctx: AppContext }) {
                 currency={ctx.currency.code}
                 theme={ctx.theme}
                 mode={ctx.mode}
+                showMode={showMode}
                 labels={prefLabels}
                 stacked
               />

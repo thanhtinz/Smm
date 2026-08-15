@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
-import { landingData, LANDING_LAYOUTS, type LandingLayout } from "@/lib/landing";
+import { landingData, chosenLayout, type LandingLayout } from "@/lib/landing";
 import PriceBoard from "@/components/landing/price-board";
 import OrderFirst from "@/components/landing/order-first";
 import Proof from "@/components/landing/proof";
@@ -46,11 +46,7 @@ export default async function LandingPage() {
   const wantsLogin = settings["landing.heroLogin"] !== false && !user;
   const [data, captcha] = await Promise.all([landingData(user), wantsLogin ? captchaFor("login") : null]);
 
-  const chosen = String(settings["appearance.landingLayout"] ?? "");
-  const layout = (LANDING_LAYOUTS as readonly string[]).includes(chosen)
-    ? (chosen as LandingLayout)
-    : LANDING_LAYOUTS[0];
-  const Layout = LAYOUTS[layout];
+  const Layout = LAYOUTS[chosenLayout(settings)];
 
   return (
     <Layout

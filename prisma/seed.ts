@@ -81,6 +81,21 @@ async function main() {
   // one, so the root panel comes first.
   PANEL = await seedRootPanel();
 
+  // What language this install speaks, read once and used by everything below
+  // that writes words a visitor will read. A setting only has a row once
+  // somebody has changed it, so the registry's default is the answer for a
+  // panel nobody has configured yet.
+  //
+  // Payment method names, static page titles and the FAQ are not translation
+  // keys — they are content an operator edits — so the seed has to pick a
+  // language rather than leave them for `t()`. Picking English on a
+  // Vietnamese panel is how a home page ends up half in each.
+  const storedLocale = await db.setting.findUnique({
+    where: { panelId_key: { panelId: PANEL, key: "locale.default" } },
+  });
+  const locale = storedLocale ? JSON.parse(storedLocale.value) : settingDefinitions["locale.default"].value;
+  const inVietnamese = locale === "vi";
+
   // --- Languages ----------------------------------------------------------
   const languages = [
     { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", isDefault: true, position: 0 },
@@ -382,11 +397,30 @@ async function main() {
     }
   }
 
+  // --- Branding text ------------------------------------------------------
+  // Written once and edited in admin afterwards, so the seed has to choose a
+  // language for them the same way the pages and the FAQ do. Only written
+  // where nobody has set them: an operator's own words are never overwritten
+  // by a re-run of the seed.
+  if (inVietnamese) {
+    const branding: Record<string, string> = {
+      "site.tagline": "Tăng trưởng mạng xã hội, giao tận nơi",
+      "site.description":
+        "Panel SMM đặt đơn trong một phút, chạy tự động, giá minh bạch và có người thật trả lời khi cần.",
+    };
+    for (const [key, value] of Object.entries(branding)) {
+      const already = await db.setting.findUnique({ where: { panelId_key: { panelId: PANEL, key } } });
+      if (!already) {
+        await db.setting.create({ data: { panelId: PANEL, key, value: JSON.stringify(value), group: "branding" } });
+      }
+    }
+  }
+
   // --- Payment methods ----------------------------------------------------
   const methods = [
     {
       code: "seapay",
-      name: "SePay — Vietnam bank transfer",
+      name: inVietnamese ? "SePay — Chuyển khoản ngân hàng" : "SePay — Vietnam bank transfer",
       driver: "seapay",
       icon: "qrcode",
       description: "Chuyển khoản ngân hàng nội địa, tự động cộng tiền qua webhook SePay.",
@@ -410,7 +444,7 @@ async function main() {
       name: "PayPal",
       driver: "paypal",
       icon: "paypal",
-      description: "Pay with a PayPal balance or any major card.",
+      description: inVietnamese ? "Trả bằng số dư PayPal hoặc thẻ quốc tế." : "Pay with a PayPal balance or any major card.",
       enabled: true,
       currencies: JSON.stringify(["USD", "EUR"]),
       minAmount: 5,
@@ -422,10 +456,10 @@ async function main() {
     },
     {
       code: "link",
-      name: "Link by Stripe",
+      name: inVietnamese ? "Thẻ quốc tế (Link by Stripe)" : "Link by Stripe",
       driver: "link",
       icon: "link",
-      description: "One-click checkout with Link, cards and wallets.",
+      description: inVietnamese ? "Thanh toán một chạm bằng Link, thẻ và ví điện tử." : "One-click checkout with Link, cards and wallets.",
       enabled: true,
       currencies: JSON.stringify(["USD", "EUR"]),
       minAmount: 5,
@@ -437,10 +471,12 @@ async function main() {
     },
     {
       code: "crypto",
-      name: "Crypto",
+      name: inVietnamese ? "Tiền mã hoá" : "Crypto",
       driver: "crypto",
       icon: "bitcoin",
-      description: "Pay in USDT, BTC or another coin; credited once the network confirms.",
+      description: inVietnamese
+        ? "Trả bằng USDT, BTC hoặc coin khác; cộng tiền khi mạng xác nhận."
+        : "Pay in USDT, BTC or another coin; credited once the network confirms.",
       enabled: false,
       currencies: JSON.stringify(["USD"]),
       minAmount: 5,
@@ -481,10 +517,12 @@ async function main() {
     },
     {
       code: "manual_bank",
-      name: "Manual bank transfer",
+      name: inVietnamese ? "Chuyển khoản thủ công" : "Manual bank transfer",
       driver: "manual",
       icon: "bank",
-      description: "Transfer manually and an operator credits your balance.",
+      description: inVietnamese
+        ? "Chuyển khoản rồi nhân viên cộng tiền vào số dư cho bạn."
+        : "Transfer manually and an operator credits your balance.",
       enabled: false,
       currencies: JSON.stringify(["VND", "USD"]),
       minAmount: 50000,
@@ -501,11 +539,20 @@ async function main() {
   }
 
   // --- Static pages -------------------------------------------------------
-  const pages = [
-    { slug: "terms", title: "Terms of service", body: "<p>Edit this page from Admin → Pages.</p>", position: 0 },
-    { slug: "privacy", title: "Privacy policy", body: "<p>Edit this page from Admin → Pages.</p>", position: 1 },
-    { slug: "refund", title: "Refund policy", body: "<p>Edit this page from Admin → Pages.</p>", position: 2 },
-  ];
+  const pageBody = inVietnamese
+    ? "<p>Sửa trang này trong Quản trị → Trang tĩnh.</p>"
+    : "<p>Edit this page from Admin → Pages.</p>";
+  const pages = inVietnamese
+    ? [
+        { slug: "terms", title: "Điều khoản sử dụng", body: pageBody, position: 0 },
+        { slug: "privacy", title: "Chính sách bảo mật", body: pageBody, position: 1 },
+        { slug: "refund", title: "Chính sách hoàn tiền", body: pageBody, position: 2 },
+      ]
+    : [
+        { slug: "terms", title: "Terms of service", body: pageBody, position: 0 },
+        { slug: "privacy", title: "Privacy policy", body: pageBody, position: 1 },
+        { slug: "refund", title: "Refund policy", body: pageBody, position: 2 },
+      ];
   for (const p of pages) {
     await db.page.upsert({
       where: { panelId_slug: { panelId: PANEL, slug: p.slug } },
@@ -520,16 +567,13 @@ async function main() {
   // they are written in whatever language the panel defaults to so the home
   // page does not open in two languages at once.
   //
-  // Nothing seeds the quotes table: inventing customers would be inventing
-  // social proof, and the landing page leaves that section out when empty.
-  // A setting only has a row once someone has changed it, so the registry's
-  // default is the answer for a panel nobody has configured yet.
-  const stored = await db.setting.findUnique({
-    where: { panelId_key: { panelId: PANEL, key: "locale.default" } },
-  });
-  const locale = stored ? JSON.parse(stored.value) : settingDefinitions["locale.default"].value;
-  const inVietnamese = locale === "vi";
-
+  // The testimonials below are seeded hidden. An operator asked for them so
+  // the section is not empty on a fresh install, and rows they can edit are a
+  // reasonable thing to ship — but four invented customers praising a panel
+  // that has served nobody are not a placeholder, they are a claim, and one
+  // made to buyers. So they arrive written as templates with the blanks
+  // showing, switched off, one toggle away from being published by whoever
+  // decides to. Admin → Home page.
   const faqs = inVietnamese
     ? [
         {
@@ -585,6 +629,28 @@ async function main() {
   for (const f of faqs) {
     const exists = await db.faq.findFirst({ where: { panelId: PANEL, question: f.question } });
     if (!exists) await db.faq.create({ data: { ...f, panelId: PANEL } });
+  }
+
+  // --- Landing testimonials (hidden) --------------------------------------
+  const quotes = inVietnamese
+    ? [
+        { name: "Tên khách hàng", role: "Shop thời trang", body: "Viết lại câu này bằng nhận xét thật của khách. Nói rõ họ mua dịch vụ gì và kết quả ra sao.", rating: 5, position: 0 },
+        { name: "Tên khách hàng", role: "Agency", body: "Một câu về tốc độ giao đơn hoặc về việc hỗ trợ trả lời nhanh, bằng lời của chính họ.", rating: 5, position: 1 },
+        { name: "Tên khách hàng", role: "Nhà sáng tạo nội dung", body: "Một câu về việc số liệu giữ được sau vài tuần, nếu khách của bạn có nói vậy.", rating: 4, position: 2 },
+      ]
+    : [
+        { name: "Customer name", role: "Online shop", body: "Replace this with something a real customer said. Name the service they bought and what it did for them.", rating: 5, position: 0 },
+        { name: "Customer name", role: "Agency", body: "A line about delivery speed, or about support answering, in their own words.", rating: 5, position: 1 },
+        { name: "Customer name", role: "Creator", body: "A line about the numbers holding up weeks later, if that is what your customers tell you.", rating: 4, position: 2 },
+      ];
+  // All or nothing, keyed on the table rather than on each row: a panel that
+  // has one testimonial of its own has started writing them, and dropping
+  // three templates in beside it would be the seed editing the operator's
+  // page. Checking row by row did exactly that on a re-run.
+  if ((await db.testimonial.count({ where: { panelId: PANEL } })) === 0) {
+    for (const q of quotes) {
+      await db.testimonial.create({ data: { ...q, visible: false, panelId: PANEL } });
+    }
   }
 
   console.log("Seed complete.");

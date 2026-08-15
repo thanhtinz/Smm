@@ -12,6 +12,38 @@ import { priceServices, resolveTier } from "./pricing";
 export const LANDING_LAYOUTS = ["priceBoard", "orderFirst", "proof", "editorial", "catalogue", "spotlight", "grid", "showcase", "midnight"] as const;
 export type LandingLayout = (typeof LANDING_LAYOUTS)[number];
 
+/**
+ * The colour mode each landing is drawn for.
+ *
+ * A landing is a composition, not a skin: its washes, its glow and the
+ * contrast between its panels are chosen against one background, and the same
+ * page rendered against the other is not the same page. So the choice belongs
+ * to whoever picked the layout, and the reader's light/dark switch does not
+ * appear on it — a control that changes nothing is worse than no control.
+ *
+ * Everywhere else in the panel the reader's preference still wins; this is
+ * the home page only.
+ */
+export const LANDING_MODE: Record<LandingLayout, "light" | "dark"> = {
+  priceBoard: "light",
+  orderFirst: "light",
+  proof: "light",
+  editorial: "light",
+  catalogue: "light",
+  spotlight: "light",
+  grid: "light",
+  showcase: "light",
+  midnight: "dark",
+};
+
+/** The layout an operator picked, or the first one if the setting is unset. */
+export function chosenLayout(settings: Record<string, unknown>): LandingLayout {
+  const chosen = String(settings["appearance.landingLayout"] ?? "");
+  return (LANDING_LAYOUTS as readonly string[]).includes(chosen)
+    ? (chosen as LandingLayout)
+    : LANDING_LAYOUTS[0];
+}
+
 export type PlatformLine = {
   id: string;
   slug: string;

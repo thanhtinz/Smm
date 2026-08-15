@@ -6,6 +6,9 @@ import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
 import { isIndexable } from "@/lib/seo";
 import { getCurrentPanel, panelBaseUrl } from "@/lib/tenancy";
+import { headers } from "next/headers";
+import { PATHNAME_HEADER } from "@/lib/panel-host";
+import { LANDING_MODE, chosenLayout } from "@/lib/landing";
 
 /**
  * The panel's faces.
@@ -92,7 +95,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     );
   }
 
-  const { theme, mode, locale } = await getAppContext();
+  const ctx = await getAppContext();
+  const { theme, locale } = ctx;
+
+  // The home page is drawn for one background — see LANDING_MODE — so it
+  // overrules the reader's light/dark preference there and only there. The
+  // switch is hidden on that page too: a control that changes nothing is
+  // worse than no control.
+  const path = (await headers()).get(PATHNAME_HEADER) ?? "";
+  const mode = path === "/" ? LANDING_MODE[chosenLayout(ctx.settings)] : ctx.mode;
+
   return (
     <html lang={locale} className={fontVars} data-theme={theme} data-mode={mode} suppressHydrationWarning>
       <head>

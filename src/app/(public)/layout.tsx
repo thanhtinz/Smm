@@ -7,6 +7,8 @@ import PanelSuspended from "@/components/panel-suspended";
 import MaintenanceNotice from "@/components/maintenance-notice";
 import ContactDock from "@/components/landing/contact-dock";
 import { maintenanceState } from "@/lib/maintenance";
+import { headers } from "next/headers";
+import { PATHNAME_HEADER } from "@/lib/panel-host";
 
 export default async function PublicLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
@@ -25,13 +27,13 @@ export default async function PublicLayout({ children }: { children: React.React
   }
 
   const ctx = await getAppContext();
-  // The midnight landing is dark whatever the reader's mode says, and the
-  // header and footer have to come with it.
-  const midnight = ctx.settings["appearance.landingLayout"] === "midnight";
+  // The home page's colour mode is the layout's, not the reader's — the root
+  // layout stamps it — so the switch that would fight it is not offered here.
+  const onLanding = ((await headers()).get(PATHNAME_HEADER) ?? "") === "/";
 
   return (
-    <div className={`flex min-h-dvh flex-col${midnight ? " landing-midnight" : ""}`}>
-      <SiteHeader ctx={ctx} />
+    <div className="flex min-h-dvh flex-col">
+      <SiteHeader ctx={ctx} showMode={!onLanding} />
       <main className="flex-1">{children}</main>
       <SiteFooter ctx={ctx} />
       <ContactDock

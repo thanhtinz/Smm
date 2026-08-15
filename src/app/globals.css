@@ -458,27 +458,3 @@ body {
     background: var(--muted);
   }
 }
-
-/**
- * The midnight landing's palette.
- *
- * Applied to the whole public shell rather than to the page, because a dark
- * page under a light header is not a look, it is a mistake. It redefines the
- * theme's own tokens rather than setting colours, so every card, badge and
- * button inside keeps reading the variables it always reads.
- *
- * This is the one place a page overrules the reader's colour mode. It is
- * deliberate: the glow and the tinted panels only hold together against
- * black, and an operator who wants the reader's mode respected picks one of
- * the other landings.
- */
-.landing-midnight {
-  --bg: #07060f;
-  --surface: #100d20;
-  --surface2: #171332;
-  --border: #272046;
-  --text: #efecff;
-  --muted: #a49dc9;
-  background: var(--bg);
-  color: var(--text);
-}

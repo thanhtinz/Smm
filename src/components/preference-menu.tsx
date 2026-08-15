@@ -118,6 +118,7 @@ export default function PreferenceMenu({
   labels,
   showTheme = true,
   showPickers = true,
+  showMode = true,
   /** Laid out down the page instead of in a popover, for the mobile sheet. */
   stacked = false,
 }: {
@@ -136,6 +137,12 @@ export default function PreferenceMenu({
    * the account page there, and only the light/dark switch stays here.
    */
   showPickers?: boolean;
+  /**
+   * Off on the landing page, whose colour mode belongs to the layout the
+   * operator chose rather than to the reader. A switch that changes nothing
+   * is worse than no switch.
+   */
+  showMode?: boolean;
   stacked?: boolean;
 }) {
   const [, start] = useTransition();
@@ -188,7 +195,7 @@ export default function PreferenceMenu({
       <div className="space-y-1">
         {showPickers &&
           groups.map((group) => <OptionList key={group.key} group={group} onDone={() => {}} showHeading />)}
-        {toggle}
+        {showMode && toggle}
       </div>
     );
   }
@@ -196,7 +203,7 @@ export default function PreferenceMenu({
   return (
     <div className="flex items-center gap-1.5">
       {showPickers && <PreferencesPopover groups={groups} label={labels.display} />}
-      {toggle}
+      {showMode && toggle}
     </div>
   );
 }
