@@ -76,8 +76,15 @@ const untranslated = Object.keys(en).filter(
   (k) => !(k in vi) && !ENGLISH_ON_PURPOSE.some((rule) => rule.test(k)),
 );
 
+/**
+ * A `.one` twin is never written as t("…"): the translator picks it at
+ * runtime when n is 1. It is referenced exactly when its base key is.
+ */
 const unreferenced = Object.keys(en).filter(
-  (k) => !mentioned.has(k) && ![...prefixes].some((p) => k.startsWith(p)),
+  (k) =>
+    !mentioned.has(k) &&
+    !(k.endsWith(".one") && mentioned.has(k.slice(0, -4))) &&
+    ![...prefixes].some((p) => k.startsWith(p)),
 );
 
 /**
