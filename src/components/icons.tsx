@@ -273,9 +273,6 @@ export const Icons = {
       <Seg d="M17 6.8h.01" />
     </>
   ),
-  // A support headset: the ear cups and the band, no boom mic — at 15px a
-  // mic is two pixels of noise.
-  headset: path("M4 14v-2a8 8 0 0 1 16 0v2|M4 14a2 2 0 0 0 2 2h1v-4H6a2 2 0 0 0-2 2Z|M20 14a2 2 0 0 1-2 2h-1v-4h1a2 2 0 0 1 2 2Z|M20 16v1a4 4 0 0 1-4 4h-2"),
   facebook: path("M14.5 8.5V6.8c0-.8.4-1.3 1.4-1.3H17V3h-2.4c-2.4 0-3.6 1.4-3.6 3.6v1.9H9V11h2v10h3.5V11H17l.5-2.5z"),
   youtube: raw(
     <>

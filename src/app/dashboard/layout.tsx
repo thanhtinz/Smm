@@ -8,6 +8,7 @@ import MaintenanceNotice from "@/components/maintenance-notice";
 import { maintenanceState } from "@/lib/maintenance";
 import { db } from "@/lib/db";
 import AnnouncementBanner from "@/components/announcement-banner";
+import ContactDock from "@/components/landing/contact-dock";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
@@ -113,6 +114,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       )}
       {children}
+
+      {/* Support is needed more often once money is involved, not less: this
+          is where an order is stuck and a balance is wrong. Raised so it
+          clears the bottom bar that replaces the sidebar on a phone. */}
+      <ContactDock
+        settings={ctx.settings}
+        labels={{ zalo: t("landing.contact.zalo"), telegram: t("landing.contact.telegram") }}
+        raised
+      />
     </AppShell>
   );
 }

@@ -375,11 +375,16 @@ tiền rồi thì không đi xem trang giới thiệu, họ đi mua — nên ch�
   không ai đọc nổi. Nền tảng của trang đang xem thì tự mở sẵn.
 - **Trang đặt đơn nằm trong panel**, cột phải là: thẻ tài khoản (số dư, tổng đã
   nạp, cấp bậc), **thẻ "Lưu ý trước khi mua hàng"**, và **thẻ "Hỗ trợ nhanh"**.
-- **Cả hai thẻ đó là lời của operator, không phải của file này.** Lưu ý lấy từ
-  một setting `order.notes` (mỗi dòng một mục, `Tiêu đề | Nội dung`); kênh hỗ
-  trợ lấy từ chính setting Zalo/Telegram/Fanpage mà dock liên hệ đang dùng.
-  **Để trống thì thẻ biến mất hẳn** chứ không hiện cái khung rỗng — khung rỗng
-  đọc ra thành "panel quên điền", tệ hơn là không có.
+- **Lưu ý là lời của operator, không phải của file này**: lấy từ setting
+  `order.notes` (mỗi dòng một mục, `Tiêu đề | Nội dung`). **Để trống thì thẻ
+  biến mất hẳn** chứ không hiện khung rỗng — khung rỗng đọc ra thành "panel
+  quên điền", tệ hơn là không có.
+- **Hai nút liên hệ nổi giờ có trong panel**, không chỉ ngoài trang giới thiệu.
+  Cần hỗ trợ nhất là lúc đã có tiền trong ví: đơn kẹt, số dư sai. Trên điện
+  thoại nó được nâng lên khỏi thanh dưới cùng — thanh đó thay sidebar ở màn
+  hẹp, và nút nằm đè lên nó là nút bấm không được.
+- Thẻ "Hỗ trợ nhanh" trong cột phải **đã bỏ**: nút nổi đã có mặt ở mọi trang
+  của panel, nên cái thẻ chỉ là ba đường link đó lần thứ hai trên cùng một màn.
 
 **Menu nền tảng ngoài trang giới thiệu đã xoá.** Header công khai trở lại bốn
 mục như cũ (Trang chủ / Dịch vụ / API / Điều khoản), và toàn bộ phần đo bề rộng

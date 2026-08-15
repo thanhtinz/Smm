@@ -9,7 +9,7 @@ import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import NewOrderForm, { type Currency, type ServiceOption } from "@/components/orders/new-order-form";
 import AccountCard from "@/components/orders/account-card";
-import { OrderNotes, OrderSupport } from "@/components/orders/order-aside";
+import { OrderNotes } from "@/components/orders/order-aside";
 import { orderFormLabels } from "@/lib/order-form-labels";
 import { LINK_RULES } from "@/lib/links";
 
@@ -134,7 +134,6 @@ export default async function PanelCategoryOrderPage({
               }}
             />
             <OrderNotes notes={String(notes ?? "")} title={t("order.notesTitle")} />
-            <OrderSupport settings={ctx.settings} title={t("order.supportTitle")} />
           </>
         }
         platforms={[{ id: platform.id, name: platform.name, icon: platform.icon, image: platform.image, color: platform.color }]}

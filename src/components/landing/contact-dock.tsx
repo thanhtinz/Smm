@@ -10,9 +10,12 @@ import { Icon, type IconName } from "@/components/icons";
 export default function ContactDock({
   settings,
   labels,
+  raised,
 }: {
   settings: Record<string, unknown>;
   labels: { zalo: string; telegram: string };
+  /** Clear of the panel's bottom bar, which only exists below `lg`. */
+  raised?: boolean;
 }) {
   const zalo = String(settings["site.zalo"] ?? "").trim();
   const telegram = String(settings["site.telegram"] ?? "").trim();
@@ -43,7 +46,11 @@ export default function ContactDock({
   if (!links.length) return null;
 
   return (
-    <div className="fixed right-4 bottom-4 z-40 flex flex-col gap-2.5 print:hidden">
+    <div
+      className={`fixed right-4 z-40 flex flex-col gap-2.5 print:hidden ${
+        raised ? "bottom-20 lg:bottom-4" : "bottom-4"
+      }`}
+    >
       {links.map((l) => (
         <a
           key={l.href}
