@@ -9,9 +9,12 @@ import SubmitButton from "@/components/ui/submit-button";
 export default function TwoFactorChallenge({
   username,
   recoveryLeft,
+  next,
   labels,
 }: {
   username: string;
+  /** Where they were headed before the password step. Checked by the page. */
+  next?: string;
   /** Recovery codes still unused, so a locked-out admin knows where they stand. */
   recoveryLeft: number;
   labels: Record<"title" | "sub" | "code" | "codeHint" | "submit" | "cancel" | "recoveryLeft" | "noRecovery", string>;
@@ -31,6 +34,7 @@ export default function TwoFactorChallenge({
       )}
 
       <form action={action} className="mt-6 space-y-4" noValidate>
+        {next && <input type="hidden" name="next" value={next} />}
         <Field name="code" label={labels.code} hint={labels.codeHint} required>
           <TextInput
             name="code"

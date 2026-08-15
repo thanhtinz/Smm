@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { safeNext } from "@/lib/next-path";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { createSession, destroySessionsFor, logActivity, requireUser, verifyPassword } from "@/lib/auth";
@@ -37,7 +38,9 @@ export async function submitCodeAction(_prev: ChallengeState, form: FormData): P
   await clearPendingLogin(row.id);
   await createSession(row.userId);
   await logActivity(row.userId, accepted === "recovery" ? "login.2fa.recovery" : "login.2fa.success");
-  redirect(row.user.role === "admin" ? "/admin" : "/dashboard");
+  // Carried across from the sign-in form, and checked again here for the same
+  // reason it was checked there: a hidden field is editable.
+  redirect(safeNext(form.get("next")) ?? (row.user.role === "admin" ? "/admin" : "/dashboard"));
 }
 
 export async function cancelPendingLoginAction(): Promise<void> {

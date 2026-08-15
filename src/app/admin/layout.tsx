@@ -8,13 +8,15 @@ import { getSetting } from "@/lib/settings";
 import { headers } from "next/headers";
 import { twoFactorRequired, STAFF_ROLES } from "@/lib/two-factor";
 import { PATHNAME_HEADER } from "@/lib/panel-host";
+import { nextQuery } from "@/lib/next-path";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
   if (panel.status !== "active") return <PanelSuspended name={panel.name} note={panel.statusNote} />;
 
   const ctx = await getAppContext();
-  if (!ctx.user) redirect("/login");
+  // Carrying the page they asked for, so signing in lands there.
+  if (!ctx.user) redirect(`/login${nextQuery((await headers()).get(PATHNAME_HEADER))}`);
   if (!STAFF_ROLES.has(ctx.user.role)) redirect("/dashboard");
 
   // None of the 24 admin pages guards itself — they all rely on this layout —

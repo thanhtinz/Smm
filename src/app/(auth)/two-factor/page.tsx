@@ -3,10 +3,16 @@ import { redirect } from "next/navigation";
 import { getAppContext } from "@/lib/context";
 import { pendingLogin, unusedRecoveryCount } from "@/lib/two-factor";
 import ChallengeForm from "@/components/auth/two-factor-challenge";
+import { safeNext } from "@/lib/next-path";
 
 export const metadata: Metadata = { title: "Two-step verification" };
 
-export default async function TwoFactorPage() {
+export default async function TwoFactorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
+  const { next } = await searchParams;
   const row = await pendingLogin();
   if (!row) redirect("/login");
 
@@ -14,6 +20,7 @@ export default async function TwoFactorPage() {
 
   return (
     <ChallengeForm
+      next={safeNext(next) ?? ""}
       username={row.user.username}
       recoveryLeft={await unusedRecoveryCount(row.userId)}
       labels={{

@@ -11,12 +11,15 @@ import CaptchaField, { type CaptchaProps } from "@/components/auth/captcha-field
 export default function LoginForm({
   captcha,
   notice,
+  next,
   labels,
 }: {
   /** Null when captcha is off or not configured. */
   captcha: CaptchaProps | null;
   /** One-off message from a redirect, e.g. after a password reset. */
   notice?: string;
+  /** Where to go once they are in. Already checked by the page. */
+  next?: string;
   labels: Record<"title" | "sub" | "identifier" | "password" | "remember" | "forgot" | "submit" | "noaccount" | "signup" | "unverified" | "resend", string>;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, {});
@@ -53,6 +56,7 @@ export default function LoginForm({
       )}
 
       <form action={action} className="mt-6 space-y-4" noValidate>
+        {next && <input type="hidden" name="next" value={next} />}
         <Field name="identifier" label={labels.identifier} error={state.fieldErrors?.identifier} required>
           <TextInput
             name="identifier"
