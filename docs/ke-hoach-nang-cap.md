@@ -160,9 +160,8 @@ mở trang lần đầu:
 
 **Đã làm xong.** Ảnh `docs/screenshots/order-before-after.png`.
 
-- **Khung phải giờ là bảng giá**: rẻ nhất mỗi nền tảng, sắp từ thấp lên, bấm
-  vào là chọn luôn nền tảng đó. Dữ liệu suy ra từ danh sách dịch vụ form đã tải
-  sẵn — không thêm props, không thêm truy vấn.
+- ~~Khung phải là bảng giá rẻ nhất mỗi nền tảng~~ — **đã bỏ theo yêu cầu.**
+  Chưa chọn dịch vụ thì cột phải chỉ có thẻ tài khoản, dưới đó để trống.
 - **Dải nền tảng xuống dòng thay vì cuộn ngang.** Trước đó chip cuối bị cắt ở
   mép phải mà không có dấu hiệu nào cho biết còn nữa: **Facebook, X/Twitter,
   Telegram, Spotify đều không nhìn thấy được**. Giờ cả 8 nền tảng hiện hết.

@@ -64,8 +64,6 @@ export type OrderLabels = Record<
   | "factYes"
   | "factNo"
   | "listPrice"
-  | "fromTitle"
-  | "fromHint"
   | "selectPlatformFirst"
   | "selectCategoryFirst"
   | "searchService"
@@ -186,14 +184,6 @@ export default function NewOrderForm({
   const fmt = (base: number) => formatCurrency(base, currency);
 
   /**
-   * The cheapest service on each platform, for the panel that would otherwise
-   * be empty until three choices have been made.
-   *
-   * Price per unit is the question a customer arrives with in this market, and
-   * making them answer three questions before it appears is answering the
-   * wrong one. Derived from the services already loaded, so it costs nothing.
-   */
-  /**
    * Everything, searchable, for customers who already know what they want.
    *
    * The cascade is right for browsing and wrong for the buyer who orders the
@@ -245,20 +235,6 @@ export default function NewOrderForm({
         },
       ]
     : [];
-
-  const cheapest = useMemo(() => {
-    const byPlatform = new Map<string, number>();
-    for (const service of services) {
-      const platform = categories.find((c) => c.id === service.categoryId)?.platformId;
-      if (!platform) continue;
-      const best = byPlatform.get(platform);
-      if (best === undefined || service.rate < best) byPlatform.set(platform, service.rate);
-    }
-    return platforms
-      .map((p) => ({ platform: p, from: byPlatform.get(p.id) }))
-      .filter((row): row is { platform: PlatformOption; from: number } => row.from !== undefined)
-      .sort((a, b) => a.from - b.from);
-  }, [services, categories, platforms]);
 
   if (state.success) {
     return (
@@ -626,8 +602,8 @@ export default function NewOrderForm({
       <aside className="min-w-0 space-y-4 lg:sticky lg:top-20 lg:self-start">
         {accountCard}
 
-        <div className="card card-pad">
-          {service ? (
+        {service ? (
+          <div className="card card-pad">
             <>
               <p className="text-sm font-semibold">{service.name}</p>
               <p className="muted mt-0.5 font-mono text-xs">#{service.publicId}</p>
@@ -698,41 +674,8 @@ export default function NewOrderForm({
                 </Link>
               )}
             </>
-          ) : (
-            <>
-              <p className="text-sm font-semibold">{labels.fromTitle}</p>
-              <p className="muted mt-0.5 text-xs">{labels.fromHint}</p>
-
-              <ul className="mt-3 divide-y divide-[var(--border)]">
-                {cheapest.map(({ platform, from }) => (
-                  <li key={platform.id}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPlatformId(platform.id);
-                        setCategoryId("");
-                        setServiceId("");
-                      }}
-                      className="flex w-full items-center gap-2.5 py-2.5 text-left transition-opacity hover:opacity-70"
-                    >
-                      <PlatformMark platform={platform} size={18} />
-                      <span className="min-w-0 flex-1 truncate text-sm">{platform.name}</span>
-                      <span className="font-mono text-sm font-semibold tabular-nums">{fmt(from)}</span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-
-              <p className="muted mt-3 text-xs">
-                {!platformId
-                  ? labels.selectPlatformFirst
-                  : !categoryId
-                    ? labels.selectCategoryFirst
-                    : labels.selectService}
-              </p>
-            </>
-          )}
-        </div>
+          </div>
+        ) : null}
       </aside>
     </form>
   );
