@@ -8,12 +8,18 @@ import type { AppContext } from "@/lib/context";
 
 export default function SiteHeader({
   ctx,
-  showMode = true,
-  showLanguage = true,
+  preferences = true,
 }: {
   ctx: AppContext;
-  showMode?: boolean;
-  showLanguage?: boolean;
+  /**
+   * Every display choice at once — language, currency, theme and the
+   * light/dark switch. Off on the landing page, which is set by whoever runs
+   * the panel rather than by whoever is reading it: its language is pinned,
+   * its colour mode belongs to the layout, and a currency picker on a page
+   * with one price on it is a control looking for a job. All four are there
+   * the moment a visitor signs in.
+   */
+  preferences?: boolean;
 }) {
   const { t, user, settings } = ctx;
 
@@ -62,7 +68,7 @@ export default function SiteHeader({
         </div>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
-          <PreferenceMenu
+          {preferences && <PreferenceMenu
             languages={ctx.languages}
             currencies={ctx.currencies}
             themes={ctx.themes}
@@ -70,10 +76,8 @@ export default function SiteHeader({
             currency={ctx.currency.code}
             theme={ctx.theme}
             mode={ctx.mode}
-            showMode={showMode}
-            showLanguage={showLanguage}
             labels={prefLabels}
-          />
+          />}
           <div className="hidden items-center gap-2 sm:flex">{account}</div>
 
           {/* Below md the links, the preferences and the account buttons all
@@ -83,7 +87,7 @@ export default function SiteHeader({
               {/* Account first: signing in is what most of the people opening
                   this came for, and the option lists below run long. */}
               <div className="flex flex-col gap-2 sm:hidden">{account}</div>
-              <PreferenceMenu
+              {preferences && <PreferenceMenu
                 languages={ctx.languages}
                 currencies={ctx.currencies}
                 themes={ctx.themes}
@@ -91,11 +95,9 @@ export default function SiteHeader({
                 currency={ctx.currency.code}
                 theme={ctx.theme}
                 mode={ctx.mode}
-                showMode={showMode}
-                showLanguage={showLanguage}
                 labels={prefLabels}
                 stacked
-              />
+              />}
             </SiteMenu>
           </div>
         </div>
