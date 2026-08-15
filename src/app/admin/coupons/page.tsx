@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import CouponManager from "@/components/admin/coupon-manager";
+import { formatLocalDay } from "@/lib/dates";
 
 export const metadata: Metadata = { title: "Coupons" };
 
 export default async function AdminCouponsPage() {
-  const { t, locale } = await getAppContext();
+  const { t, locale, timezone } = await getAppContext();
 
   const coupons = await db.coupon.findMany({
     orderBy: { createdAt: "desc" },
@@ -27,7 +28,7 @@ export default async function AdminCouponsPage() {
           maxPerUser: c.maxPerUser,
           firstDepositOnly: c.firstDepositOnly,
           enabled: c.enabled,
-          expiresAt: c.expiresAt ? c.expiresAt.toISOString().slice(0, 10) : "",
+          expiresAt: c.expiresAt ? formatLocalDay(c.expiresAt, timezone) : "",
           used: c._count.redemptions,
         }))}
         labels={{

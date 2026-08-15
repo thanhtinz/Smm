@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import { dateFormats } from "@/lib/dates";
+import { dateFormats, formatLocalDay } from "@/lib/dates";
 import { getSetting } from "@/lib/settings";
 import { displayMoney } from "@/lib/currency";
 import { requirePanel } from "@/lib/tenancy";
 import { childrenOf, effectiveMaxDepth } from "@/lib/panels";
 import PanelManager from "@/components/admin/panel-manager";
+import PanelRequestQueue from "@/components/admin/panel-request-queue";
 import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = { title: "Child panels" };
@@ -58,8 +59,47 @@ export default async function AdminPanelsPage() {
       ? t("panel.limitCount", { max: Number(maxChildren) })
       : "";
 
+  // Waiting on the operator, newest first. Approved and rejected ones drop
+  // out — the panel they became is in the list below.
+  const queued = await db.panelRequest.findMany({
+    where: { status: { in: ["pending", "delegated"] } },
+    orderBy: { createdAt: "desc" },
+    include: { user: { select: { username: true } } },
+    take: 50,
+  });
+
   return (
     <div className="mx-auto max-w-6xl space-y-5">
+      <PanelRequestQueue
+        rows={queued.map((r) => ({
+          id: r.id,
+          publicId: r.publicId,
+          name: r.name,
+          slug: r.slug,
+          host: r.host,
+          status: r.status,
+          note: r.note,
+          owner: r.user.username,
+          nameServers: r.nameServers ? r.nameServers.split(",") : [],
+          at: dates.full(r.createdAt),
+        }))}
+        labels={{
+          close: t("common.close"),
+          queue: t("panelReq.queue"),
+          queueHint: t("panelReq.queueHint"),
+          approve: t("panelReq.approve"),
+          reject: t("panelReq.reject"),
+          rejectReason: t("panelReq.rejectReason"),
+          recheck: t("panelReq.recheck"),
+          needsDelegation: t("panelReq.notDelegated"),
+          adminUsername: t("auth.username"),
+          adminEmail: t("auth.email"),
+          adminPassword: t("auth.password"),
+          status_pending: t("panelReq.status.pending"),
+          status_delegated: t("panelReq.status.delegated"),
+        }}
+      />
+
       <PanelManager
         canCreate={!depthReached && !countReached}
         limitNote={limitNote}
@@ -78,7 +118,7 @@ export default async function AdminPanelsPage() {
             if (!price) return t("panel.rentFree");
             return `${displayMoney(price, currency, locale)} / ${Number(periodDays)}${t("panel.days")}`;
           })(),
-          nextDueAt: c.nextDueAt ? c.nextDueAt.toISOString().slice(0, 10) : "",
+          nextDueAt: c.nextDueAt ? formatLocalDay(c.nextDueAt, timezone) : "",
           dueLabel: c.nextDueAt ? `${t("panel.nextDue")}: ${fmtDate.format(c.nextDueAt)}` : "",
           overdue: Boolean(c.nextDueAt && c.nextDueAt < today),
           users: c.users,

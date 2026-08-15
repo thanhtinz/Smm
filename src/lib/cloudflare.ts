@@ -17,12 +17,13 @@ import { getSetting } from "./settings";
 const API = process.env.CLOUDFLARE_API ?? "https://api.cloudflare.com/client/v4";
 const TIMEOUT_MS = 15_000;
 
-export type CloudflareConfig = { token: string; zoneId: string };
+export type CloudflareConfig = { token: string; zoneId: string; accountId: string };
 
 export async function cloudflareConfig(): Promise<CloudflareConfig | null> {
   const token = String(await getSetting("panel.cloudflareToken")).trim();
   const zoneId = String(await getSetting("panel.cloudflareZoneId")).trim();
-  return token && zoneId ? { token, zoneId } : null;
+  const accountId = String(await getSetting("panel.cloudflareAccountId")).trim();
+  return token && zoneId ? { token, zoneId, accountId } : null;
 }
 
 type Answer<T> = { ok: true; data: T } | { ok: false; error: string };
@@ -93,8 +94,11 @@ export async function createRecord(
   config: CloudflareConfig,
   host: string,
   target: string,
+  /** Which zone the record belongs in; the operator's own unless a reseller
+   *  delegated their domain, in which case it is the zone made for them. */
+  zoneId = config.zoneId,
 ): Promise<Answer<string>> {
-  const result = await call<{ id: string }>(config, `/zones/${config.zoneId}/dns_records`, {
+  const result = await call<{ id: string }>(config, `/zones/${zoneId}/dns_records`, {
     method: "POST",
     body: { type: "CNAME", name: host, content: target, ttl: 1, proxied: true },
   });
@@ -108,10 +112,57 @@ export async function createRecord(
  * hostname, and refusing because the DNS side was tidied by hand first would
  * leave a row nobody can get rid of.
  */
-export async function deleteRecord(config: CloudflareConfig, recordId: string): Promise<Answer<true>> {
-  const result = await call<unknown>(config, `/zones/${config.zoneId}/dns_records/${recordId}`, {
+export async function deleteRecord(
+  config: CloudflareConfig,
+  recordId: string,
+  zoneId = config.zoneId,
+): Promise<Answer<true>> {
+  const result = await call<unknown>(config, `/zones/${zoneId}/dns_records/${recordId}`, {
     method: "DELETE",
   });
   if (result.ok) return { ok: true, data: true };
   return /not found|does not exist|81044/i.test(result.error) ? { ok: true, data: true } : result;
+}
+
+export type Zone = { id: string; status: string; nameServers: string[] };
+
+/**
+ * Takes on a reseller's own domain.
+ *
+ * Cloudflare answers with the two nameservers it has assigned. The reseller
+ * sets those at their registrar, and that act is the proof of ownership: a
+ * domain can only be delegated by whoever controls it, so there is nothing
+ * further to verify. The zone stays `pending` until the delegation is seen,
+ * then flips to `active` on its own.
+ */
+export async function createZone(config: CloudflareConfig, name: string): Promise<Answer<Zone>> {
+  if (!config.accountId) return { ok: false, error: "No Cloudflare account id is configured" };
+
+  const result = await call<{ id: string; status: string; name_servers?: string[] }>(config, "/zones", {
+    method: "POST",
+    body: { name, account: { id: config.accountId }, type: "full" },
+  });
+  if (!result.ok) return result;
+  return { ok: true, data: { id: result.data.id, status: result.data.status, nameServers: result.data.name_servers ?? [] } };
+}
+
+/** Where a zone has got to, which is how the delegation is noticed. */
+export async function readZone(config: CloudflareConfig, zoneId: string): Promise<Answer<Zone>> {
+  const result = await call<{ id: string; status: string; name_servers?: string[] }>(config, `/zones/${zoneId}`);
+  if (!result.ok) return result;
+  return { ok: true, data: { id: result.data.id, status: result.data.status, nameServers: result.data.name_servers ?? [] } };
+}
+
+/**
+ * Gives up a zone.
+ *
+ * Called when a request is rejected or withdrawn: leaving the domain in the
+ * operator's account would keep answering for a reseller they turned down.
+ * One already gone counts as removed, for the same reason a missing record
+ * does.
+ */
+export async function deleteZone(config: CloudflareConfig, zoneId: string): Promise<Answer<true>> {
+  const result = await call<unknown>(config, `/zones/${zoneId}`, { method: "DELETE" });
+  if (result.ok) return { ok: true, data: true };
+  return /not found|does not exist|1049|7003/i.test(result.error) ? { ok: true, data: true } : result;
 }

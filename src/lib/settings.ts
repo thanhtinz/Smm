@@ -245,6 +245,12 @@ export const settingDefinitions = {
   "panel.graceDays": { group: "panel", type: "number", value: 3 },
   "panel.cloudflareToken": { group: "panel", type: "password", value: "" },
   "panel.cloudflareZoneId": { group: "panel", type: "text", value: "" },
+  // Needed only to take on a reseller's own domain: adding a zone is an
+  // account-level call, where pointing a subdomain is a zone-level one.
+  "panel.cloudflareAccountId": { group: "panel", type: "text", value: "" },
+  // Whether customers may ask for a panel themselves. Off until the operator
+  // decides to sell them, because the form is on every customer's dashboard.
+  "panel.selfServeEnabled": { group: "panel", type: "boolean", value: false },
 
   // --- Maintenance --------------------------------------------------------
   "maintenance.enabled": { group: "maintenance", type: "boolean", value: false },
