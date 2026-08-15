@@ -7,6 +7,7 @@ import OrderFirst from "@/components/landing/order-first";
 import Proof from "@/components/landing/proof";
 import Editorial from "@/components/landing/editorial";
 import Catalogue from "@/components/landing/catalogue";
+import Spotlight from "@/components/landing/spotlight";
 import type { LayoutProps } from "@/components/landing/types";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -14,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * Five landings, chosen in admin.
+ * Six landings, chosen in admin.
  *
  * They are not reorderings of one page: each answers the visitor's first
  * question differently — with a price, with a working quote, with finished
@@ -27,6 +28,7 @@ const LAYOUTS: Record<LandingLayout, (props: LayoutProps) => React.ReactNode> = 
   proof: Proof,
   editorial: Editorial,
   catalogue: Catalogue,
+  spotlight: Spotlight,
 };
 
 export default async function LandingPage() {
