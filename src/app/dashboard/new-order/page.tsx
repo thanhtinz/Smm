@@ -188,8 +188,6 @@ export default async function NewOrderPage({
                 quickFind: t("order.quickFind"),
                 quickFindHint: t("order.quickFindHint"),
                 quickFindPlaceholder: t("order.quickFindPlaceholder"),
-                factStatus: t("order.factStatus"),
-                factOn: t("order.factOn"),
                 factTime: t("order.factTime"),
                 factUnknown: t("order.factUnknown"),
                 factCancel: t("order.factCancel"),

@@ -80,8 +80,6 @@ export type OrderLabels = Record<
   | "quickFind"
   | "quickFindHint"
   | "quickFindPlaceholder"
-  | "factStatus"
-  | "factOn"
   | "factTime"
   | "factUnknown"
   | "factCancel"
@@ -240,9 +238,11 @@ export default function NewOrderForm({
     setServiceId(id);
   };
 
+  // No "Status: on sale" tile: a service that is not on sale never reaches
+  // this list, so that tile was a tick that could never say anything else and
+  // it cost a quarter of the row.
   const facts: Fact[] = service
     ? [
-        { key: "status", label: labels.factStatus, value: labels.factOn, tone: "good", icon: "checkCircle" },
         {
           key: "time",
           label: labels.factTime,

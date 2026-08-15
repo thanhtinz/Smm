@@ -21,32 +21,37 @@ export type Fact = {
   icon: IconName;
 };
 
-const TONE: Record<Fact["tone"], { text: string; ring: string }> = {
-  good: { text: "text-[var(--success)]", ring: "bg-[color-mix(in_srgb,var(--success)_14%,transparent)]" },
-  bad: { text: "text-[var(--danger)]", ring: "bg-[color-mix(in_srgb,var(--danger)_14%,transparent)]" },
-  neutral: { text: "text-[var(--accent)]", ring: "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]" },
+const TONE: Record<Fact["tone"], string> = {
+  good: "text-[var(--success)]",
+  bad: "text-[var(--danger)]",
+  neutral: "text-[var(--accent)]",
 };
 
 export default function OrderFacts({ facts }: { facts: Fact[] }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+    <div className="grid grid-cols-3 gap-2">
       {facts.map((fact) => {
         const tone = TONE[fact.tone];
         return (
-          // Stacked rather than side by side: four of these share the form
-          // column, and a horizontal tile there wraps its label onto three
-          // lines and then truncates the answer, which is the one word that
-          // had to survive.
-          <div key={fact.key} className="surface-2 rounded-xl px-3 py-2.5">
-            <span className="flex items-center gap-2">
-              <span className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${tone.ring} ${tone.text}`}>
-                <Icon name={fact.icon} size={15} />
-              </span>
-              <span className="muted min-w-0 text-[0.6rem] leading-tight font-semibold tracking-[0.1em] uppercase">
-                {fact.label}
-              </span>
+          <div
+            key={fact.key}
+            className="surface-2 flex flex-col gap-1.5 rounded-xl border border-[var(--border)] px-3.5 py-3"
+          >
+            {/* Sentence case, not uppercase with wide tracking: at a quarter of
+                the form column that treatment broke every label onto two lines,
+                which pushed the four answers onto four different baselines. */}
+            <span className="muted truncate text-xs leading-none">{fact.label}</span>
+
+            {/* The mark belongs with the answer, not with the question — a tick
+                beside "Có" reinforces it, a tick beside "Huỷ được" only
+                decorates. It also drops four tinted chips off the row. */}
+            <span className={`flex items-start gap-1.5 text-sm leading-tight font-semibold ${tone}`}>
+              <Icon name={fact.icon} size={15} className="mt-px shrink-0" />
+              {/* Wraps rather than truncates. The answer is the one word on
+                  this tile that has to survive — "Đang b…" is worse than two
+                  lines, and it is what the previous layout did. */}
+              <span className="min-w-0">{fact.value}</span>
             </span>
-            <span className={`mt-1.5 block text-sm leading-snug font-semibold ${tone.text}`}>{fact.value}</span>
           </div>
         );
       })}

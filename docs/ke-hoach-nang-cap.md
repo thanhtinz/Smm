@@ -178,10 +178,17 @@ panel này không có, và lấy về đủ bốn:
 - **Nền tảng là dropdown**, cùng kiểu với danh mục và dịch vụ. Trước đó nó là
   một dải chip: phải xuống dòng, không nói được cái nào đang chọn nếu không dựa
   vào màu, và làm bước đầu của cascade trông khác hẳn hai bước sau.
-- **Bốn ô thông số hiện ngay khi chọn xong dịch vụ**: trạng thái, bắt đầu sau,
-  huỷ được, bảo hành. Trước đó ba cái nằm dưới dạng pill xám nhỏ và một dòng
-  trong danh sách — chỗ mắt nhìn tới sau cùng. Dấu X đỏ ở "không bảo hành" là
-  câu trả lời thật, không phải lỗi, và khách cần thấy rõ trước khi trả tiền.
+- **Ba ô thông số hiện ngay khi chọn xong dịch vụ**: bắt đầu sau, huỷ được,
+  bảo hành. Trước đó chúng nằm dưới dạng pill xám nhỏ và một dòng trong danh
+  sách — chỗ mắt nhìn tới sau cùng. Dấu X đỏ ở "không bảo hành" là câu trả lời
+  thật, không phải lỗi, và khách cần thấy rõ trước khi trả tiền.
+  Ban đầu là **bốn** ô, có thêm "Trạng thái: Đang bán" — nhưng dịch vụ đã tắt
+  thì không bao giờ vào được danh sách này, nên đó là một dấu tích không bao giờ
+  nói được điều gì khác mà chiếm một phần tư hàng. Nhãn cũng đổi từ VIẾT HOA
+  giãn chữ sang chữ thường: ở một phần tư cột form thì kiểu đó bẻ mọi nhãn
+  xuống hai dòng, đẩy bốn câu trả lời lên bốn đường chân khác nhau. Và dấu tích
+  chuyển sang nằm cạnh **câu trả lời** chứ không cạnh câu hỏi — tích bên chữ
+  "Có" thì nhấn mạnh, tích bên chữ "Huỷ được" chỉ là trang trí.
 - **Thẻ tài khoản ở cột phải**: số dư, tổng đã nạp, cấp bậc kèm mức giảm, hai
   nút nạp tiền / hồ sơ. Số dư đã có trên thanh trên cùng, nhưng đây là cột
   khách đọc lúc đang cân nhắc — "đủ tiền không" nên nằm cạnh giá.
