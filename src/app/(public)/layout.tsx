@@ -27,14 +27,15 @@ export default async function PublicLayout({ children }: { children: React.React
   }
 
   const ctx = await getAppContext();
-  // The home page's colour mode and its language both belong to the operator
-  // rather than to the reader, so neither switch is offered there. Both still
-  // work everywhere else, including on the sign-in page one click away.
+  // The home page is the operator's, not the reader's: its language is
+  // pinned, its colour mode belongs to the layout, and its prices are quoted
+  // in one currency. So it offers none of those controls at all. Every one of
+  // them is there on the next page and inside the panel.
   const onLanding = ((await headers()).get(PATHNAME_HEADER) ?? "") === "/";
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <SiteHeader ctx={ctx} showMode={!onLanding} showLanguage={!onLanding} />
+      <SiteHeader ctx={ctx} preferences={!onLanding} />
       <main className="flex-1">{children}</main>
       <SiteFooter ctx={ctx} />
       <ContactDock
