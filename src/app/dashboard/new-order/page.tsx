@@ -5,6 +5,8 @@ import NewOrderForm, { type Currency, type ServiceOption } from "@/components/or
 import MassOrderForm from "@/components/orders/mass-order-form";
 import OrderTabs from "@/components/orders/order-tabs";
 import { Icon } from "@/components/icons";
+import AccountCard from "@/components/orders/account-card";
+import { displayMoney } from "@/lib/currency";
 import { getSetting } from "@/lib/settings";
 import { priceServices, resolveTier } from "@/lib/pricing";
 import { LINK_RULES } from "@/lib/links";
@@ -48,6 +50,7 @@ export default async function NewOrderPage() {
     linkExample:
       (s.target === "profile" ? s.category.platform?.profileExample : s.category.platform?.postExample) ?? "",
     rate: rates.get(s.id) ?? s.rate,
+    listRate: s.rate,
     min: s.min,
     max: s.max,
     refill: s.refill,
@@ -57,6 +60,20 @@ export default async function NewOrderPage() {
     averageTime: s.averageTime,
     description: s.description,
   }));
+
+  const deposited = await db.transaction.aggregate({
+    where: { userId: user.id, type: "deposit", status: "completed" },
+    _sum: { amount: true },
+  });
+
+  const account = {
+    name: user.fullName || user.username,
+    balance: user.balance,
+    deposited: deposited._sum.amount ?? 0,
+    tierName: tier?.name ?? "",
+    tierColor: tier?.color ?? "",
+    discountPercent: tier?.discountPercent ?? 0,
+  };
 
   const currency: Currency = {
     code: ctx.currency.code,
@@ -81,6 +98,22 @@ export default async function NewOrderPage() {
         {{
           single: (
             <NewOrderForm
+              accountCard={
+                <AccountCard
+                  account={account}
+                  money={{
+                    balance: displayMoney(account.balance, ctx.currency, ctx.locale),
+                    deposited: displayMoney(account.deposited, ctx.currency, ctx.locale),
+                  }}
+                  labels={{
+                    balance: t("common.balance"),
+                    deposited: t("order.deposited"),
+                    tier: t("tier.title"),
+                    addFunds: t("dash.addFunds"),
+                    account: t("nav.profile"),
+                  }}
+                />
+              }
               platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
               categories={categories.map((c) => ({ id: c.id, name: c.name, platformId: c.platformId }))}
               services={serviceOptions}
@@ -113,6 +146,20 @@ export default async function NewOrderPage() {
                 addFunds: t("dash.addFunds"),
                 selectCategory: t("order.selectCategory"),
                 selectService: t("order.selectService"),
+                id: t("order.id"),
+                limits: t("order.limits"),
+                quickFind: t("order.quickFind"),
+                quickFindHint: t("order.quickFindHint"),
+                quickFindPlaceholder: t("order.quickFindPlaceholder"),
+                factStatus: t("order.factStatus"),
+                factOn: t("order.factOn"),
+                factTime: t("order.factTime"),
+                factUnknown: t("order.factUnknown"),
+                factCancel: t("order.factCancel"),
+                factWarranty: t("order.factWarranty"),
+                factYes: t("order.factYes"),
+                factNo: t("order.factNo"),
+                listPrice: t("order.listPrice"),
                 fromTitle: t("order.fromTitle"),
                 fromHint: t("order.fromHint"),
                 selectPlatformFirst: t("order.selectPlatformFirst"),
