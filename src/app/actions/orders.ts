@@ -81,6 +81,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
       },
       service,
       timezone,
+      locale,
     );
     // The checks answer with keys so the API can have English and the form can
     // have the reader's language; this is the form.

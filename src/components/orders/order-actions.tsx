@@ -24,6 +24,10 @@ export default function OrderActions({
 }) {
   const [error, setError] = useState("");
   const [done, setDone] = useState<string | null>(order.openRequest);
+  // A booking called off before its scheduled hour is cancelled outright and
+  // the money is already back. Saying "waiting for approval" would send the
+  // customer looking for a decision nobody is going to make.
+  const [settled, setSettled] = useState(false);
   const [pending, start] = useTransition();
 
   const send = (type: string) => {
@@ -31,7 +35,10 @@ export default function OrderActions({
     start(async () => {
       const result = await createOrderRequestAction(order.orderId, type);
       if (result.error) setError(result.error);
-      else setDone(type);
+      else {
+        setSettled(Boolean(result.cancelled));
+        setDone(type);
+      }
     });
   };
 
@@ -48,9 +55,9 @@ export default function OrderActions({
   if (done) {
     return (
       <div className="flex flex-wrap items-center justify-end gap-1">
-        <span className="badge badge-info">
-          <Icon name="clock" size={11} />
-          {done === "refill" ? labels.refillPending : labels.cancelPending}
+        <span className={settled ? "badge badge-success" : "badge badge-info"}>
+          <Icon name={settled ? "checkCircle" : "clock"} size={11} />
+          {settled ? labels.cancelled : done === "refill" ? labels.refillPending : labels.cancelPending}
         </span>
         {reorder}
       </div>

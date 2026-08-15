@@ -8,7 +8,7 @@ import { runAsPanel } from "./tenancy";
 import { requestProviderCancel, requestProviderRefill } from "./providers";
 import { notification, requestKey } from "./notify";
 import { englishMessage, type Fault } from "./fault";
-import { withSettled, recordOrderStep } from "./orders";
+import { withSettled, recordOrderStep, notStartedYet } from "./orders";
 
 /**
  * Refusals here are read three ways at once: shown to an admin, written into
@@ -16,6 +16,16 @@ import { withSettled, recordOrderStep } from "./orders";
  * auto-approves has no reader at all. So this says what was wrong and leaves
  * the wording to each of them.
  */
+/**
+ * The note on a cancellation the panel made itself.
+ *
+ * Stored as a translation key rather than a sentence: every other note on a
+ * request was typed by an operator for the customer who raised it, and is
+ * shown as written — this one is the panel talking, and would otherwise be
+ * the single English line on a Vietnamese order page.
+ */
+export const AUTO_CANCEL_NOTE = "order.cancelledBeforeStart";
+
 /** Refill only makes sense once delivery has finished or stalled. */
 const REFILLABLE = new Set(["completed", "partial"]);
 /**
@@ -37,12 +47,22 @@ export async function openRequest(
   userId: string,
   orderId: string,
   type: "refill" | "cancel",
-): Promise<{ publicId: number } | Fault> {
+): Promise<{ publicId: number; cancelled?: true } | Fault> {
   const order = await db.order.findFirst({
     where: { id: orderId, userId },
     include: { service: { select: { refill: true, cancel: true } } },
   });
   if (!order) return { key: "err.orderGone" };
+
+  // An order waiting for its scheduled hour has not been bought from anyone:
+  // no provider has it, nothing is running, and the only thing that happened
+  // was taking the money. Sending that through the approval queue — and
+  // refusing it outright on a service whose provider does not do cancels —
+  // made the customer wait on an operator for a decision the panel could make
+  // on its own, about work it had not started.
+  if (type === "cancel" && notStartedYet(order)) {
+    return cancelBeforeStart(order);
+  }
 
   if (type === "refill") {
     if (!order.service.refill) return { key: "err.noRefill" };
@@ -68,6 +88,80 @@ export async function openRequest(
   await db.orderRequest.create({ data: { publicId, orderId, userId, type } });
   await logActivity(userId, `order.${type}.request`, `#${order.publicId}`);
   return { publicId };
+}
+
+/**
+ * Cancels a booking and hands the money back, in one transaction.
+ *
+ * The status is re-read inside it and the same three conditions checked
+ * again: between the read above and this write the dispatcher may have sent
+ * the order upstream, and refunding one that is now running would pay for
+ * work the panel is still going to be charged for.
+ */
+async function cancelBeforeStart(order: {
+  id: string;
+  publicId: number;
+  userId: string;
+  charge: number;
+}): Promise<{ publicId: number; cancelled: true } | Fault> {
+  // Both numbers are allocated before the transaction opens: nextPublicId
+  // reads a counter of its own, and doing that inside would hold the write
+  // lock across a second round trip.
+  const [refundPublicId, requestPublicId] = [await nextPublicId("transaction"), await nextPublicId("request")];
+
+  const done = await db.$transaction(async (tx) => {
+    const fresh = await tx.order.findUniqueOrThrow({ where: { id: order.id } });
+    if (!notStartedYet(fresh)) return false;
+
+    await tx.order.update({ where: { id: fresh.id }, data: withSettled({ status: "canceled" }) });
+    await recordOrderStep(tx, fresh, { status: "canceled" }, "customer");
+
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: fresh.userId },
+      select: { balance: true, spent: true },
+    });
+    const balanceAfter = user.balance + fresh.charge;
+
+    await tx.user.update({
+      where: { id: fresh.userId },
+      data: { balance: balanceAfter, spent: Math.max(0, user.spent - fresh.charge) },
+    });
+    await tx.transaction.create({
+      data: {
+        publicId: refundPublicId,
+        userId: fresh.userId,
+        type: "refund",
+        amount: fresh.charge,
+        status: "completed",
+        reference: String(fresh.publicId),
+        note: `Cancellation of scheduled order #${fresh.publicId}`,
+        balanceAfter,
+      },
+    });
+
+    // Recorded as an approved request even though nobody approved it, so the
+    // request log is a complete account of every cancellation rather than one
+    // with the automatic ones missing — and so every caller still has a
+    // number to be told.
+    await tx.orderRequest.create({
+      data: {
+        publicId: requestPublicId,
+        orderId: fresh.id,
+        userId: fresh.userId,
+        type: "cancel",
+        status: "approved",
+        note: AUTO_CANCEL_NOTE,
+      },
+    });
+    return true;
+  });
+
+  // Lost the race: it went upstream while this was being decided, so it is an
+  // ordinary running order now and takes the ordinary route.
+  if (!done) return { key: "err.cancelStarted" };
+
+  await logActivity(order.userId, "order.cancel.scheduled", `#${order.publicId}`);
+  return { publicId: requestPublicId, cancelled: true };
 }
 
 export type RequestOutcome = { ok?: true } | Fault;

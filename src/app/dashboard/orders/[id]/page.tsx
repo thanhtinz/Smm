@@ -8,7 +8,8 @@ import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import OrderTimeline from "@/components/orders/order-timeline";
-import { ORDER_STATUSES, customerStatus } from "@/lib/orders";
+import { ORDER_STATUSES, customerStatus, notStartedYet } from "@/lib/orders";
+import { AUTO_CANCEL_NOTE } from "@/lib/requests";
 import OrderActions from "@/components/orders/order-actions";
 import { reorderHref } from "@/lib/reorder";
 import { formatCount } from "@/lib/numbers";
@@ -161,7 +162,11 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             order={{
               orderId: order.id,
               canRefill: order.service.refill && ["completed", "partial"].includes(order.status),
-              canCancel: order.service.cancel && ["pending", "processing"].includes(shown),
+              // A booking can always be called off: nothing was sent
+              // anywhere, so whether the provider supports cancellations does
+              // not come into it.
+              canCancel:
+                notStartedYet(order) || (order.service.cancel && ["pending", "processing"].includes(shown)),
               openRequest: order.requests.find((r) => ["pending", "approved"].includes(r.status))?.type ?? null,
               reorderHref: order.service.enabled ? reorderHref(order, timezone) : null,
             }}
@@ -170,6 +175,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               cancel: t("order.cancel"),
               refillPending: t("order.refillPending"),
               cancelPending: t("order.cancelPending"),
+              cancelled: t("order.cancelled"),
               reorder: t("order.reorder"),
             }}
           />
@@ -189,9 +195,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                     {r.type === "refill" ? t("order.refill") : t("order.cancel")}
                     <span className="muted ml-2 font-mono text-xs">#{r.publicId}</span>
                   </p>
-                  {/* The operator's own note, written to be read by whoever
-                      raised the request. */}
-                  {r.note && <p className="muted mt-1 text-sm">{r.note}</p>}
+                  {/* An operator's note is prose and is shown as written; the
+                      panel's own is a key, so it is read in the reader's
+                      language like everything else on the page. */}
+                  {r.note && (
+                    <p className="muted mt-1 text-sm">{r.note === AUTO_CANCEL_NOTE ? t(r.note) : r.note}</p>
+                  )}
                   <p className="muted mt-1 text-xs">{dates.full(r.createdAt)}</p>
                 </div>
                 <span className="badge badge-muted">{t(`request.status.${r.status}`)}</span>
