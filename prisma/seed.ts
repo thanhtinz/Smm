@@ -195,7 +195,18 @@ async function main() {
       profileExample: "https://instagram.com/nova",
     },
     {
-      slug: "tiktok", name: "TikTok", icon: "tiktok", color: "#25f4ee", position: 1,
+      // Threads posts are addressed by a code under the author's handle, and
+      // the profile is the handle on its own — the same shape Instagram uses,
+      // which is what Threads accounts are.
+      slug: "threads", name: "Threads", icon: "megaphone", color: "#000000", position: 1,
+      hosts: "threads.net, threads.com",
+      postPattern: String.raw`^/@[\w.]+/post/[\w-]+`,
+      profilePattern: String.raw`^/@[\w.]+/?$`,
+      postExample: "https://threads.net/@nova/post/Cx1y2z3aBcD",
+      profileExample: "https://threads.net/@nova",
+    },
+    {
+      slug: "tiktok", name: "TikTok", icon: "tiktok", color: "#25f4ee", position: 2,
       hosts: "tiktok.com, vt.tiktok.com",
       postPattern: String.raw`^/@[\w.]+/video/\d+`,
       profilePattern: String.raw`^/@[\w.]+/?$`,
@@ -203,7 +214,7 @@ async function main() {
       profileExample: "https://tiktok.com/@nova",
     },
     {
-      slug: "youtube", name: "YouTube", icon: "youtube", color: "#ff0000", position: 2,
+      slug: "youtube", name: "YouTube", icon: "youtube", color: "#ff0000", position: 3,
       hosts: "youtube.com, youtu.be",
       postPattern: String.raw`^(/watch\?v=[\w-]+|/shorts/[\w-]+|/[\w-]{11}$)`,
       profilePattern: String.raw`^(/@[\w.-]+|/(channel|c|user)/[\w-]+)/?$`,
@@ -211,7 +222,7 @@ async function main() {
       profileExample: "https://youtube.com/@nova",
     },
     {
-      slug: "facebook", name: "Facebook", icon: "facebook", color: "#1877f2", position: 3,
+      slug: "facebook", name: "Facebook", icon: "facebook", color: "#1877f2", position: 4,
       hosts: "facebook.com, fb.com, fb.watch",
       postPattern: String.raw`(/posts/|/videos/|/photo|/reel/|story_fbid=|/permalink)`,
       profilePattern: String.raw`^/(profile\.php\?id=\d+|[\w.]+)/?$`,
@@ -243,11 +254,25 @@ async function main() {
       profileExample: "https://open.spotify.com/artist/1vCWHaC5f2uS3yhpwWbIA6",
     },
   ];
+  // The real brand mark, in the platform's own colours, shipped as a file
+  // rather than drawn from the icon set. The glyph stays as the fallback: it
+  // is what a platform an operator adds themselves gets until they upload
+  // something, and what any of these fall back to if the file is missing.
+  //
+  // Written only on create, and only where the operator has not uploaded
+  // their own — a re-run of the seed must not undo an upload.
   for (const p of platforms) {
+    const existing = await db.platform.findUnique({
+      where: { panelId_slug: { panelId: PANEL, slug: p.slug } },
+      select: { image: true },
+    });
+    const image = `/platforms/${p.slug}.svg`;
+
     await db.platform.upsert({
       where: { panelId_slug: { panelId: PANEL, slug: p.slug } },
-      create: { ...p, panelId: PANEL },
+      create: { ...p, image, panelId: PANEL },
       update: {
+        ...(existing?.image ? {} : { image }),
         name: p.name,
         icon: p.icon,
         hosts: p.hosts,
