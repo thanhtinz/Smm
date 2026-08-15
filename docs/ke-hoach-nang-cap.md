@@ -172,7 +172,12 @@ panel này không có, và lấy về đủ bốn:
 
 - **Ô "tìm nhanh dịch vụ" trên cùng.** Gõ tên hoặc mã là nhảy thẳng tới dịch
   vụ, ba ô bên dưới tự điền theo. Cascade đúng cho người đi tìm, sai cho khách
-  tuần nào cũng mua đúng một thứ họ gọi tên được.
+  tuần nào cũng mua đúng một thứ họ gọi tên được. **Là ô nhập gõ thẳng được**,
+  không phải dropdown phải mở ra rồi mới có chỗ gõ — cái đó là dropdown đội lốt
+  ô tìm kiếm, hai lần bấm trước khi gõ được một ký tự.
+- **Nền tảng là dropdown**, cùng kiểu với danh mục và dịch vụ. Trước đó nó là
+  một dải chip: phải xuống dòng, không nói được cái nào đang chọn nếu không dựa
+  vào màu, và làm bước đầu của cascade trông khác hẳn hai bước sau.
 - **Bốn ô thông số hiện ngay khi chọn xong dịch vụ**: trạng thái, bắt đầu sau,
   huỷ được, bảo hành. Trước đó ba cái nằm dưới dạng pill xám nhỏ và một dòng
   trong danh sách — chỗ mắt nhìn tới sau cùng. Dấu X đỏ ở "không bảo hành" là

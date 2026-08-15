@@ -148,6 +148,7 @@ export default async function NewOrderPage() {
                 selectService: t("order.selectService"),
                 id: t("order.id"),
                 limits: t("order.limits"),
+                selectPlatform: t("order.selectPlatform"),
                 quickFind: t("order.quickFind"),
                 quickFindHint: t("order.quickFindHint"),
                 quickFindPlaceholder: t("order.quickFindPlaceholder"),
