@@ -5,6 +5,9 @@ import { getSetting } from "@/lib/settings";
 import { panelBaseUrl } from "@/lib/tenancy";
 import { regenerateApiKeyAction } from "@/app/actions/api-key";
 import CopyField from "@/components/ui/copy-field";
+import CallbackSettings from "@/components/api/callback-settings";
+import { recentCallbacks } from "@/lib/callbacks";
+import { dateFormats } from "@/lib/dates";
 import { Icon } from "@/components/icons";
 
 export const metadata: Metadata = { title: "API" };
@@ -16,6 +19,10 @@ export default async function ApiPage() {
 
   const enabled = await getSetting("api.enabled");
   const endpoint = `${await panelBaseUrl()}/api/v2`;
+
+  const callbacksOn = await getSetting("api.callbacksEnabled");
+  const deliveries = callbacksOn ? await recentCallbacks(user.id) : [];
+  const dates = dateFormats(ctx.locale, ctx.timezone);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -53,6 +60,33 @@ export default async function ApiPage() {
         </form>
         <p className="form-hint">{t("api.rotateHint")}</p>
       </div>
+
+      {callbacksOn && (
+        <CallbackSettings
+          url={user.callbackUrl}
+          deliveries={deliveries.map((d) => ({
+            id: d.id,
+            publicId: d.publicId,
+            status: d.status,
+            attempts: d.attempts,
+            lastCode: d.lastCode,
+            lastError: d.lastError,
+            at: dates.stamp(d.createdAt),
+          }))}
+          labels={{
+            title: t("api.callback.title"),
+            intro: t("api.callback.intro"),
+            url: t("api.callback.url"),
+            save: t("common.save"),
+            saved: t("api.callback.saved"),
+            recent: t("api.callback.recent"),
+            attempts: t("api.callback.attempts"),
+            "state.pending": t("api.callback.state.pending"),
+            "state.delivered": t("api.callback.state.delivered"),
+            "state.failed": t("api.callback.state.failed"),
+          }}
+        />
+      )}
 
       <Link href="/api-docs" className="btn btn-ghost">
         <Icon name="document" size={16} />

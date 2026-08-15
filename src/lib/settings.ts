@@ -161,6 +161,14 @@ export const settingDefinitions = {
   // --- API ----------------------------------------------------------------
   "api.enabled": { group: "api", type: "boolean", value: true },
   "api.rateLimitPerMinute": { group: "api", type: "number", value: 120 },
+  // Callbacks cost nothing until a reseller sets a URL, so they are on.
+  "api.callbacksEnabled": { group: "api", type: "boolean", value: true },
+  "api.callbackAttempts": { group: "api", type: "number", value: 6 },
+  // A callback URL is typed by a customer and dialled by this server, so
+  // refusing private addresses is the difference between a webhook and a
+  // way to probe the panel's own network. Off only for a panel that really
+  // does need to call something on its own side.
+  "api.callbackBlockPrivate": { group: "api", type: "boolean", value: true },
 
   // --- Email --------------------------------------------------------------
   "mail.enabled": { group: "mail", type: "boolean", value: false },

@@ -24,6 +24,7 @@ export async function POST(request: Request) {
     mailed: result.mailed,
     chain: result.chain,
     requests: result.requests,
+    callbacks: result.callbacks,
     catalogue: result.catalogue,
     auto: result.auto,
     rent: result.rent,

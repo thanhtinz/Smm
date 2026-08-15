@@ -9,6 +9,7 @@ import {
   isValidOrderLink,
   parseSubscription,
   subscriptionFields,
+  apiStatus,
   type Subscription,
 } from "@/lib/orders";
 import { priceService, priceServices, resolveTier } from "@/lib/pricing";
@@ -409,26 +410,11 @@ function orderPayload(
   return {
     charge: order.charge.toFixed(decimals),
     start_count: String(order.startCount),
-    status: STATUS_LABEL[order.status] ?? order.status,
+    status: apiStatus(order.status),
     remains: String(order.remains),
     currency,
   };
 }
-
-/** The standard uses title-case status names. */
-const STATUS_LABEL: Record<string, string> = {
-  // Held is deliberately reported as Pending: the standard has no word for
-  // it, a reseller can do nothing about it, and inventing one would break
-  // client code that switches on this string.
-  held: "Pending",
-  pending: "Pending",
-  processing: "Processing",
-  inprogress: "In progress",
-  completed: "Completed",
-  partial: "Partial",
-  canceled: "Canceled",
-  refunded: "Refunded",
-};
 
 function fail(message: string) {
   // The standard returns errors with HTTP 200 and an `error` key.
