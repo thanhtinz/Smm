@@ -27,13 +27,14 @@ export default async function PublicLayout({ children }: { children: React.React
   }
 
   const ctx = await getAppContext();
-  // The home page's colour mode is the layout's, not the reader's — the root
-  // layout stamps it — so the switch that would fight it is not offered here.
+  // The home page's colour mode and its language both belong to the operator
+  // rather than to the reader, so neither switch is offered there. Both still
+  // work everywhere else, including on the sign-in page one click away.
   const onLanding = ((await headers()).get(PATHNAME_HEADER) ?? "") === "/";
 
   return (
     <div className="flex min-h-dvh flex-col">
-      <SiteHeader ctx={ctx} showMode={!onLanding} />
+      <SiteHeader ctx={ctx} showMode={!onLanding} showLanguage={!onLanding} />
       <main className="flex-1">{children}</main>
       <SiteFooter ctx={ctx} />
       <ContactDock

@@ -1,9 +1,10 @@
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { db } from "./db";
 import { getCurrentUser } from "./auth";
 import { getSetting, getSettings } from "./settings";
 import { getTranslator, getEnabledLanguages, type Translator } from "./i18n";
 import { getCurrencies, resolveCurrency, getBaseCurrency, type CurrencyInfo } from "./currency";
+import { PATHNAME_HEADER } from "./panel-host";
 
 export const LOCALE_COOKIE = "nova_locale";
 export const CURRENCY_COOKIE = "nova_currency";
@@ -101,9 +102,18 @@ export async function getAppContext(): Promise<AppContext> {
   const localeCandidate = allowLocale
     ? user?.locale || jar.get(LOCALE_COOKIE)?.value || (settings["locale.default"] as string)
     : (settings["locale.default"] as string);
-  const locale = languages.some((l) => l.code === localeCandidate)
+  const resolvedLocale = languages.some((l) => l.code === localeCandidate)
     ? localeCandidate
     : languages[0]?.code || "en";
+
+  // The home page is fixed to one language — `landing.locale`, English out of
+  // the box. Resolved here rather than in the page so the header, the footer
+  // and the page itself cannot end up in two different languages, and so the
+  // switch that would fight it can be hidden from the same fact.
+  const onLanding = ((await headers()).get(PATHNAME_HEADER) ?? "") === "/";
+  const landingLocale = String(settings["landing.locale"] ?? "en");
+  const locale =
+    onLanding && languages.some((l) => l.code === landingLocale) ? landingLocale : resolvedLocale;
 
   const allowCurrency = settings["currency.allowUserCurrency"] !== false;
   const currencyCode = allowCurrency

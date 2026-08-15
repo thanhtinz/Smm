@@ -96,6 +96,18 @@ async function main() {
   const locale = storedLocale ? JSON.parse(storedLocale.value) : settingDefinitions["locale.default"].value;
   const inVietnamese = locale === "vi";
 
+  // The home page argues in one language of its own — `landing.locale`,
+  // English out of the box — so the rows that show up on it follow that
+  // rather than the panel's. A Vietnamese tagline under an English headline
+  // is the same half-and-half page this was meant to fix, just the other way
+  // round. Payment method names are not on it, and stay in the panel's
+  // language, which is where a customer reads them.
+  const storedLanding = await db.setting.findUnique({
+    where: { panelId_key: { panelId: PANEL, key: "landing.locale" } },
+  });
+  const landingLocale = storedLanding ? JSON.parse(storedLanding.value) : settingDefinitions["landing.locale"].value;
+  const landingVi = landingLocale === "vi";
+
   // --- Languages ----------------------------------------------------------
   const languages = [
     { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", isDefault: true, position: 0 },
@@ -427,7 +439,7 @@ async function main() {
   // language for them the same way the pages and the FAQ do. Only written
   // where nobody has set them: an operator's own words are never overwritten
   // by a re-run of the seed.
-  if (inVietnamese) {
+  if (landingVi) {
     const branding: Record<string, string> = {
       "site.tagline": "Tăng trưởng mạng xã hội, giao tận nơi",
       "site.description":
@@ -564,10 +576,10 @@ async function main() {
   }
 
   // --- Static pages -------------------------------------------------------
-  const pageBody = inVietnamese
+  const pageBody = landingVi
     ? "<p>Sửa trang này trong Quản trị → Trang tĩnh.</p>"
     : "<p>Edit this page from Admin → Pages.</p>";
-  const pages = inVietnamese
+  const pages = landingVi
     ? [
         { slug: "terms", title: "Điều khoản sử dụng", body: pageBody, position: 0 },
         { slug: "privacy", title: "Chính sách bảo mật", body: pageBody, position: 1 },
@@ -599,7 +611,7 @@ async function main() {
   // made to buyers. So they arrive written as templates with the blanks
   // showing, switched off, one toggle away from being published by whoever
   // decides to. Admin → Home page.
-  const faqs = inVietnamese
+  const faqs = landingVi
     ? [
         {
           question: "Đơn bao lâu thì bắt đầu chạy?",
@@ -657,7 +669,7 @@ async function main() {
   }
 
   // --- Landing testimonials (hidden) --------------------------------------
-  const quotes = inVietnamese
+  const quotes = landingVi
     ? [
         { name: "Tên khách hàng", role: "Shop thời trang", body: "Viết lại câu này bằng nhận xét thật của khách. Nói rõ họ mua dịch vụ gì và kết quả ra sao.", rating: 5, position: 0 },
         { name: "Tên khách hàng", role: "Agency", body: "Một câu về tốc độ giao đơn hoặc về việc hỗ trợ trả lời nhanh, bằng lời của chính họ.", rating: 5, position: 1 },
