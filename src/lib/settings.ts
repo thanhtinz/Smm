@@ -43,6 +43,12 @@ export const settingDefinitions = {
   // Panels in this market put the sign-in box on the home page, because most
   // visitors are returning customers. Off gives the plain pair of buttons.
   "landing.heroLogin": { group: "appearance", type: "boolean", value: true },
+  // The home page speaks one language, whoever is reading and whatever the
+  // panel's own default is. It is the first thing a stranger sees and it is
+  // what search engines index, so an operator picks the language it argues
+  // in rather than letting a cookie decide. Everything behind the sign-in
+  // still follows the reader.
+  "landing.locale": { group: "appearance", type: "text", value: "en" },
   "appearance.landingLayout": {
     group: "appearance",
     type: "select",

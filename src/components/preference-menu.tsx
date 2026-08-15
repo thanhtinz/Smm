@@ -119,6 +119,7 @@ export default function PreferenceMenu({
   showTheme = true,
   showPickers = true,
   showMode = true,
+  showLanguage = true,
   /** Laid out down the page instead of in a popover, for the mobile sheet. */
   stacked = false,
 }: {
@@ -143,19 +144,29 @@ export default function PreferenceMenu({
    * is worse than no switch.
    */
   showMode?: boolean;
+  /**
+   * Off on the landing page too, which argues in one language the operator
+   * picked. Currency and theme still change what the reader sees there, so
+   * those stay.
+   */
+  showLanguage?: boolean;
   stacked?: boolean;
 }) {
   const [, start] = useTransition();
 
   const groups: Group[] = [
-    {
-      key: "language",
-      icon: "language",
-      label: labels.language,
-      active: locale,
-      options: languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name })),
-      onPick: setLocale,
-    },
+    ...(showLanguage
+      ? [
+          {
+            key: "language",
+            icon: "language" as IconName,
+            label: labels.language,
+            active: locale,
+            options: languages.map((l) => ({ value: l.code, label: l.nativeName, hint: l.name })),
+            onPick: setLocale,
+          },
+        ]
+      : []),
     {
       key: "currency",
       icon: "wallet",
