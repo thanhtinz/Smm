@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 
 export type PickerService = {
@@ -51,6 +52,30 @@ export default function ServicePicker({
   disabledLabel: string;
   emptyLabel: string;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+  // Whether there is anything above or below what is on screen. A capped list
+  // with no sign that it is capped reads as a broken card, not as more to
+  // come: the fifth service was being sliced through its own name.
+  const [more, setMore] = useState({ up: false, down: false });
+
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    const read = () => {
+      const room = el.scrollHeight - el.clientHeight;
+      setMore({ up: el.scrollTop > 4, down: room > 4 && el.scrollTop < room - 4 });
+    };
+    read();
+    el.addEventListener("scroll", read, { passive: true });
+    // The list changes when the category above it does.
+    const observer = new ResizeObserver(read);
+    observer.observe(el);
+    return () => {
+      el.removeEventListener("scroll", read);
+      observer.disconnect();
+    };
+  }, [services]);
+
   if (disabled || services.length === 0) {
     return (
       <p className="surface-2 muted rounded-xl px-3.5 py-3 text-sm">{disabled ? disabledLabel : emptyLabel}</p>
@@ -58,9 +83,10 @@ export default function ServicePicker({
   }
 
   return (
-    // Capped and scrollable: a category with forty services should not push
-    // the link and quantity fields off the screen.
-    <div className="max-h-[26rem] space-y-2 overflow-y-auto" role="radiogroup">
+    // A bordered box, so a card cut off at the edge reads as the list
+    // continuing rather than as a card that failed to draw.
+    <div className="relative rounded-xl border border-[var(--border)] p-2">
+      <div ref={box} className="max-h-[26rem] space-y-2 overflow-y-auto pr-1" role="radiogroup">
       <input type="hidden" name={name} value={value} />
       {services.map((service) => {
         const chosen = service.id === value;
@@ -116,6 +142,17 @@ export default function ServicePicker({
           </label>
         );
       })}
+      </div>
+
+      {/* Fading edges rather than an arrow: they say "there is more this way"
+          without claiming a button that does not exist, and they go when the
+          list is at its end so a full view is not permanently smudged. */}
+      {more.up && (
+        <span className="pointer-events-none absolute inset-x-2 top-2 h-6 rounded-t-xl bg-gradient-to-b from-[var(--surface)] to-transparent" />
+      )}
+      {more.down && (
+        <span className="pointer-events-none absolute inset-x-2 bottom-2 h-8 rounded-b-xl bg-gradient-to-t from-[var(--surface)] to-transparent" />
+      )}
     </div>
   );
 }
