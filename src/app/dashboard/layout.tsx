@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import AppShell, { type NavGroup, type NavItem } from "@/components/app-shell";
+import AppShell, { type Catalogue, type NavGroup, type NavItem } from "@/components/app-shell";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
 import { guardPanel } from "@/lib/tenancy";
@@ -29,9 +29,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!ctx.user) redirect("/login");
 
   const { t } = ctx;
-  const openTickets = await db.ticket.count({
-    where: { userId: ctx.user.id, status: { in: ["open", "answered"] } },
-  });
+  const [openTickets, platforms] = await Promise.all([
+    db.ticket.count({ where: { userId: ctx.user.id, status: { in: ["open", "answered"] } } }),
+    // Only what is actually on sale: a platform whose categories are all
+    // empty opens onto nothing, and a category with no enabled service is a
+    // page with a service picker that cannot be answered.
+    db.platform.findMany({
+      where: { visible: true, categories: { some: { visible: true, services: { some: { enabled: true } } } } },
+      orderBy: { position: "asc" },
+      select: {
+        slug: true,
+        name: true,
+        icon: true,
+        image: true,
+        color: true,
+        categories: {
+          where: { visible: true, services: { some: { enabled: true } } },
+          orderBy: [{ position: "asc" }, { name: "asc" }],
+          select: { slug: true, name: true },
+        },
+      },
+    }),
+  ]);
+
+  const catalogue: Catalogue = { title: t("nav.services"), platforms };
 
   const groups: NavGroup[] = [
     {
@@ -82,7 +103,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   });
 
   return (
-    <AppShell ctx={ctx} groups={groups} primaryMobile={primaryMobile} title={t("dash.title")}>
+    <AppShell ctx={ctx} groups={groups} catalogue={catalogue} primaryMobile={primaryMobile} title={t("dash.title")}>
       {notices.length > 0 && (
         <div className="mb-5">
           <AnnouncementBanner

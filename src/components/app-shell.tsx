@@ -4,6 +4,7 @@ import PreferenceMenu from "@/components/preference-menu";
 import UserMenu from "@/components/user-menu";
 import MobileNav from "@/components/mobile-nav";
 import NavLink from "@/components/nav-link";
+import NavTree, { type TreePlatform } from "@/components/nav-tree";
 import NotificationBell, { type BellItem } from "@/components/notification-bell";
 import { Icon, type IconName } from "@/components/icons";
 import { db } from "@/lib/db";
@@ -14,6 +15,7 @@ import type { AppContext } from "@/lib/context";
 
 export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean };
 export type NavGroup = { title: string; items: NavItem[] };
+export type Catalogue = { title: string; platforms: TreePlatform[] };
 
 /**
  * Shared chrome for every signed-in area. The sidebar is the single primary
@@ -23,12 +25,15 @@ export type NavGroup = { title: string; items: NavItem[] };
 export default async function AppShell({
   ctx,
   groups,
+  catalogue,
   children,
   title,
   primaryMobile,
 }: {
   ctx: AppContext;
   groups: NavGroup[];
+  /** The platform → category tree, placed under the first group. */
+  catalogue?: Catalogue;
   children: React.ReactNode;
   title: string;
   primaryMobile: NavItem[];
@@ -61,18 +66,16 @@ export default async function AppShell({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 pb-4" aria-label={title}>
-          {groups.map((group) => (
-            <div key={group.title} className="mb-5">
-              <p className="muted px-3 pb-2 text-[0.67rem] font-semibold tracking-widest uppercase">{group.title}</p>
-              <ul className="space-y-0.5">
-                {group.items.map((item) => (
-                  <li key={item.href}>
-                    <NavLink {...item} />
-                  </li>
-                ))}
-              </ul>
+          {groups.map((group, i) => (
+            <div key={group.title}>
+              {/* Right after the first group: ordering is what the panel is
+                  for, so the catalogue sits above the wallet and support
+                  rather than at the bottom of a scroll. */}
+              {i === 1 && catalogue && <NavTree platforms={catalogue.platforms} title={catalogue.title} />}
+              <NavGroupBlock group={group} />
             </div>
           ))}
+          {groups.length < 2 && catalogue && <NavTree platforms={catalogue.platforms} title={catalogue.title} />}
         </nav>
 
         <div className="border-t border-[var(--border)] p-3">
@@ -152,6 +155,21 @@ export default async function AppShell({
 
         <MobileNav items={primaryMobile} label={t("nav.primary")} />
       </div>
+    </div>
+  );
+}
+
+function NavGroupBlock({ group }: { group: NavGroup }) {
+  return (
+    <div className="mb-5">
+      <p className="muted px-3 pb-2 text-[0.67rem] font-semibold tracking-widest uppercase">{group.title}</p>
+      <ul className="space-y-0.5">
+        {group.items.map((item) => (
+          <li key={item.href}>
+            <NavLink {...item} />
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
