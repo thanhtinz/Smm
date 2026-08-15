@@ -196,30 +196,13 @@ về ví đủ.
 
 ---
 
-## 5. Nạp tiền không có biên lai
-
-**Bằng chứng.** Nạp tiền tạo một dòng `Transaction`. Không có route in ấn, không
-có mẫu biên lai.
-
-**Vì sao đáng làm.** Khách doanh nghiệp ở VN cần chứng từ để hạch toán. Hiện họ
-phải chụp màn hình lịch sử giao dịch.
-
-**Làm gì.** Một trang in được cho mỗi giao dịch nạp: tên panel, mã giao dịch,
-số tiền, thời điểm, phương thức. Thông tin xuất hoá đơn (tên công ty, mã số
-thuế) đặt trong hồ sơ khách. **Không** tự nhận đây là hoá đơn VAT hợp lệ — nó
-là biên lai; hoá đơn điện tử là việc của đơn vị phát hành.
-
-**Cỡ.** Nhỏ.
-
----
-
 ## Thứ tự đề xuất
 
-1 → 2 → 4 → 3 → 5.
+1 → 2 → 4 → 3. **Đã làm xong cả bốn.**
 
-Lý do: (1) là chế độ hỏng im lặng, sửa trước mọi thứ. (2) là thứ (4) và bộ phận
-hỗ trợ đều cần để làm việc. (3) mang lại doanh thu đại lý nhưng không cứu ai khi
-hỏng. (5) nhỏ, làm lúc nào cũng được.
+Lý do thứ tự: (1) là chế độ hỏng im lặng, sửa trước mọi thứ. (2) là thứ (4) và
+bộ phận hỗ trợ đều cần để làm việc. (3) mang lại doanh thu đại lý nhưng không
+cứu ai khi hỏng.
 
 ## Đã loại, và vì sao
 
@@ -229,5 +212,7 @@ hỏng. (5) nhỏ, làm lúc nào cũng được.
   quyền. Khung công cụ thì dựng được, phần bóc link thì không.
 - **Marketing AI** — bạn đã bảo bỏ.
 - **Công cụ miễn phí** — đã làm rồi bạn bảo bỏ, đã xoá sạch.
+- **Biên lai nạp tiền** — làm xong rồi bạn bảo bỏ, đã gỡ sạch: trang in, cột
+  thông tin xuất biên lai trên `User`, cấu hình bên phát hành, và migration.
 - **Rank tracker** — chờ bạn chọn: Search Console (chính xác, cần OAuth bạn tự
   tạo) hay SERP API trả phí (bạn cấp key).
