@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import NewOrderForm, { type Currency, type ServiceOption } from "@/components/orders/new-order-form";
+import NewOrderForm, { type Currency, type Prefill, type ServiceOption } from "@/components/orders/new-order-form";
 import MassOrderForm from "@/components/orders/mass-order-form";
 import OrderTabs from "@/components/orders/order-tabs";
 import { Icon } from "@/components/icons";
@@ -13,7 +13,12 @@ import { LINK_RULES } from "@/lib/links";
 
 export const metadata: Metadata = { title: "New order" };
 
-export default async function NewOrderPage() {
+export default async function NewOrderPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = await searchParams;
   const ctx = await getAppContext();
   const user = ctx.user!;
   const { t } = ctx;
@@ -60,6 +65,36 @@ export default async function NewOrderPage() {
     averageTime: s.averageTime,
     description: s.description,
   }));
+
+  // "Order this again" arrives as a query string. The service travels as its
+  // public number and is resolved here against the services actually on sale,
+  // so a link to something since withdrawn opens an ordinary empty form rather
+  // than a form pointing at a service the customer cannot buy.
+  const one = (key: string) => {
+    const value = params[key];
+    return (Array.isArray(value) ? value[0] : value) ?? "";
+  };
+  // Numbers come back as digits or as nothing: the form feeds these straight
+  // into number inputs, and the action revalidates every one of them anyway.
+  const digits = (key: string) => (/^\d+$/.test(one(key)) ? one(key) : "");
+
+  const wanted = Number(one("service"));
+  const repeat = Number.isInteger(wanted) && wanted > 0 ? serviceOptions.find((s) => s.publicId === wanted) : undefined;
+
+  const prefill: Prefill | undefined = repeat && {
+    serviceId: repeat.id,
+    link: one("link"),
+    quantity: digits("quantity"),
+    comments: one("comments"),
+    username: one("username"),
+    posts: digits("posts"),
+    minPerPost: digits("minPerPost"),
+    maxPerPost: digits("maxPerPost"),
+    delay: digits("delay"),
+    expiry: /^\d{4}-\d{2}-\d{2}$/.test(one("expiry")) ? one("expiry") : "",
+    runs: digits("runs"),
+    interval: digits("interval"),
+  };
 
   const deposited = await db.transaction.aggregate({
     where: { userId: user.id, type: "deposit", status: "completed" },
@@ -119,6 +154,7 @@ export default async function NewOrderPage() {
               services={serviceOptions}
               balance={user.balance}
               currency={currency}
+              prefill={prefill}
               labels={{
                 platform: t("order.platform"),
                 category: t("order.category"),

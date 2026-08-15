@@ -5,16 +5,18 @@ import { displayMoney } from "@/lib/currency";
 import { Icon, type IconName } from "@/components/icons";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
-import { resolveTier } from "@/lib/pricing";
 import { CUSTOMER_ACTIVE_STATUSES } from "@/lib/orders";
+import { priceServices, resolveTier } from "@/lib/pricing";
 import { renderNotification } from "@/lib/notify";
+import { frequentServices } from "@/lib/reorder";
+import FrequentServices from "@/components/orders/frequent-services";
 
 export default async function DashboardPage() {
   const ctx = await getAppContext();
   const user = ctx.user!;
   const { t, currency, locale } = ctx;
 
-  const [activeCount, completedCount, recentOrders, notifications] = await Promise.all([
+  const [activeCount, completedCount, recentOrders, notifications, frequent] = await Promise.all([
     db.order.count({ where: { userId: user.id, status: { in: CUSTOMER_ACTIVE_STATUSES } } }),
     db.order.count({ where: { userId: user.id, status: "completed" } }),
     db.order.findMany({
@@ -24,9 +26,16 @@ export default async function DashboardPage() {
       include: { service: { select: { name: true } } },
     }),
     db.notification.findMany({ where: { userId: user.id }, orderBy: { createdAt: "desc" }, take: 4 }),
+    frequentServices(user.id),
   ]);
 
   const tier = await resolveTier(user);
+  // The card quotes what this customer pays, not the list price — a tier
+  // discount that only appears at the last step persuades nobody.
+  const rates = await priceServices(tier, frequent);
+  const frequentPrices = Object.fromEntries(
+    frequent.map((s) => [s.id, displayMoney(rates.get(s.id) ?? s.rate, currency, locale)]),
+  );
 
   const quick: { href: string; label: string; icon: IconName }[] = [
     { href: "/dashboard/new-order", label: t("dash.newOrder"), icon: "cart" },
@@ -77,6 +86,12 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      <FrequentServices
+        services={frequent}
+        prices={frequentPrices}
+        labels={{ title: t("dash.frequent"), times: t("dash.frequentTimes"), per: t("order.rate") }}
+      />
 
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         <section className="card overflow-hidden">

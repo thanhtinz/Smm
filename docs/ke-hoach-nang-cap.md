@@ -211,6 +211,45 @@ phải đánh dấu gì.
 
 **Cỡ.** Nhỏ.
 
+**Đã làm xong.** Ảnh `docs/screenshots/order-reorder.png`,
+`docs/screenshots/order-prefilled.png`, `docs/screenshots/dash-frequent.png`.
+
+- **Nút "Đặt lại" trên mỗi dòng đơn** (và trên trang chi tiết đơn), mở form đã
+  điền sẵn: dịch vụ, link, số lượng — và cả ba bậc cascade phía trên nó. Khách
+  sửa gì thì sửa rồi bấm đặt.
+- **Lời mời đặt lại nằm trong URL, không nằm trong bảng nào.** Nó sống sót qua
+  bookmark, qua link gửi cho người khác, qua một vòng đăng nhập lại, và không có
+  gì phải đồng bộ khi đơn cũ đổi. Dịch vụ đi bằng **mã công khai** — con số khách
+  đã nhìn thấy — chứ không phải cuid nội bộ.
+- **Dịch vụ đã ngừng bán thì không mời đặt lại.** Dòng đơn đó không có nút, và
+  một link cũ trỏ tới mã không còn bán mở ra form trắng bình thường chứ không
+  phải form trỏ vào thứ không mua được.
+- **Đơn subscription và đơn nhỏ giọt mang theo đúng trường của nó.** Với
+  subscription thì `link` là tên tài khoản chứ không phải URL và số lượng là
+  trần tính từ số bài × mức tối đa — chép cả hai sang là điền sai ô bằng sai số.
+- **"Dịch vụ bạn hay đặt" trên bảng điều khiển**, tính từ chính lịch sử đơn:
+  không có bảng yêu thích, không có gì để khách phải đánh dấu. Chỉ hiện dịch vụ
+  đã đặt **từ hai lần trở lên** — đặt một lần là một đơn, không phải một thói
+  quen. Giá trên thẻ là giá **sau chiết khấu cấp bậc** của chính khách đó.
+
+**Chứng minh.** 23/23 điểm trong trình duyệt thật: thẻ hiện đúng số lần đã đặt,
+mọi thẻ trỏ tới dịch vụ còn bán, link đặt lại lấy đúng dịch vụ của dòng đó, form
+mở ra đã điền nền tảng + danh mục + dịch vụ + link + số lượng, và **bấm đặt ngay
+mà không chạm vào cascade thì sinh đúng một đơn, đúng dịch vụ, đúng link, đúng số
+lượng**. Mã dịch vụ không tồn tại mở ra form trắng; số lượng sửa tay thành chữ
+bị bỏ.
+
+**Ba lỗi probe bắt được — đều là lỗi của probe, không phải của sản phẩm.**
+`publicId` là duy nhất **theo từng panel** chứ không phải toàn hệ thống, nên đếm
+dịch vụ không giới hạn panel thì 4 thành 7; dòng đầu bảng và link đầu bảng không
+phải cùng một đơn khi dòng đầu có dịch vụ đã ngừng bán; và trang có **hai** form
+(đơn lẻ và hàng loạt) nên `locator("form")` là nhập nhằng.
+
+**Một thứ sửa thêm khi chụp lại.** Cột ngày dùng dấu thời gian đầy đủ, bị bóp
+lại còn ~90px nên **xuống bốn dòng** và kéo cao mọi dòng của bảng. Đổi sang
+ngày/tháng + giờ: bảng còn một nửa chiều cao. Năm vẫn có trên trang chi tiết đơn
+và trong file CSV xuất ra.
+
 ---
 
 ## 5. Mỗi dịch vụ chưa có trang riêng để lên tìm kiếm
