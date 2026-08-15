@@ -10,7 +10,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
-    "tenancy:check": "node scripts/tenancy-check.mjs"
+    "tenancy:check": "node scripts/tenancy-check.mjs",
+    "translations:sync": "tsx scripts/sync-translations.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
