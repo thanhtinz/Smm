@@ -9,6 +9,10 @@ export type DepositContext = {
   /** Short reference the payer must include, e.g. NOVA100042. */
   reference: string;
   transactionId: string;
+  /** The deposit's own number, which is what a callback is matched back to. */
+  publicId: number;
+  /** Selects this panel in a callback URL, the way the webhook routes do. */
+  panelToken: string;
   config: GatewayConfig;
   appUrl: string;
 };
@@ -156,6 +160,116 @@ export const drivers: Record<string, Driver> = {
       const data = (await res.json()) as { invoice_url?: string };
       if (!data.invoice_url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
       return { kind: "redirect", url: data.invoice_url };
+    },
+  },
+
+  momo: {
+    key: "momo",
+    webhook: "momo",
+    required: ["partnerCode", "accessKey", "secretKey"],
+    fields: [
+      { name: "partnerCode", label: "Partner code" },
+      { name: "accessKey", label: "Access key", type: "password" },
+      { name: "secretKey", label: "Secret key", type: "password", hint: "Signs both the order and the callback" },
+      {
+        name: "apiUrl",
+        label: "API endpoint",
+        hint: "Leave blank for live. The test gateway is https://test-payment.momo.vn/v2/gateway/api/create",
+      },
+    ],
+    async prepare(ctx) {
+      const { signCreate } = await import("./momo");
+      const endpoint = ctx.config.apiUrl || "https://payment.momo.vn/v2/gateway/api/create";
+
+      // MoMo takes whole dong, and rounds nothing itself: a fractional amount
+      // is rejected outright rather than adjusted.
+      const values = {
+        accessKey: ctx.config.accessKey,
+        amount: String(Math.round(ctx.amount)),
+        extraData: "",
+        ipnUrl: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/momo`,
+        // The reference is what the callback is matched back to, so it is the
+        // deposit's own id rather than anything cosmetic.
+        orderId: ctx.reference,
+        orderInfo: `Nap tien ${ctx.reference}`,
+        partnerCode: ctx.config.partnerCode,
+        redirectUrl: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?momo=return`,
+        requestId: ctx.reference,
+        requestType: ctx.config.requestType || "captureWallet",
+      };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({
+            ...values,
+            // Signed but not sent: it is a shared secret, not a parameter.
+            accessKey: undefined,
+            partnerName: ctx.config.partnerName || "Nova",
+            storeId: ctx.config.partnerCode,
+            lang: "vi",
+            signature: signCreate(values, ctx.config.secretKey),
+          }),
+        });
+        const data = (await res.json()) as { payUrl?: string; resultCode?: number };
+        if (!data.payUrl) return { kind: "unconfigured", key: "err.payMomo" };
+        return { kind: "redirect", url: data.payUrl };
+      } catch {
+        return { kind: "unconfigured", key: "err.payUnreachable" };
+      }
+    },
+  },
+
+  zalopay: {
+    key: "zalopay",
+    webhook: "zalopay",
+    required: ["appId", "key1", "key2"],
+    fields: [
+      { name: "appId", label: "App ID" },
+      { name: "key1", label: "Key 1", type: "password", hint: "Signs the order this panel sends" },
+      { name: "key2", label: "Key 2", type: "password", hint: "Signs the callback the panel receives" },
+      {
+        name: "apiUrl",
+        label: "API endpoint",
+        hint: "Leave blank for live. The sandbox is https://sb-openapi.zalopay.vn/v2/create",
+      },
+    ],
+    async prepare(ctx) {
+      const { signOrder, appTransId } = await import("./zalopay");
+      const endpoint = ctx.config.apiUrl || "https://openapi.zalopay.vn/v2/create";
+
+      const order = {
+        app_id: ctx.config.appId,
+        // Must start with yymmdd and be unique that day; the deposit's own id
+        // supplies the uniqueness and makes the callback matchable.
+        app_trans_id: appTransId(ctx.publicId, new Date()),
+        app_user: ctx.reference,
+        amount: Math.round(ctx.amount),
+        app_time: Date.now(),
+        embed_data: JSON.stringify({ redirecturl: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?zalopay=return` }),
+        item: "[]",
+      };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          cache: "no-store",
+          body: new URLSearchParams({
+            ...Object.fromEntries(Object.entries(order).map(([k, v]) => [k, String(v)])),
+            description: `Nap tien ${ctx.reference}`,
+            callback_url: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/zalopay`,
+            mac: signOrder(order, ctx.config.key1),
+          }),
+        });
+        const data = (await res.json()) as { order_url?: string; return_code?: number; return_message?: string };
+        if (!data.order_url) return { kind: "unconfigured", key: "err.payZalopay" };
+        return { kind: "redirect", url: data.order_url };
+      } catch {
+        return { kind: "unconfigured", key: "err.payUnreachable" };
+      }
     },
   },
 

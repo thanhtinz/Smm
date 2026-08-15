@@ -431,6 +431,35 @@ async function main() {
       config: JSON.stringify({ apiKey: "", ipnSecret: "", payCurrency: "", apiUrl: "", prefix: "NOVA" }),
     },
     {
+      // The two wallets this market actually pays from. Seeded switched off
+      // and unconfigured, like the rest: a driver nobody can see in the admin
+      // area is a driver nobody uses.
+      code: "momo",
+      name: "MoMo",
+      driver: "momo",
+      icon: "wallet",
+      description: "Pay from the MoMo wallet.",
+      enabled: false,
+      currencies: JSON.stringify(["VND"]),
+      minAmount: 10000,
+      maxAmount: 50000000,
+      position: 1,
+      config: JSON.stringify({ partnerCode: "", accessKey: "", secretKey: "", apiUrl: "" }),
+    },
+    {
+      code: "zalopay",
+      name: "ZaloPay",
+      driver: "zalopay",
+      icon: "wallet",
+      description: "Pay from the ZaloPay wallet.",
+      enabled: false,
+      currencies: JSON.stringify(["VND"]),
+      minAmount: 10000,
+      maxAmount: 50000000,
+      position: 2,
+      config: JSON.stringify({ appId: "", key1: "", key2: "", apiUrl: "" }),
+    },
+    {
       code: "manual_bank",
       name: "Manual bank transfer",
       driver: "manual",

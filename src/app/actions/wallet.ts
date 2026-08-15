@@ -8,7 +8,7 @@ import { nextPublicId } from "@/lib/ids";
 import { getCurrencies, getBaseCurrency } from "@/lib/currency";
 import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
-import { panelBaseUrl } from "@/lib/tenancy";
+import { panelBaseUrl, getCurrentPanel } from "@/lib/tenancy";
 import { readerMessages } from "@/lib/context";
 
 export type DepositState = {
@@ -127,11 +127,17 @@ export async function prepareDeposit(transactionId: string) {
   const reference = `${prefix}${txn.publicId}`;
 
   try {
+    // A wallet gateway calls back to a fixed URL, so the panel has to be named
+    // in it — the same token the other webhook routes are addressed by.
+    const panel = await getCurrentPanel();
+
     return await driver.prepare({
       amount: txn.paidAmount,
       currency: txn.currency,
       reference,
       transactionId: txn.id,
+      publicId: txn.publicId,
+      panelToken: panel?.webhookToken ?? "",
       config,
       appUrl: await panelBaseUrl(),
     });
