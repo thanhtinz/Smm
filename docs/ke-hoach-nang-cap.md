@@ -381,9 +381,13 @@ tiền rồi thì không đi xem trang giới thiệu, họ đi mua — nên ch�
   **Để trống thì thẻ biến mất hẳn** chứ không hiện cái khung rỗng — khung rỗng
   đọc ra thành "panel quên điền", tệ hơn là không có.
 
-Trang công khai `/services/<nền-tảng>/<danh-mục>` vẫn giữ: đó là mặt SEO, chỗ
-người từ tìm kiếm rơi vào. Hai trang, hai mục đích, nhưng **chỉ một form đặt
-đơn** — cùng một component.
+**Menu nền tảng ngoài trang giới thiệu đã xoá.** Header công khai trở lại bốn
+mục như cũ (Trang chủ / Dịch vụ / API / Điều khoản), và toàn bộ phần đo bề rộng
++ menu tràn + dropdown hover dựng cho nó cũng xoá theo — code chết còn tệ hơn
+không có. Trang `/services/<nền-tảng>/<danh-mục>` **vẫn còn** vì đó là mặt SEO,
+chỗ người từ tìm kiếm rơi vào; nó chỉ không còn nằm trên thanh menu.
+
+Hai trang, hai mục đích, nhưng **chỉ một form đặt đơn** — cùng một component.
 
 **Chứng minh.** 20/20 điểm: sidebar liệt kê đúng số nền tảng đang bán, mở ra
 đúng số danh mục, mở cái thứ hai thì cái thứ nhất đóng, đánh dấu đúng trang
