@@ -69,8 +69,11 @@ export default function SyncStatus({ view, labels }: { view: SyncView; labels: R
         <div className="mt-4 border-t border-[var(--border)] pt-3">
           <p className="muted text-xs font-semibold tracking-wide uppercase">{labels.failures}</p>
           <ul className="muted mt-1.5 space-y-1 text-sm">
-            {view.failures.slice(0, 5).map((f) => (
-              <li key={f} className="font-mono text-xs">
+            {/* Keyed by position, not by text: the same job failing the same
+                way twice is the normal case here, and two identical strings
+                as keys is React quietly dropping one of them. */}
+            {view.failures.slice(0, 5).map((f, i) => (
+              <li key={i} className="font-mono text-xs">
                 {f}
               </li>
             ))}

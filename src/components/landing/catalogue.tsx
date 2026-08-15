@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import Hero from "./hero";
 import { ClosingCta, Faqs, PaymentStrip, PlatformStrip, QualityTags, Quotes, StatTiles, rateLabel } from "./sections";
