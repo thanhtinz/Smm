@@ -61,6 +61,37 @@ hai không cộng thêm. Đúng như đã làm với SePay và crypto.
 
 **Cỡ.** Vừa. Rủi ro nằm ở chữ ký webhook, không nằm ở phần gọi.
 
+**Đã làm xong — MoMo và ZaloPay. Thẻ cào bỏ theo yêu cầu.**
+
+Hai driver theo đúng khuôn `PaymentDriver` sẵn có, cấu hình trong admin, mỗi cái
+một URL callback riêng theo token panel — không thêm trang admin nào.
+
+Hai cổng ký khác nhau và chỗ đó là chỗ dễ sai nhất:
+- **MoMo** ký HMAC-SHA256 trên chuỗi `key=value&…` **sắp xếp theo tên trường**.
+  Panel *sắp xếp bằng code* theo đúng quy tắc cổng công bố, chứ không viết tay
+  chuỗi — viết tay thì sai một dấu là mọi thanh toán bị từ chối mà không biết vì
+  sao. `accessKey` được ký nhưng **không gửi đi**.
+- **ZaloPay** ký nối bằng `|` theo **thứ tự cố định, không phải a→z**, và dùng
+  **hai khoá khác nhau**: key1 cho đơn panel gửi, key2 cho callback panel nhận.
+  Dùng nhầm một khoá cho cả hai là lỗi tích hợp kinh điển.
+
+Cả hai webhook **từ chối khi chưa có khoá**, theo đúng bài học từ lỗ SePay đã
+sửa hôm nay.
+
+**Chứng minh.** Không gọi được cổng thật (phải có hợp đồng doanh nghiệp, và
+proxy ở đây chặn cả host tài liệu của họ), nên mỗi cổng được thay bằng một máy
+chủ nói đúng giao thức và **tự kiểm chữ ký panel ký** — chứ không phải mock gật
+đầu với chính nó. 25/25 điểm: cổng chấp nhận chữ ký; số tiền là số nguyên đồng;
+URL callback gọi đúng panel; `app_trans_id` đúng dạng `yymmdd_<mã nạp>`;
+callback giả mạo bị từ chối và không cộng đồng nào; callback ZaloPay ký bằng
+key1 thay vì key2 bị từ chối; callback thật cộng đúng một lần; gửi lại không
+cộng lần hai; trả thiếu tiền thì không cộng và ghi lại phần thiếu.
+
+**Hai lỗi thật probe bắt được trước khi commit.** `orderId` gửi sang MoMo mang
+tiền tố (`NOVA100124`) còn webhook đọc nó như số thuần — **không callback nào
+khớp được đơn nạp**. Và webhook trả 204 **kèm body**, thứ mà HTTP không cho
+phép: nó ném lỗi, cổng thấy 500 và **thử lại một khoản đã cộng rồi**.
+
 ---
 
 ## 2. Thông tin dịch vụ quá mỏng so với thứ thị trường rao
