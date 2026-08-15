@@ -13,6 +13,7 @@ import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import OrderTimeline, { type Step } from "@/components/orders/order-timeline";
 import { Icon } from "@/components/icons";
+import { formatCount } from "@/lib/numbers";
 
 export type AdminOrderRow = {
   id: string;
@@ -45,8 +46,11 @@ export default function OrderManager({
   rows,
   money,
   labels,
+  locale,
 }: {
   rows: AdminOrderRow[];
+  /** Counts are grouped the reader's way, not the server's. */
+  locale: string;
   /** Pre-formatted so currency conversion stays on the server. */
   money: Record<string, string>;
   labels: Record<string, string>;
@@ -122,7 +126,7 @@ export default function OrderManager({
                         {row.link}
                       </a>
                     </td>
-                    <td className="text-right tabular-nums">{row.quantity.toLocaleString()}</td>
+                    <td className="text-right tabular-nums">{formatCount(row.quantity, locale)}</td>
                     <td className="text-right tabular-nums">{money[row.id]}</td>
                     <td>
                       {row.status === "held" ? (
@@ -190,7 +194,7 @@ export default function OrderManager({
         )}
       </div>
 
-      {editing && <OrderDrawer row={editing} labels={labels} onClose={() => setEditing(null)} />}
+      {editing && <OrderDrawer row={editing} labels={labels} locale={locale} onClose={() => setEditing(null)} />}
     </>
   );
 }
@@ -203,10 +207,12 @@ export default function OrderManager({
 function OrderDrawer({
   row,
   labels,
+  locale,
   onClose,
 }: {
   row: AdminOrderRow;
   labels: Record<string, string>;
+  locale: string;
   onClose: () => void;
 }) {
   const [state, action] = useActionState<ActionResult, FormData>(updateOrderAction, {});
@@ -249,17 +255,17 @@ function OrderDrawer({
 
         <dl className="card card-pad space-y-2 text-sm">
           <Row label={labels.user} value={row.username} />
-          <Row label={labels.quantity} value={row.quantity.toLocaleString()} />
+          <Row label={labels.quantity} value={formatCount(row.quantity, locale)} />
           <Row label={labels.charge} value={labels[`money.${row.id}`] ?? ""} />
           {row.providerOrderId && <Row label={labels.providerOrderId} value={row.providerOrderId} mono />}
           {row.fromChild && <Row label={labels.source} value={labels.fromChild} />}
           {row.note && <Row label={labels.note} value={row.note} />}
           {row.subscription && (
             <>
-              <Row label={labels.posts} value={row.subscription.posts.toLocaleString()} />
+              <Row label={labels.posts} value={formatCount(row.subscription.posts, locale)} />
               <Row
                 label={labels.perPost}
-                value={`${row.subscription.minPerPost.toLocaleString()} – ${row.subscription.maxPerPost.toLocaleString()}`}
+                value={`${formatCount(row.subscription.minPerPost, locale)} – ${formatCount(row.subscription.maxPerPost, locale)}`}
               />
               <Row label={labels.delay} value={`${row.subscription.delay} ${labels.minutes}`} />
               {row.subscription.expiry && <Row label={labels.expiry} value={row.subscription.expiry} />}
@@ -319,7 +325,7 @@ function OrderDrawer({
         <section className="mt-6 border-t border-[var(--border)] pt-5">
           <h3 className="font-semibold">{labels.timeline}</h3>
           <div className="mt-4">
-            <OrderTimeline steps={timeline.steps} createdAt={timeline.createdAt} labels={labels} />
+            <OrderTimeline steps={timeline.steps} createdAt={timeline.createdAt} labels={labels} locale={locale} />
           </div>
         </section>
       )}

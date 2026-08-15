@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { formatLocalDay } from "@/lib/dates";
 
 /**
  * Ordering the same thing again.
@@ -26,7 +27,7 @@ export type Reorderable = {
   service: { publicId: number };
 };
 
-export function reorderHref(order: Reorderable): string {
+export function reorderHref(order: Reorderable, timeZone: string): string {
   const q = new URLSearchParams({ service: String(order.service.publicId) });
 
   // A subscription's `link` is the profile being watched, not a URL, and its
@@ -38,7 +39,10 @@ export function reorderHref(order: Reorderable): string {
     if (order.minPerPost !== null) q.set("minPerPost", String(order.minPerPost));
     if (order.maxPerPost !== null) q.set("maxPerPost", String(order.maxPerPost));
     if (order.delay !== null) q.set("delay", String(order.delay));
-    if (order.expiry) q.set("expiry", order.expiry.toISOString().slice(0, 10));
+    // The day this falls on where the panel lives. Read in UTC instead, an
+    // end date came back one day earlier on every server east of it — and one
+    // day earlier again on each reorder after that.
+    if (order.expiry) q.set("expiry", formatLocalDay(order.expiry, timeZone));
   } else {
     if (order.link) q.set("link", order.link);
     // Comment services are bought by the line, so the lines are the quantity;

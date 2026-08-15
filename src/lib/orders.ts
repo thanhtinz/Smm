@@ -1,4 +1,6 @@
 import { queueCallback, type QueueClient } from "./callbacks/queue";
+import { formatLocalDay, parseLocalTime } from "./dates";
+import type { Fault } from "./fault";
 
 /** Charge for a service, in the panel's base currency. */
 export function calculateCharge(ratePer1000: number, quantity: number): number {
@@ -101,18 +103,28 @@ export type Subscription = {
 };
 
 /**
- * Accepts both dates a subscription can arrive as: the dd/mm/yyyy the API
- * standard uses, and the yyyy-mm-dd a date input posts. Read as local time so
- * the day the customer picked is the day that is stored.
+ * An end date as the customer wrote it, into the day it names.
+ *
+ * Both shapes it arrives in are accepted: the dd/mm/yyyy the API standard
+ * uses, and the yyyy-mm-dd a date input posts.
+ *
+ * Returned as both the instant to store — midnight in the panel's own zone,
+ * so the stored moment shows the same day back to the reader — and the plain
+ * "2026-08-20" string, which is what the comparison against today is made on.
+ * Comparing strings avoids the question of what hour "today" starts at on a
+ * server that is not in the panel's zone: it never starts one.
  */
-function parseExpiry(raw: string): Date | null {
-  const parts = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw);
-  const date = parts
-    ? new Date(Number(parts[3]), Number(parts[2]) - 1, Number(parts[1]))
+function parseExpiry(raw: string, timeZone: string): { at: Date; day: string } | null {
+  const slashed = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw);
+  const day = slashed
+    ? `${slashed[3]}-${slashed[2].padStart(2, "0")}-${slashed[1].padStart(2, "0")}`
     : /^\d{4}-\d{2}-\d{2}$/.test(raw)
-      ? new Date(`${raw}T00:00:00`)
+      ? raw
       : null;
-  return date && !Number.isNaN(date.getTime()) ? date : null;
+  if (!day) return null;
+
+  const at = parseLocalTime(`${day}T00:00`, timeZone);
+  return at ? { at, day } : null;
 }
 
 /** The columns a subscription order sets, or nulls when it is not one. */
@@ -164,49 +176,58 @@ export const SUBSCRIPTION_DELAYS = [0, 5, 10, 15, 30, 60, 90] as const;
  * max on the service are per post here, and the customer is charged for the
  * ceiling — posts x maxPerPost — because that is the most that can be
  * delivered. Anything not used comes back as a refund like any other order.
+ *
+ * The refusals come back as keys rather than sentences. Written out here they
+ * were English, and stayed English on a Vietnamese panel — the one form in
+ * the order page that answered in the wrong language, because it was the one
+ * whose checks live in a file shared with the API. The API turns them into
+ * fixed English, the form into the reader's language, and neither has to
+ * agree with the other about wording.
  */
 export function parseSubscription(
   raw: { username: string; posts: string; min: string; max: string; delay: string; expiry: string },
   service: { min: number; max: number },
-): { sub: Subscription; quantity: number } | { fieldErrors: Record<string, string> } {
-  const fieldErrors: Record<string, string> = {};
+  /** The panel's zone, which is the one the end date is written in. */
+  timeZone: string,
+): { sub: Subscription; quantity: number } | { fieldErrors: Record<string, Fault> } {
+  const fieldErrors: Record<string, Fault> = {};
 
   const username = raw.username.trim().replace(/^@/, "");
-  if (!username) fieldErrors.username = "Enter the username to watch";
-  else if (!/^[A-Za-z0-9._-]{1,64}$/.test(username)) fieldErrors.username = "Enter the username on its own, not a link";
+  if (!username) fieldErrors.username = { key: "err.subUsername" };
+  else if (!/^[A-Za-z0-9._-]{1,64}$/.test(username)) fieldErrors.username = { key: "err.subUsernameShape" };
 
   const posts = Number(raw.posts);
-  if (!Number.isInteger(posts) || posts < 1) fieldErrors.posts = "Enter how many future posts this covers";
+  if (!Number.isInteger(posts) || posts < 1) fieldErrors.posts = { key: "err.subPosts" };
 
   const minPerPost = Number(raw.min);
   const maxPerPost = Number(raw.max);
   if (!Number.isInteger(minPerPost) || minPerPost < service.min) {
-    fieldErrors.min = `At least ${service.min.toLocaleString()} per post`;
+    fieldErrors.min = { key: "err.subMin", vars: { min: service.min } };
   }
   if (!Number.isInteger(maxPerPost) || maxPerPost > service.max) {
-    fieldErrors.max = `At most ${service.max.toLocaleString()} per post`;
+    fieldErrors.max = { key: "err.subMax", vars: { max: service.max } };
   }
   if (!fieldErrors.min && !fieldErrors.max && minPerPost > maxPerPost) {
-    fieldErrors.max = "The maximum cannot be below the minimum";
+    fieldErrors.max = { key: "err.subMaxBelowMin" };
   }
 
   const delay = Number(raw.delay || 0);
   if (!SUBSCRIPTION_DELAYS.includes(delay as (typeof SUBSCRIPTION_DELAYS)[number])) {
-    fieldErrors.delay = `Choose one of ${SUBSCRIPTION_DELAYS.join(", ")} minutes`;
+    fieldErrors.delay = { key: "err.subDelay", vars: { options: SUBSCRIPTION_DELAYS.join(", ") } };
   }
 
   // Optional, and only meaningful in the future — an expiry already past would
   // charge for a subscription that can never deliver.
   let expiry: Date | null = null;
   if (raw.expiry.trim()) {
-    expiry = parseExpiry(raw.expiry.trim());
-    if (!expiry) fieldErrors.expiry = "Enter a valid date";
-    else {
-      // Compared against the start of today: an expiry is a day, not a moment,
-      // so today itself is still a valid answer at any hour.
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      if (expiry < today) fieldErrors.expiry = "The end date is in the past";
+    const parsed = parseExpiry(raw.expiry.trim(), timeZone);
+    if (!parsed) fieldErrors.expiry = { key: "err.subExpiry" };
+    // An expiry is a day, not a moment, so today itself is still a valid
+    // answer at any hour of it — in the panel's zone, not the server's.
+    else if (parsed.day < formatLocalDay(new Date(), timeZone)) {
+      fieldErrors.expiry = { key: "err.subExpiryPast" };
+    } else {
+      expiry = parsed.at;
     }
   }
 

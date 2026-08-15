@@ -111,6 +111,26 @@ export function describeZone(name: string, locale: string): string {
 }
 
 /**
+ * The calendar day an instant falls on in a named zone, as "2026-08-20".
+ *
+ * The counterpart to parseLocalTime, and it exists so a date can survive a
+ * round trip. `toISOString().slice(0, 10)` reads the day in UTC, which is a
+ * different day from the reader's for part of every day: an end date entered
+ * as the 20th on a server running east of UTC came back as the 19th, and came
+ * back a day earlier again on each reorder.
+ */
+export function formatLocalDay(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(value);
+  const at = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  return `${at("year")}-${at("month")}-${at("day")}`;
+}
+
+/**
  * "2026-08-20T14:30" in a named zone, as the instant it names.
  *
  * A `datetime-local` field sends a wall clock with no zone attached, and the

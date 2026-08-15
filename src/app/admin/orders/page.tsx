@@ -137,6 +137,7 @@ export default async function AdminOrdersPage({
       </div>
 
       <OrderManager
+        locale={locale}
         rows={orders.map((o) => ({
           id: o.id,
           publicId: o.publicId,

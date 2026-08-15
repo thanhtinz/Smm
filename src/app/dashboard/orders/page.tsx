@@ -9,6 +9,7 @@ import StatusBadge from "@/components/ui/status-badge";
 import OrderActions from "@/components/orders/order-actions";
 import { CUSTOMER_ORDER_STATUSES, customerStatus } from "@/lib/orders";
 import { reorderHref } from "@/lib/reorder";
+import { formatCount } from "@/lib/numbers";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -82,7 +83,7 @@ export default async function OrdersPage({
     canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
     canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
     openRequest: o.requests[0]?.type ?? null,
-    reorderHref: o.service.enabled ? reorderHref(o) : null,
+    reorderHref: o.service.enabled ? reorderHref(o, timezone) : null,
   });
 
   return (
@@ -196,7 +197,7 @@ export default async function OrdersPage({
                       <td className="max-w-[14rem] truncate">
                         {o.posts ? (
                           <span className="muted">
-                            @{o.link} · {o.posts.toLocaleString()} {t("order.posts").toLowerCase()}
+                            @{o.link} · {formatCount(o.posts, locale)} {t("order.posts").toLowerCase()}
                           </span>
                         ) : (
                           <a href={o.link} target="_blank" rel="noopener noreferrer" className="muted hover:text-[var(--text)]">
@@ -204,7 +205,7 @@ export default async function OrdersPage({
                           </a>
                         )}
                       </td>
-                      <td className="text-right tabular-nums">{o.quantity.toLocaleString()}</td>
+                      <td className="text-right tabular-nums">{formatCount(o.quantity, locale)}</td>
                       <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                       <td>
                         <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
@@ -247,7 +248,7 @@ export default async function OrdersPage({
                     {o.service.name}
                   </Link>
                   <p className="muted mt-0.5 truncate text-xs">
-                    {o.posts ? `@${o.link} · ${o.posts.toLocaleString()} ${t("order.posts").toLowerCase()}` : o.link}
+                    {o.posts ? `@${o.link} · ${formatCount(o.posts, locale)} ${t("order.posts").toLowerCase()}` : o.link}
                   </p>
                   {o.comments && (
                     <details className="mt-1.5">
@@ -258,7 +259,7 @@ export default async function OrdersPage({
                     </details>
                   )}
                   <div className="mt-2.5 flex items-center justify-between gap-3 text-xs">
-                    <span className="muted tabular-nums">{o.quantity.toLocaleString()}</span>
+                    <span className="muted tabular-nums">{formatCount(o.quantity, locale)}</span>
                     <span className="font-semibold tabular-nums">{displayMoney(o.charge, currency, locale)}</span>
                   </div>
                   <div className="mt-2 flex justify-end">

@@ -69,7 +69,18 @@ export async function readerLocale(): Promise<string> {
  * rather than written into the code in one language.
  */
 export async function readerMessages(): Promise<Translator> {
-  return (await getTranslator(await readerLocale())).t;
+  return (await readerText()).t;
+}
+
+/**
+ * The same, with the locale kept.
+ *
+ * A refusal that quotes a number — a minimum deposit, a maximum quantity —
+ * has to group its digits the reader's way too, and the translator alone does
+ * not say which way that is.
+ */
+export async function readerText(): Promise<{ t: Translator; locale: string }> {
+  return getTranslator(await readerLocale());
 }
 
 /**

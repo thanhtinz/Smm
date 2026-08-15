@@ -10,6 +10,7 @@ import { Icon, type IconName } from "@/components/icons";
 import SyncStatus, { type SyncView } from "@/components/admin/sync-status";
 import { syncHealth } from "@/lib/sync-health";
 import { getRootPanel, currentPanelId } from "@/lib/tenancy";
+import { formatCount } from "@/lib/numbers";
 
 export const metadata: Metadata = { title: "Admin" };
 
@@ -128,7 +129,7 @@ export default async function AdminOverviewPage() {
                     <td className="font-mono text-xs">#{o.publicId}</td>
                     <td>{o.user.username}</td>
                     <td className="max-w-[20rem] truncate">{o.service.name}</td>
-                    <td className="text-right tabular-nums">{o.quantity.toLocaleString()}</td>
+                    <td className="text-right tabular-nums">{formatCount(o.quantity, locale)}</td>
                     <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                     <td>
                       <StatusBadge status={o.status} label={t(`status.${o.status}`)} />

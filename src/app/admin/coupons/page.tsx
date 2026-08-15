@@ -6,7 +6,7 @@ import CouponManager from "@/components/admin/coupon-manager";
 export const metadata: Metadata = { title: "Coupons" };
 
 export default async function AdminCouponsPage() {
-  const { t } = await getAppContext();
+  const { t, locale } = await getAppContext();
 
   const coupons = await db.coupon.findMany({
     orderBy: { createdAt: "desc" },
@@ -16,6 +16,7 @@ export default async function AdminCouponsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <CouponManager
+        locale={locale}
         rows={coupons.map((c) => ({
           id: c.id,
           code: c.code,

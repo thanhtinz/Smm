@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import { dateFormats } from "@/lib/dates";
+import { dateFormats, formatLocalDay, parseLocalTime } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
@@ -27,9 +27,21 @@ export default async function AdminStatisticsPage({
   const dates = dateFormats(locale, timezone);
 
   const days = WINDOWS.includes(Number(params.days) as (typeof WINDOWS)[number]) ? Number(params.days) : 30;
-  const since = new Date();
-  since.setHours(0, 0, 0, 0);
-  since.setDate(since.getDate() - (days - 1));
+
+  // The days are the panel's, not the server's. Counted in UTC, a panel in
+  // Hanoi had every order placed before 7am filed under the day before: the
+  // revenue for today only started appearing mid-morning, and the last day of
+  // the window began at breakfast rather than at midnight.
+  //
+  // The calendar arithmetic itself is done on a UTC anchor, where a day is
+  // always 86,400 seconds — stepping a local date back thirty times would
+  // gain or lose an hour at a daylight-saving boundary and land on the wrong
+  // date. Only the first and last conversions know about the zone.
+  const anchor = Date.parse(`${formatLocalDay(new Date(), timezone)}T00:00:00Z`);
+  const dayKeys = Array.from({ length: days }, (_, i) =>
+    new Date(anchor - (days - 1 - i) * 86_400_000).toISOString().slice(0, 10),
+  );
+  const since = parseLocalTime(`${dayKeys[0]}T00:00`, timezone) ?? new Date(anchor);
 
   const [orders, deposits, users, byStatus, topServices] = await Promise.all([
     db.order.findMany({
@@ -58,13 +70,10 @@ export default async function AdminStatisticsPage({
 
   // One bucket per day, including the days with nothing in them — a gap in the
   // series would otherwise read as a shorter period rather than a quiet one.
-  const key = (d: Date) => d.toISOString().slice(0, 10);
-  const buckets = new Map<string, Bucket>();
-  for (let i = 0; i < days; i++) {
-    const d = new Date(since);
-    d.setDate(since.getDate() + i);
-    buckets.set(key(d), { revenue: 0, cost: 0, profit: 0, orders: 0, deposits: 0, users: 0 });
-  }
+  const key = (d: Date) => formatLocalDay(d, timezone);
+  const buckets = new Map<string, Bucket>(
+    dayKeys.map((day) => [day, { revenue: 0, cost: 0, profit: 0, orders: 0, deposits: 0, users: 0 }]),
+  );
 
   // Profit only counts orders that were both paid for and have a recorded
   // cost. An order refunded to the customer earned nothing, and one placed
@@ -93,9 +102,13 @@ export default async function AdminStatisticsPage({
     if (b) b.users += 1;
   }
 
-  const short = { format: dates.stamp };
+  // The label for a bucket is that day at midnight in the panel's zone, so
+  // the axis cannot name a different day from the one the bucket counted.
   const series = (pick: (b: Bucket) => number): TrendPoint[] =>
-    [...buckets.entries()].map(([day, b]) => ({ day: short.format(new Date(`${day}T00:00:00`)), value: pick(b) }));
+    [...buckets.entries()].map(([day, b]) => ({
+      day: dates.stamp(parseLocalTime(`${day}T00:00`, timezone) ?? new Date(`${day}T00:00:00Z`)),
+      value: pick(b),
+    }));
 
   const money = (n: number) => displayMoney(n, currency, locale);
   const totals = [...buckets.values()].reduce(

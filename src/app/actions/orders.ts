@@ -17,9 +17,10 @@ import { priceService, priceServices, resolveTier } from "@/lib/pricing";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 import { duplicateOrder, duplicateWindow, findDuplicate, guardOrder, orderRateLimit } from "@/lib/order-guard";
 import { maintenanceState } from "@/lib/maintenance";
-import { readerMessages } from "@/lib/context";
+import { readerText } from "@/lib/context";
 import { parseLocalTime } from "@/lib/dates";
 import { LINK_RULES, checkLink, extractUsername, normaliseLink } from "@/lib/links";
+import { formatCount } from "@/lib/numbers";
 
 /** As many as one paste is allowed to place at once. */
 const MAX_LINES = 100;
@@ -31,7 +32,7 @@ export type OrderState = {
 };
 
 export async function placeOrderAction(_prev: OrderState, formData: FormData): Promise<OrderState> {
-  const t = await readerMessages();
+  const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
 
@@ -55,6 +56,10 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   if (!service) return { fieldErrors: { serviceId: t("err.serviceGone") } };
   const rules = service.category.platform;
 
+  // Both dates on this form — the end date and the scheduled start — are wall
+  // clocks with no zone attached, and both are read in the panel's.
+  const timezone = String(await getSetting("locale.timezone")) || "UTC";
+
   // A subscription watches a profile instead of pointing at one post, so it
   // takes a username and a run of future posts rather than a link and a count.
   let subscription: Subscription | null = null;
@@ -75,8 +80,17 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
         expiry: String(formData.get("expiry") ?? ""),
       },
       service,
+      timezone,
     );
-    if ("fieldErrors" in parsed) return parsed;
+    // The checks answer with keys so the API can have English and the form can
+    // have the reader's language; this is the form.
+    if ("fieldErrors" in parsed) {
+      return {
+        fieldErrors: Object.fromEntries(
+          Object.entries(parsed.fieldErrors).map(([field, fault]) => [field, t(fault.key, fault.vars)]),
+        ),
+      };
+    }
     subscription = parsed.sub;
     quantity = parsed.quantity;
     link = parsed.sub.username;
@@ -113,7 +127,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     if (quantity < service.min || quantity > service.max) {
       return {
         fieldErrors: {
-          quantity: `Quantity must be between ${service.min.toLocaleString()} and ${service.max.toLocaleString()}`,
+          quantity: t("err.quantityRange", { min: formatCount(service.min, locale), max: formatCount(service.max, locale) }),
         },
       };
     }
@@ -146,7 +160,6 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
     // the server's, or an operator in Hanoi and a server in Frankfurt would
     // disagree by seven hours about what "2pm" meant.
     const typed = String(formData.get("startAt") ?? "").trim();
-    const timezone = String(await getSetting("locale.timezone")) || "UTC";
     startAt = parseLocalTime(typed, timezone);
     if (!startAt) return { fieldErrors: { startAt: t("err.scheduleInvalid") } };
     if (startAt.getTime() <= Date.now()) return { fieldErrors: { startAt: t("err.schedulePast") } };
@@ -161,7 +174,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const charge = calculateCharge(rate, totalQuantity);
   const minCharge = Number(await getSetting("order.minCharge")) || 0;
   if (charge < minCharge) {
-    return { fieldErrors: { quantity: t("err.minCharge", { amount: minCharge.toLocaleString() }) } };
+    return { fieldErrors: { quantity: t("err.minCharge", { amount: formatCount(minCharge, locale) }) } };
   }
 
   // After the shape of the order is known, so the message names the service
@@ -301,7 +314,7 @@ export type MassOrderState = {
  * lines are placed — a bad line never blocks the rest.
  */
 export async function massOrderAction(_prev: MassOrderState, formData: FormData): Promise<MassOrderState> {
-  const t = await readerMessages();
+  const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
   if (!(await getSetting("order.enabled"))) return { error: t("err.orderDisabled") };
@@ -366,7 +379,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
         line,
         raw,
         ok: false,
-        message: t("err.massQuantity", { min: service.min.toLocaleString(), max: service.max.toLocaleString() }),
+        message: t("err.quantityRange", { min: formatCount(service.min, locale), max: formatCount(service.max, locale) }),
       });
       return;
     }

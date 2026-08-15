@@ -10,6 +10,7 @@ import { priceServices, resolveTier } from "@/lib/pricing";
 import { renderNotification } from "@/lib/notify";
 import { frequentServices } from "@/lib/reorder";
 import FrequentServices from "@/components/orders/frequent-services";
+import { formatCount } from "@/lib/numbers";
 
 export default async function DashboardPage() {
   const ctx = await getAppContext();
@@ -121,7 +122,7 @@ export default async function DashboardPage() {
                     <tr key={o.id}>
                       <td className="font-mono text-xs">#{o.publicId}</td>
                       <td className="max-w-[22rem] truncate">{o.service.name}</td>
-                      <td className="tabular-nums">{o.quantity.toLocaleString()}</td>
+                      <td className="tabular-nums">{formatCount(o.quantity, locale)}</td>
                       <td className="tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                       <td>
                         <StatusBadge status={o.status} label={t(`status.${o.status}`)} />

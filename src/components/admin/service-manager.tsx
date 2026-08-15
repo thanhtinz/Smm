@@ -8,6 +8,7 @@ import EntityDrawer from "@/components/admin/entity-drawer";
 import { Icon } from "@/components/icons";
 import RouteEditor, { type RouteRow } from "@/components/admin/route-editor";
 import PlatformMark from "@/components/platform-mark";
+import { formatCount } from "@/lib/numbers";
 
 export type ServiceRow = {
   id: string;
@@ -65,10 +66,13 @@ export default function ServiceManager({
   tiers,
   isChild,
   currency,
+  locale,
   labels,
   routeLabels,
 }: {
   rows: ServiceRow[];
+  /** Counts are grouped the reader's way, not the server's. */
+  locale: string;
   categories: CategoryOption[];
   platforms: PlatformOption[];
   providers: ProviderOption[];
@@ -238,7 +242,7 @@ export default function ServiceManager({
                         {margin === null ? <span className="muted">—</span> : `${margin.toFixed(0)}%`}
                       </td>
                       <td className="muted text-right text-xs tabular-nums">
-                        {row.min.toLocaleString()}–{row.max.toLocaleString()}
+                        {formatCount(row.min, locale)}–{formatCount(row.max, locale)}
                       </td>
                       <td>
                         <button
