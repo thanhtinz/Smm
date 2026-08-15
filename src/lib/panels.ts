@@ -4,7 +4,7 @@ import type { Panel } from "@prisma/client";
 import { db } from "./db";
 import { readSettingAcross, runAsPanel } from "./tenancy";
 import { nextPublicId } from "./ids";
-import { setSetting, settingDefinitions } from "./settings";
+import { getSetting, setSetting, settingDefinitions } from "./settings";
 
 /** Counters a fresh panel needs before it can number anything. */
 const COUNTER_STARTS: Record<string, number> = {
@@ -16,20 +16,38 @@ const COUNTER_STARTS: Record<string, number> = {
   request: 1000,
 };
 
-const DEFAULT_PAGES = [
-  { slug: "terms", title: "Terms of service", position: 0 },
-  { slug: "privacy", title: "Privacy policy", position: 1 },
-  { slug: "refund", title: "Refund policy", position: 2 },
-];
+/**
+ * The pages and payment methods a new panel starts with.
+ *
+ * Their names are content rather than translation keys — the child's own
+ * admin edits them — so a language has to be chosen when the rows are
+ * written. It follows the parent's default, because a reseller of a
+ * Vietnamese panel is selling to Vietnamese customers and should not have to
+ * rename five payment methods before opening.
+ */
+function defaultPages(vi: boolean) {
+  return vi
+    ? [
+        { slug: "terms", title: "Điều khoản sử dụng", position: 0 },
+        { slug: "privacy", title: "Chính sách bảo mật", position: 1 },
+        { slug: "refund", title: "Chính sách hoàn tiền", position: 2 },
+      ]
+    : [
+        { slug: "terms", title: "Terms of service", position: 0 },
+        { slug: "privacy", title: "Privacy policy", position: 1 },
+        { slug: "refund", title: "Refund policy", position: 2 },
+      ];
+}
 
-/** The methods a new panel starts with, disabled until its owner adds keys. */
-const DEFAULT_METHODS = [
-  { code: "seapay", name: "Bank transfer (SePay)", driver: "seapay", icon: "bank", currencies: ["VND"] },
-  { code: "paypal", name: "PayPal", driver: "paypal", icon: "paypal", currencies: ["USD", "EUR"] },
-  { code: "link", name: "Card / Link", driver: "link", icon: "creditCard", currencies: ["USD", "EUR"] },
-  { code: "crypto", name: "Crypto", driver: "crypto", icon: "bitcoin", currencies: ["USD"] },
-  { code: "manual_bank", name: "Manual bank transfer", driver: "manual", icon: "wallet", currencies: [] },
-];
+function defaultMethods(vi: boolean) {
+  return [
+    { code: "seapay", name: vi ? "Chuyển khoản ngân hàng (SePay)" : "Bank transfer (SePay)", driver: "seapay", icon: "bank", currencies: ["VND"] },
+    { code: "paypal", name: "PayPal", driver: "paypal", icon: "paypal", currencies: ["USD", "EUR"] },
+    { code: "link", name: vi ? "Thẻ quốc tế / Link" : "Card / Link", driver: "link", icon: "creditCard", currencies: ["USD", "EUR"] },
+    { code: "crypto", name: vi ? "Tiền mã hoá" : "Crypto", driver: "crypto", icon: "bitcoin", currencies: ["USD"] },
+    { code: "manual_bank", name: vi ? "Chuyển khoản thủ công" : "Manual bank transfer", driver: "manual", icon: "wallet", currencies: [] },
+  ];
+}
 
 export type ChildDraft = {
   slug: string;
@@ -88,6 +106,9 @@ export async function createChildPanel(parent: Panel, draft: ChildDraft): Promis
 
   // Everything below is written as the new panel, so the panel filter in
   // src/lib/db.ts stamps it rather than each call repeating panelId.
+  // Read on the parent, where the setting lives, before the context switches.
+  const vi = (await getSetting("locale.default")) === "vi";
+
   await runAsPanel(panel.id, async () => {
     for (const [name, value] of Object.entries(COUNTER_STARTS)) {
       await db.counter.create({ data: { name, value } });
@@ -96,18 +117,18 @@ export async function createChildPanel(parent: Panel, draft: ChildDraft): Promis
     await setSetting("site.name", draft.name);
     await setSetting("site.logoText", draft.name);
 
-    for (const page of DEFAULT_PAGES) {
+    for (const page of defaultPages(vi)) {
       await db.page.create({
         data: {
           slug: page.slug,
           title: page.title,
-          body: "<p>Edit this page from Admin → Pages.</p>",
+          body: vi ? "<p>Sửa trang này trong Quản trị → Trang tĩnh.</p>" : "<p>Edit this page from Admin → Pages.</p>",
           position: page.position,
         },
       });
     }
 
-    for (const [index, method] of DEFAULT_METHODS.entries()) {
+    for (const [index, method] of defaultMethods(vi).entries()) {
       await db.paymentMethod.create({
         data: {
           code: method.code,
