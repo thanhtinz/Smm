@@ -25,6 +25,7 @@ export async function POST(request: Request) {
     chain: result.chain,
     requests: result.requests,
     callbacks: result.callbacks,
+    ranks: result.ranks,
     catalogue: result.catalogue,
     auto: result.auto,
     rent: result.rent,

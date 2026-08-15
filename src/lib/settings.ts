@@ -64,6 +64,35 @@ export const settingDefinitions = {
   "seo.googleVerification": { group: "seo", type: "text", value: "" },
   "seo.bingVerification": { group: "seo", type: "text", value: "" },
 
+  // --- Rank tracking ------------------------------------------------------
+  // Off until an operator has somewhere to read rankings from. Turning it on
+  // is all that starting it takes: the scheduler already runs.
+  "rank.enabled": { group: "seo", type: "boolean", value: false },
+  "rank.source": { group: "seo", type: "select", value: "searchConsole", options: ["searchConsole", "serpApi"] },
+  // Rankings barely move within a day and both sources cost something to ask
+  // — money for one, quota for the other — so the default is daily.
+  "rank.checkEveryHours": { group: "seo", type: "number", value: 24 },
+  // Search Console. A service account rather than a personal login, so the
+  // report does not stop the day whoever set it up leaves.
+  //
+  // The property as Search Console spells it, which is not the panel's own
+  // address: a domain property is "sc-domain:example.com". Only this driver
+  // uses it — a SERP vendor is matched against the real site.
+  "rank.siteUrl": { group: "seo", type: "text", value: "" },
+  "rank.serviceAccountJson": { group: "seo", type: "password", value: "" },
+
+  // Any SERP vendor: the endpoint carries {query}, {country} and {key}, and
+  // the two paths say where that vendor puts its results.
+  "rank.serpUrl": { group: "seo", type: "text", value: "" },
+  "rank.serpKey": { group: "seo", type: "password", value: "" },
+  "rank.serpResultsPath": { group: "seo", type: "text", value: "organic_results" },
+  "rank.serpLinkField": { group: "seo", type: "text", value: "link" },
+
+  // Overridable so the whole thing can be pointed at a local stand-in and
+  // proved to work without a paid key or a live Google property.
+  "rank.apiBase": { group: "seo", type: "text", value: "" },
+  "rank.tokenUrl": { group: "seo", type: "text", value: "" },
+
   // --- Localisation -------------------------------------------------------
   "locale.default": { group: "locale", type: "text", value: "vi" },
   "locale.allowUserLocale": { group: "locale", type: "boolean", value: true },

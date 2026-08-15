@@ -65,6 +65,7 @@ const EDGES = [
   ["user", "tierId", "userTier"],
   ["tierPrice", "tierId", "userTier"],
   ["tierPrice", "serviceId", "service"],
+  ["keywordRank", "keywordId", "keyword"],
 ];
 
 async function checkForeignKeys() {
@@ -87,7 +88,7 @@ async function checkNoOrphans() {
   console.log("\nNo row left with the placeholder panelId");
   const models = [
     "setting", "counter", "user", "session", "authToken", "recoveryCode", "activityLog", "media", "platform", "category",
-    "provider", "service", "serviceRoute", "order", "orderEvent", "blocklist", "callback", "orderRequest", "paymentMethod", "transaction", "ticket",
+    "provider", "service", "serviceRoute", "order", "orderEvent", "blocklist", "callback", "keyword", "keywordRank", "orderRequest", "paymentMethod", "transaction", "ticket",
     "ticketMessage", "notification", "coupon", "couponRedemption", "referralEarning",
     "announcement", "page", "userTier", "tierPrice", "testimonial", "faq", "channel", "conversation", "inboxMessage",
   ];

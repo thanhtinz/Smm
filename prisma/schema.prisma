@@ -688,6 +688,54 @@ model Callback {
   @@index([panelId])
 }
 
+/// A search phrase the operator wants to know their position for.
+model Keyword {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelKeywords", fields: [panelId], references: [id], onDelete: Cascade)
+  phrase  String
+  /// Two-letter country the search is run from, because a panel selling in
+  /// Vietnam does not care where it ranks in the United States.
+  country String @default("vn")
+
+  /// Filled from the newest reading so the list can sort and colour without
+  /// reading history for every row. Zero means "not in the range checked",
+  /// which is not the same as position zero.
+  position     Int       @default(0)
+  /// The position before that, so the arrow beside a row means something.
+  lastPosition Int       @default(0)
+  /// Which of our pages was found there. Useful when the wrong page ranks.
+  url          String    @default("")
+  checkedAt    DateTime?
+  /// Why the last check produced nothing, in the operator's words.
+  lastError    String    @default("")
+  createdAt    DateTime  @default(now())
+
+  ranks KeywordRank[]
+
+  @@unique([panelId, phrase, country])
+  @@index([panelId])
+}
+
+/// One reading, kept so a position can be shown as a trend rather than a
+/// number that silently changes.
+model KeywordRank {
+  id        String   @id @default(cuid())
+  panelId   String   @default("")
+  panel     Panel    @relation("PanelKeywordRanks", fields: [panelId], references: [id], onDelete: Cascade)
+  keywordId String
+  keyword   Keyword  @relation(fields: [keywordId], references: [id], onDelete: Cascade)
+  position  Int
+  url       String   @default("")
+  /// Which source said so — readings from different sources mean different
+  /// things and should never be drawn on one line as though they agree.
+  source    String
+  createdAt DateTime @default(now())
+
+  @@index([keywordId, createdAt])
+  @@index([panelId])
+}
+
 /// Links and accounts the operator has decided this panel will not serve.
 ///
 /// Deliberately not a rule that holds an order for review: someone typed this
@@ -1075,6 +1123,8 @@ model Panel {
   orderEvents    OrderEvent[]       @relation("PanelOrderEvents")
   blocklist      Blocklist[]        @relation("PanelBlocklist")
   callbacks      Callback[]         @relation("PanelCallbacks")
+  keywords       Keyword[]          @relation("PanelKeywords")
+  keywordRanks   KeywordRank[]      @relation("PanelKeywordRanks")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
   createdAt      DateTime           @default(now())
