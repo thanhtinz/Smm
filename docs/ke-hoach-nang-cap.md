@@ -129,6 +129,33 @@ vụ mới bán mà ghi "0 phút" là nói dối theo hướng ngược lại.
 
 **Cỡ.** Vừa.
 
+**Đã làm xong.** Ảnh `docs/screenshots/service-facts.png`.
+
+- **Ba trường số** `startMinutes`, `speedPerDay`, `warrantyDays` cho operator
+  khai, sửa trong Admin → Dịch vụ. **0 = không ghi và không hiện gì** — dịch vụ
+  chưa bán buổi nào mà ghi "0 phút" là nói dối theo hướng ngược lại.
+  `averageTime` (chuỗi tự do của nhà cung cấp) vẫn giữ làm phương án lùi.
+- **Số đo thật nằm ngay dưới số tự khai**, không thay thế nó: lời hứa và thành
+  tích là hai tuyên bố khác nhau. `src/lib/service-stats.ts` đọc `OrderEvent`
+  và trả về *bắt đầu sau bao lâu*, *giao xong trong bao lâu*, *bao nhiêu %
+  đơn xin refill*, kèm số đơn nó dựa vào.
+- **Dùng trung vị chứ không phải trung bình** — một đơn kẹt một tuần kéo lệch
+  trung bình. Và **dưới 10 đơn thì không nói gì**: ba đơn không phải thành
+  tích, bịa một con số từ ba đơn là biến số đo thành một lời tự khai nữa.
+- **Một truy vấn cho cả trang**, không phải một truy vấn mỗi dịch vụ — form đặt
+  hàng có hàng trăm dòng.
+
+**Chứng minh (9/9 điểm).** Gieo 12 đơn với mốc thời gian tự chọn, **tính trung
+vị bằng tay trước** rồi mới hỏi panel: 16 phút vs 16 phút, 116 phút vs 116
+phút. Dịch vụ chưa có đơn nào trả `null` chứ không phải 0. Trên màn hình hiện
+đủ "30 phút / Đo thật: 16 phút (24 đơn gần nhất)", "5.000/ngày / Giao xong: 1
+giờ 56 phút", "30 ngày / 8% đơn xin refill".
+
+**Hai thứ sửa khi chụp lại.** `toLocaleString()` không truyền locale thì dùng
+locale của **máy chủ** — trang tiếng Việt in ra "5,000" thay vì "5.000". Và bốn
+ô xếp một hàng trong cột form nửa màn hình thì mỗi ô còn ~130px, không đủ chỗ
+cho dòng số đo; giờ bốn ô xếp **2×2**.
+
 ---
 
 ## 3. Trang đặt hàng: giá xuất hiện quá muộn, màn hình phần lớn để trống

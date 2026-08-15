@@ -39,6 +39,9 @@ export type ServiceRow = {
   cancel: boolean;
   dripfeed: boolean;
   averageTime: string;
+  warrantyDays: number;
+  startMinutes: number;
+  speedPerDay: number;
   enabled: boolean;
   position: number;
 };
@@ -420,6 +423,39 @@ function ServiceForm({
         <Field name="averageTime" label={labels.averageTime}>
           <TextInput name="averageTime" defaultValue={row?.averageTime} placeholder="1 hour" />
         </Field>
+
+        {/* The three numbers this market quotes. Left at zero each one shows
+            nothing rather than "0", because a service nobody has bought yet
+            promising "0 minutes" is a lie in the other direction. */}
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field name="startMinutes" label={labels.startMinutes} hint={labels.promiseHint}>
+            <TextInput
+              name="startMinutes"
+              type="number"
+              min={0}
+              defaultValue={String(row?.startMinutes ?? 0)}
+              hint={labels.promiseHint}
+            />
+          </Field>
+          <Field name="speedPerDay" label={labels.speedPerDay} hint={labels.promiseHint}>
+            <TextInput
+              name="speedPerDay"
+              type="number"
+              min={0}
+              defaultValue={String(row?.speedPerDay ?? 0)}
+              hint={labels.promiseHint}
+            />
+          </Field>
+          <Field name="warrantyDays" label={labels.warrantyDays} hint={labels.promiseHint}>
+            <TextInput
+              name="warrantyDays"
+              type="number"
+              min={0}
+              defaultValue={String(row?.warrantyDays ?? 0)}
+              hint={labels.promiseHint}
+            />
+          </Field>
+        </div>
         <Field name="position" label={labels.position}>
           <TextInput name="position" type="number" defaultValue={String(row?.position ?? 0)} />
         </Field>

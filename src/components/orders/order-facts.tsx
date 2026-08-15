@@ -17,6 +17,13 @@ export type Fact = {
   key: string;
   label: string;
   value: string;
+  /**
+   * What the panel measured, under what the operator promised. Every other
+   * panel in this market quotes the promise alone, because it is the only
+   * figure they have; this one records each order's timings, so the promise
+   * can be shown with its track record beside it.
+   */
+  note?: string;
   tone: "good" | "bad" | "neutral";
   icon: IconName;
 };
@@ -27,9 +34,25 @@ const TONE: Record<Fact["tone"], string> = {
   neutral: "text-[var(--accent)]",
 };
 
+/**
+ * Two columns is the floor and three is the ceiling.
+ *
+ * This row shares a half-width form column, so a quarter of it is about 130px
+ * — enough for "Có" and nothing else. Four facts therefore sit two by two
+ * rather than in a line: the measured figure under each one needs room to be
+ * read, and a tile that has to truncate its answer is a tile that failed.
+ * Written out rather than built so Tailwind can see the class names.
+ */
+const COLUMNS: Record<number, string> = {
+  1: "sm:grid-cols-1",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-2",
+};
+
 export default function OrderFacts({ facts }: { facts: Fact[] }) {
   return (
-    <div className="grid grid-cols-3 gap-2">
+    <div className={`grid grid-cols-2 gap-2 ${COLUMNS[facts.length] ?? "sm:grid-cols-2"}`}>
       {facts.map((fact) => {
         const tone = TONE[fact.tone];
         return (
@@ -52,6 +75,8 @@ export default function OrderFacts({ facts }: { facts: Fact[] }) {
                   lines, and it is what the previous layout did. */}
               <span className="min-w-0">{fact.value}</span>
             </span>
+
+            {fact.note && <span className="muted text-[0.7rem] leading-snug">{fact.note}</span>}
           </div>
         );
       })}

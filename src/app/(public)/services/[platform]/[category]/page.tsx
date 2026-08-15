@@ -12,6 +12,8 @@ import CategoryList from "@/components/services/category-list";
 import { serviceListLabels } from "@/lib/service-list";
 import NewOrderForm, { type Currency, type ServiceOption } from "@/components/orders/new-order-form";
 import { orderFormLabels } from "@/lib/order-form-labels";
+import { toServiceOption } from "@/lib/service-option";
+import { serviceStatsMany } from "@/lib/service-stats";
 import { LINK_RULES } from "@/lib/links";
 
 /**
@@ -88,23 +90,10 @@ export default async function CategoryPage({
 
   const ordering = user !== null && (await getSetting("order.enabled"));
 
-  const serviceOptions: ServiceOption[] = category.services.map((s) => ({
-    id: s.id,
-    publicId: s.publicId,
-    name: s.name,
-    categoryId: s.categoryId,
-    linkExample: (s.target === "profile" ? platform.profileExample : platform.postExample) ?? "",
-    rate: rateOf(s.id, s.rate),
-    listRate: s.rate,
-    min: s.min,
-    max: s.max,
-    refill: s.refill,
-    cancel: s.cancel,
-    dripfeed: s.dripfeed,
-    type: s.type,
-    averageTime: s.averageTime,
-    description: s.description,
-  }));
+  const measured = await serviceStatsMany(category.services.map((s) => s.id));
+  const serviceOptions: ServiceOption[] = category.services.map((s) =>
+    toServiceOption(s, { rate: rateOf(s.id, s.rate), links: platform, stats: measured.get(s.id), t }),
+  );
 
   const money: Currency = {
     code: currency.code,

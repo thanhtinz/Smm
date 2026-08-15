@@ -11,6 +11,8 @@ import { getSetting } from "@/lib/settings";
 import { priceServices, resolveTier } from "@/lib/pricing";
 import { LINK_RULES } from "@/lib/links";
 import { orderFormLabels } from "@/lib/order-form-labels";
+import { toServiceOption } from "@/lib/service-option";
+import { serviceStatsMany } from "@/lib/service-stats";
 
 export const metadata: Metadata = { title: "New order" };
 
@@ -48,24 +50,18 @@ export default async function NewOrderPage({
   const tier = await resolveTier(user);
   const rates = await priceServices(tier, services);
 
-  const serviceOptions: ServiceOption[] = services.map((s) => ({
-    id: s.id,
-    publicId: s.publicId,
-    name: s.name,
-    categoryId: s.categoryId,
-    linkExample:
-      (s.target === "profile" ? s.category.platform?.profileExample : s.category.platform?.postExample) ?? "",
-    rate: rates.get(s.id) ?? s.rate,
-    listRate: s.rate,
-    min: s.min,
-    max: s.max,
-    refill: s.refill,
-    cancel: s.cancel,
-    dripfeed: s.dripfeed,
-    type: s.type,
-    averageTime: s.averageTime,
-    description: s.description,
-  }));
+  // What each service actually did, from its own orders — one query for the
+  // whole catalogue, not one per row.
+  const measured = await serviceStatsMany(services.map((s) => s.id));
+
+  const serviceOptions: ServiceOption[] = services.map((s) =>
+    toServiceOption(s, {
+      rate: rates.get(s.id),
+      links: s.category.platform,
+      stats: measured.get(s.id),
+      t,
+    }),
+  );
 
   // "Order this again" arrives as a query string. The service travels as its
   // public number and is resolved here against the services actually on sale,
