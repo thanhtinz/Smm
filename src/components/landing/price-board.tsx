@@ -44,7 +44,7 @@ export default function PriceBoard(props: LayoutProps) {
             {cheapest.map((p, i) => (
               <li key={p.id} className="border-b border-[var(--border)] last:border-0">
                 <Link
-                  href={`/services/${p.slug}`}
+                  href="/dashboard/new-order"
                   className="group relative flex items-center gap-4 bg-[var(--surface)] px-5 py-5 transition-colors"
                   style={{ ["--row" as string]: p.color }}
                 >

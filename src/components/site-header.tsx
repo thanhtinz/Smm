@@ -11,7 +11,6 @@ export default function SiteHeader({ ctx }: { ctx: AppContext }) {
 
   const links = [
     { href: "/", label: t("nav.home") },
-    { href: "/services", label: t("nav.services") },
     { href: "/api-docs", label: t("nav.api") },
     { href: "/p/terms", label: t("nav.terms") },
   ];

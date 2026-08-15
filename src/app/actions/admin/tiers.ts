@@ -26,7 +26,6 @@ function num(form: FormData, key: string, fallback = 0) {
 function revalidatePricing() {
   revalidatePath("/admin/tiers");
   revalidatePath("/admin/users");
-  revalidatePath("/services");
   revalidatePath("/dashboard/new-order");
 }
 

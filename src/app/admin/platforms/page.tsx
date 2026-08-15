@@ -31,9 +31,6 @@ export default async function AdminPlatformsPage() {
           profilePattern: p.profilePattern,
           postExample: p.postExample,
           profileExample: p.profileExample,
-          seoTitle: p.seoTitle,
-          seoDescription: p.seoDescription,
-          seoBody: p.seoBody,
         }))}
         labels={{
           close: t("common.close"),
@@ -68,11 +65,6 @@ export default async function AdminPlatformsPage() {
           profilePattern: t("link.profilePattern"),
           postExample: t("link.postExample"),
           profileExample: t("link.profileExample"),
-          seoSection: t("platform.seoSection"),
-          seoTitle: t("platform.seoTitle"),
-          seoTitleHint: t("platform.seoTitleHint"),
-          seoDescription: t("platform.seoDescription"),
-          seoBody: t("platform.seoBody"),
           save: t("common.save"),
           cancel: t("common.cancel"),
         }}

@@ -413,7 +413,22 @@ tiền rồi thì không đi xem trang giới thiệu, họ đi mua — nên ch�
 - Thẻ "Hỗ trợ nhanh" trong cột phải **đã bỏ**: nút nổi đã có mặt ở mọi trang
   của panel, nên cái thẻ chỉ là ba đường link đó lần thứ hai trên cùng một màn.
 
-**Menu nền tảng ngoài trang giới thiệu đã xoá.** Header công khai trở lại bốn
+**Toàn bộ phần dịch vụ ngoài trang giới thiệu đã xoá theo yêu cầu.** Bốn route
+`/services`, `/services/<nền-tảng>`, `/services/<nền-tảng>/<danh-mục>` và trang
+riêng từng dịch vụ đều không còn — cùng với mọi link trỏ tới chúng (header,
+footer, sidebar panel), các URL đó trong sitemap, và **ba trường SEO** ở
+Platform/Category/Service vốn chỉ để điền cho những trang đó. Còn để lại thì
+operator điền tiêu đề SEO cho một địa chỉ không ai mở được.
+
+`Category.slug` **giữ lại** — panel định tuyến bằng nó
+(`/dashboard/order/<nền-tảng>/<danh-mục>`). `Service.slug` bỏ, không còn gì
+dùng. Catalogue giờ chỉ sống trong panel, sau đăng nhập.
+
+Trang giới thiệu vẫn còn và vẫn khoe nền tảng/bảng giá; các link đó giờ trỏ vào
+form đặt hàng, và khách chưa đăng nhập được chuyển sang trang đăng nhập — chỗ
+mà một trang giới thiệu vốn muốn đưa họ tới.
+
+**Trước đó: menu nền tảng ngoài trang giới thiệu đã xoá.** Header công khai trở lại bốn
 mục như cũ (Trang chủ / Dịch vụ / API / Điều khoản), và toàn bộ phần đo bề rộng
 + menu tràn + dropdown hover dựng cho nó cũng xoá theo — code chết còn tệ hơn
 không có. Trang `/services/<nền-tảng>/<danh-mục>` **vẫn còn** vì đó là mặt SEO,

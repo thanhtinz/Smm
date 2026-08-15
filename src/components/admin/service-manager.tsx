@@ -377,6 +377,7 @@ function ServiceForm({
         <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} />
       </Field>
 
+
       <Field name="description" label={labels.description}>
         <textarea id="description" name="description" rows={3} className="field" defaultValue={row?.description} />
       </Field>
@@ -547,6 +548,8 @@ function ServiceForm({
           <Check name="enabled" label={labels.enabled} defaultChecked={row?.enabled ?? true} />
         </div>
       </div>
+
+
 
       <div className="flex gap-2 pt-2">
         <SubmitButton className="btn btn-primary flex-1">

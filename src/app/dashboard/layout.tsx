@@ -76,7 +76,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       title: t("nav.support"),
       items: [
         { href: "/dashboard/tickets", label: t("dash.tickets"), icon: "ticket", badge: openTickets || undefined },
-        { href: "/services", label: t("nav.services"), icon: "layers" },
         { href: "/dashboard/api", label: t("nav.api"), icon: "code" },
       ],
     },

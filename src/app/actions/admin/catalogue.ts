@@ -37,7 +37,6 @@ function revalidateCatalogue() {
   revalidatePath("/admin/platforms");
   revalidatePath("/admin/categories");
   revalidatePath("/admin/services");
-  revalidatePath("/services");
   revalidatePath("/dashboard/new-order");
 }
 
@@ -77,11 +76,8 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
     profilePattern,
     postExample: String(form.get("postExample") ?? "").trim(),
     profileExample: String(form.get("profileExample") ?? "").trim(),
-    seoTitle: String(form.get("seoTitle") ?? "").trim(),
-    seoDescription: String(form.get("seoDescription") ?? "").trim(),
     // HTML by the panel's own admin, the same author as every other string on
     // the site — there is no untrusted author here.
-    seoBody: String(form.get("seoBody") ?? "").trim(),
   };
 
   if (id) {
@@ -204,6 +200,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
   } else if (panel.parentId) {
     return { fieldErrors: { sourceServiceId: t("adm.chooseSource") } };
   }
+
 
   const data = {
     sourceServiceId,
