@@ -33,6 +33,29 @@ export type ServiceOption = {
   description: string;
 };
 
+/**
+ * A repeat of an earlier order, read off the URL by the page.
+ *
+ * Every field is optional and every one is only a starting value: the customer
+ * lands on a filled form they can change, not a confirmation they have to
+ * undo. The service is resolved to an id server-side, so a number that no
+ * longer sells arrives as an empty string and the cascade opens as normal.
+ */
+export type Prefill = {
+  serviceId: string;
+  link: string;
+  quantity: string;
+  comments: string;
+  username: string;
+  posts: string;
+  minPerPost: string;
+  maxPerPost: string;
+  delay: string;
+  expiry: string;
+  runs: string;
+  interval: string;
+};
+
 export type CategoryOption = { id: string; name: string; platformId: string | null };
 export type PlatformOption = { id: string; name: string; icon: string; image: string; color: string };
 
@@ -122,6 +145,7 @@ export default function NewOrderForm({
   balance,
   currency,
   accountCard,
+  prefill,
   labels,
 }: {
   platforms: PlatformOption[];
@@ -131,15 +155,22 @@ export default function NewOrderForm({
   currency: Currency;
   /** Rendered on the server: it formats money and reads the customer tier. */
   accountCard?: React.ReactNode;
+  /** Starting values from a "order this again" link. */
+  prefill?: Prefill;
   labels: OrderLabels;
 }) {
   const [state, action] = useActionState<OrderState, FormData>(placeOrderAction, {});
 
+  // A repeat arrives with the service already chosen, so the two steps above
+  // it are filled in from the catalogue rather than asked again.
+  const repeat = prefill?.serviceId ? services.find((s) => s.id === prefill.serviceId) : undefined;
+  const repeatCategory = repeat ? categories.find((c) => c.id === repeat.categoryId) : undefined;
+
   // Strictly cascading: nothing is preselected, and each step only unlocks
   // once the step above it has been answered.
-  const [platformId, setPlatformId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [serviceId, setServiceId] = useState("");
+  const [platformId, setPlatformId] = useState(repeatCategory?.platformId ?? "");
+  const [categoryId, setCategoryId] = useState(repeat?.categoryId ?? "");
+  const [serviceId, setServiceId] = useState(repeat?.id ?? "");
 
   const visibleCategories = useMemo(
     () => (platformId ? categories.filter((c) => c.platformId === platformId) : []),
@@ -151,26 +182,26 @@ export default function NewOrderForm({
   );
   const service = visibleServices.find((s) => s.id === serviceId);
 
-  const [quantity, setQuantity] = useState("");
-  const [comments, setComments] = useState("");
+  const [quantity, setQuantity] = useState(prefill?.quantity ?? "");
+  const [comments, setComments] = useState(prefill?.comments ?? "");
 
   // These services are bought by the comment, not by the thousand, so the
   // quantity is however many lines the customer wrote.
   const custom = service?.type === "custom_comments";
   const commentLines = comments.split("\n").map((l) => l.trim()).filter(Boolean).length;
-  const [dripfeed, setDripfeed] = useState(false);
-  const [runs, setRuns] = useState("");
-  const [interval, setInterval] = useState("");
+  const [dripfeed, setDripfeed] = useState(Boolean(prefill?.runs));
+  const [runs, setRuns] = useState(prefill?.runs ?? "");
+  const [interval, setInterval] = useState(prefill?.interval ?? "");
 
   // A subscription watches a profile and delivers on each new post, so what is
   // charged is the ceiling it could reach: posts x the most per post.
   const subscription = service?.type === "subscription";
-  const [username, setUsername] = useState("");
-  const [posts, setPosts] = useState("");
-  const [minPerPost, setMinPerPost] = useState("");
-  const [maxPerPost, setMaxPerPost] = useState("");
-  const [delay, setDelay] = useState("0");
-  const [expiry, setExpiry] = useState("");
+  const [username, setUsername] = useState(prefill?.username ?? "");
+  const [posts, setPosts] = useState(prefill?.posts ?? "");
+  const [minPerPost, setMinPerPost] = useState(prefill?.minPerPost ?? "");
+  const [maxPerPost, setMaxPerPost] = useState(prefill?.maxPerPost ?? "");
+  const [delay, setDelay] = useState(prefill?.delay || "0");
+  const [expiry, setExpiry] = useState(prefill?.expiry ?? "");
 
   const qty = subscription
     ? Number(posts) * Number(maxPerPost)
@@ -475,6 +506,7 @@ export default function NewOrderForm({
               name="link"
               type="url"
               inputMode="url"
+              defaultValue={prefill?.link ?? ""}
               placeholder={service?.linkExample || ""}
               error={state.fieldErrors?.link}
             />

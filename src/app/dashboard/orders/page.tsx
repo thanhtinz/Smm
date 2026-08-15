@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import { dateFormats, type DateFormats } from "@/lib/dates";
+import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import OrderActions from "@/components/orders/order-actions";
 import { CUSTOMER_ORDER_STATUSES, customerStatus } from "@/lib/orders";
+import { reorderHref } from "@/lib/reorder";
 
 export const metadata: Metadata = { title: "Orders" };
 
@@ -51,7 +52,10 @@ export default async function OrdersPage({
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
       include: {
-        service: { select: { name: true, refill: true, cancel: true } },
+        // enabled decides whether reorder is offered at all: a link to a
+        // service that has been withdrawn is a link to a form that cannot be
+        // submitted.
+        service: { select: { name: true, refill: true, cancel: true, enabled: true, publicId: true } },
         requests: { where: { status: { in: ["pending", "approved"] } }, select: { type: true } },
       },
     }),
@@ -70,7 +74,16 @@ export default async function OrdersPage({
     cancel: t("order.cancel"),
     refillPending: t("order.refillPending"),
     cancelPending: t("order.cancelPending"),
+    reorder: t("order.reorder"),
   };
+
+  const actionsFor = (o: (typeof orders)[number]) => ({
+    orderId: o.id,
+    canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
+    canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
+    openRequest: o.requests[0]?.type ?? null,
+    reorderHref: o.service.enabled ? reorderHref(o) : null,
+  });
 
   return (
     <div className="mx-auto max-w-6xl space-y-5">
@@ -196,17 +209,13 @@ export default async function OrdersPage({
                       <td>
                         <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
                       </td>
-                      <td className="muted text-xs">{formatDate(o.createdAt, dates)}</td>
+                      {/* Day, month and clock. The full stamp wants ~150px
+                          and, squeezed into the width this table can spare,
+                          wrapped onto four lines and set the height of every
+                          row. The year is on the order's own page. */}
+                      <td className="muted text-xs">{dates.stamp(o.createdAt)}</td>
                       <td>
-                        <OrderActions
-                          order={{
-                            orderId: o.id,
-                            canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
-                            canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
-                            openRequest: o.requests[0]?.type ?? null,
-                          }}
-                          labels={requestLabels}
-                        />
+                        <OrderActions order={actionsFor(o)} labels={requestLabels} />
                       </td>
                     </tr>
                   ))}
@@ -242,15 +251,7 @@ export default async function OrdersPage({
                     <span className="font-semibold tabular-nums">{displayMoney(o.charge, currency, locale)}</span>
                   </div>
                   <div className="mt-2 flex justify-end">
-                    <OrderActions
-                      order={{
-                        orderId: o.id,
-                        canRefill: o.service.refill && ["completed", "partial"].includes(o.status),
-                        canCancel: o.service.cancel && ["pending", "processing"].includes(o.status),
-                        openRequest: o.requests[0]?.type ?? null,
-                      }}
-                      labels={requestLabels}
-                    />
+                    <OrderActions order={actionsFor(o)} labels={requestLabels} />
                   </div>
                 </li>
               ))}
@@ -338,8 +339,4 @@ function PageLink({
       {trailing && <Icon name={icon} size={15} />}
     </Link>
   );
-}
-
-function formatDate(date: Date, dates: DateFormats) {
-  return dates.full(date);
 }

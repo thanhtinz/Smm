@@ -10,6 +10,7 @@ import StatusBadge from "@/components/ui/status-badge";
 import OrderTimeline from "@/components/orders/order-timeline";
 import { ORDER_STATUSES, customerStatus } from "@/lib/orders";
 import OrderActions from "@/components/orders/order-actions";
+import { reorderHref } from "@/lib/reorder";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -34,7 +35,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const order = await db.order.findFirst({
     where: { publicId, userId: user.id },
     include: {
-      service: { select: { name: true, refill: true, cancel: true, description: true } },
+      service: { select: { name: true, refill: true, cancel: true, description: true, enabled: true, publicId: true } },
       requests: { orderBy: { createdAt: "desc" } },
       events: { orderBy: { createdAt: "asc" } },
     },
@@ -156,12 +157,14 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               canRefill: order.service.refill && ["completed", "partial"].includes(order.status),
               canCancel: order.service.cancel && ["pending", "processing"].includes(shown),
               openRequest: order.requests.find((r) => ["pending", "approved"].includes(r.status))?.type ?? null,
+              reorderHref: order.service.enabled ? reorderHref(order) : null,
             }}
             labels={{
               refill: t("order.refill"),
               cancel: t("order.cancel"),
               refillPending: t("order.refillPending"),
               cancelPending: t("order.cancelPending"),
+              reorder: t("order.reorder"),
             }}
           />
         </div>

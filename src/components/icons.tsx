@@ -150,6 +150,9 @@ export const Icons = {
   ),
   filter: path("M3 5h18|M6.5 12h11|M10 19h4"),
   refresh: path("M21 12a9 9 0 1 1-2.6-6.4|M21 4v5h-5"),
+  // Distinct from refresh on purpose: reorder and refill sit side by side on
+  // the same row, and two actions drawn with one glyph is one action.
+  repeat: path("M17 2l4 4-4 4|M3 11v-1a4 4 0 0 1 4-4h14|M7 22l-4-4 4-4|M21 13v1a4 4 0 0 1-4 4H3"),
   edit: path("M12 20h9|M16.5 3.5a2.1 2.1 0 0 1 3 3L7.5 18.5 3 20l1.5-4.5z"),
   trash: path("M3.5 6h17|M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6|M5.5 6l1 13a2 2 0 0 0 2 1.9h7a2 2 0 0 0 2-1.9l1-13"),
   copy: raw(
