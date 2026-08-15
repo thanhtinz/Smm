@@ -34,6 +34,7 @@ export default async function AdminProvidersPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <ProviderManager
+        locale={locale}
         rows={providers.map((p) => ({
           id: p.id,
           name: p.name,

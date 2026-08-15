@@ -160,6 +160,9 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
         expiry: String(params.expiry ?? ""),
       },
       service,
+      // A reseller posts an end date as a bare day, and the day it means is
+      // the panel's, not whatever zone this process happens to run in.
+      String(await getSetting("locale.timezone")) || "UTC",
     );
     // The standard answers with the name of the offending field, not a
     // sentence, so the first error is reported the way callers expect.

@@ -16,6 +16,7 @@ import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import { Icon } from "@/components/icons";
+import { formatCount } from "@/lib/numbers";
 
 export type ProviderRow = {
   id: string;
@@ -46,7 +47,16 @@ export type ProviderRow = {
   };
 };
 
-export default function ProviderManager({ rows, labels }: { rows: ProviderRow[]; labels: Record<string, string> }) {
+export default function ProviderManager({
+  rows,
+  labels,
+  locale,
+}: {
+  rows: ProviderRow[];
+  labels: Record<string, string>;
+  /** Counts are grouped the reader's way, not the server's. */
+  locale: string;
+}) {
   const [editing, setEditing] = useState<ProviderRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [notice, setNotice] = useState<{ tone: "ok" | "bad"; text: string } | null>(null);
@@ -119,7 +129,7 @@ export default function ProviderManager({ rows, labels }: { rows: ProviderRow[];
               </div>
 
               <dl className="mt-4 space-y-2 text-sm">
-                <Row label={labels.balance} value={`${row.balance.toLocaleString()} ${row.currency}`} />
+                <Row label={labels.balance} value={`${formatCount(row.balance, locale)} ${row.currency}`} />
                 <Row label={labels.services} value={String(row.serviceCount)} />
                 <Row label={labels.lastSync} value={row.lastSyncAt || "—"} />
                 <Row

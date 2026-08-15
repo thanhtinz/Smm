@@ -11,7 +11,7 @@ export const metadata: Metadata = { title: "Services" };
 
 export default async function AdminServicesPage() {
   const ctx = await getAppContext();
-  const { t } = ctx;
+  const { t, locale } = ctx;
 
   const panel = await requirePanel();
   const isChild = panel.parentId !== null;
@@ -56,6 +56,7 @@ export default async function AdminServicesPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-5">
       <ServiceManager
+        locale={locale}
         rows={services.map((s) => ({
           id: s.id,
           publicId: s.publicId,

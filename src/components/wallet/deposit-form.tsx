@@ -5,6 +5,7 @@ import { createDepositAction, type DepositState } from "@/app/actions/wallet";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon, type IconName } from "@/components/icons";
+import { formatCount } from "@/lib/numbers";
 
 export type MethodOption = {
   id: string;
@@ -176,7 +177,7 @@ export default function DepositForm({
           error={state.fieldErrors?.amount}
           hint={
             method && method.minAmount > 0
-              ? `${method.minAmount.toLocaleString()} – ${method.maxAmount > 0 ? method.maxAmount.toLocaleString() : "∞"} ${effectiveCurrency}`
+              ? `${formatCount(method.minAmount, locale)} – ${method.maxAmount > 0 ? formatCount(method.maxAmount, locale) : "∞"} ${effectiveCurrency}`
               : undefined
           }
           required

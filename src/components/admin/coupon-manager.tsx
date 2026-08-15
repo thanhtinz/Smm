@@ -6,6 +6,7 @@ import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import { Icon } from "@/components/icons";
+import { formatCount } from "@/lib/numbers";
 
 export type CouponRow = {
   id: string;
@@ -21,7 +22,16 @@ export type CouponRow = {
   used: number;
 };
 
-export default function CouponManager({ rows, labels }: { rows: CouponRow[]; labels: Record<string, string> }) {
+export default function CouponManager({
+  rows,
+  labels,
+  locale,
+}: {
+  rows: CouponRow[];
+  labels: Record<string, string>;
+  /** Counts are grouped the reader's way, not the server's. */
+  locale: string;
+}) {
   const [editing, setEditing] = useState<CouponRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -73,11 +83,11 @@ export default function CouponManager({ rows, labels }: { rows: CouponRow[]; lab
                     <td>
                       <span className="badge badge-success">
                         <Icon name="gift" size={11} />
-                        {row.type === "percent" ? `${row.value}%` : row.value.toLocaleString()}
+                        {row.type === "percent" ? `${row.value}%` : formatCount(row.value, locale)}
                       </span>
                       {row.firstDepositOnly && <span className="muted mt-0.5 block text-xs">{labels.firstOnly}</span>}
                     </td>
-                    <td className="muted text-right tabular-nums">{row.minAmount ? row.minAmount.toLocaleString() : "—"}</td>
+                    <td className="muted text-right tabular-nums">{row.minAmount ? formatCount(row.minAmount, locale) : "—"}</td>
                     <td className="text-right tabular-nums">
                       {row.used}
                       {row.maxUses > 0 ? ` / ${row.maxUses}` : ""}

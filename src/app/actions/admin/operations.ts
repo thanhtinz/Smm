@@ -10,10 +10,11 @@ import { planUpstream, writeUpstream } from "@/lib/chain";
 import { refundOwed } from "@/lib/refunds";
 import type { ActionResult } from "./catalogue";
 import { notification } from "@/lib/notify";
-import { readerMessages, getAppContext } from "@/lib/context";
+import { readerMessages, readerText, getAppContext } from "@/lib/context";
 import { getCurrentUser } from "@/lib/auth";
 import { STAFF_ROLES } from "@/lib/two-factor";
 import { dateFormats } from "@/lib/dates";
+import { formatCount } from "@/lib/numbers";
 
 export type { ActionResult };
 
@@ -111,7 +112,7 @@ export async function setOrderStatusAction(id: string, status: string, note = ""
  * chain disagree with reality.
  */
 export async function updateOrderAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
-  const t = await readerMessages();
+  const { t, locale } = await readerText();
   const admin = await requireAdmin();
 
   const id = String(form.get("id") ?? "");
@@ -131,7 +132,7 @@ export async function updateOrderAction(_prev: ActionResult, form: FormData): Pr
     return { fieldErrors: { remains: t("adm.wholeNumber") } };
   }
   if (remains > order.quantity) {
-    return { fieldErrors: { remains: t("adm.remainsMax", { quantity: order.quantity.toLocaleString() }) } };
+    return { fieldErrors: { remains: t("adm.remainsMax", { quantity: formatCount(order.quantity, locale) }) } };
   }
 
   const changes: string[] = [];

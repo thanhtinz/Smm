@@ -9,7 +9,8 @@ import { getCurrencies, getBaseCurrency } from "@/lib/currency";
 import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
 import { panelBaseUrl, getCurrentPanel } from "@/lib/tenancy";
-import { readerMessages } from "@/lib/context";
+import { readerText } from "@/lib/context";
+import { formatCount } from "@/lib/numbers";
 
 export type DepositState = {
   error?: string;
@@ -17,7 +18,7 @@ export type DepositState = {
 };
 
 export async function createDepositAction(_prev: DepositState, formData: FormData): Promise<DepositState> {
-  const t = await readerMessages();
+  const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
 
@@ -44,10 +45,10 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   if (!currency) return { fieldErrors: { currency: t("err.currencyForMethod") } };
 
   if (method.minAmount > 0 && amount < method.minAmount) {
-    return { fieldErrors: { amount: t("err.methodMin", { amount: method.minAmount.toLocaleString(), currency: currency.code }) } };
+    return { fieldErrors: { amount: t("err.methodMin", { amount: formatCount(method.minAmount, locale), currency: currency.code }) } };
   }
   if (method.maxAmount > 0 && amount > method.maxAmount) {
-    return { fieldErrors: { amount: t("err.methodMax", { amount: method.maxAmount.toLocaleString(), currency: currency.code }) } };
+    return { fieldErrors: { amount: t("err.methodMax", { amount: formatCount(method.maxAmount, locale), currency: currency.code }) } };
   }
 
   // The panel's own floor is expressed in the base currency.
@@ -56,10 +57,10 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   const minDeposit = Number(await getSetting("wallet.minDeposit")) || 0;
   const maxDeposit = Number(await getSetting("wallet.maxDeposit")) || 0;
   if (minDeposit > 0 && amountInBase < minDeposit) {
-    return { fieldErrors: { amount: t("err.depositMin", { amount: minDeposit.toLocaleString(), currency: base.code }) } };
+    return { fieldErrors: { amount: t("err.depositMin", { amount: formatCount(minDeposit, locale), currency: base.code }) } };
   }
   if (maxDeposit > 0 && amountInBase > maxDeposit) {
-    return { fieldErrors: { amount: t("err.depositMax", { amount: maxDeposit.toLocaleString(), currency: base.code }) } };
+    return { fieldErrors: { amount: t("err.depositMax", { amount: formatCount(maxDeposit, locale), currency: base.code }) } };
   }
 
   const totals = computeTotals(amount, method);
@@ -70,7 +71,7 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   let couponBonusBase = 0;
   let couponId = "";
   if (couponCode) {
-    const check = await evaluateCoupon(couponCode, user.id, amountInBase);
+    const check = await evaluateCoupon(couponCode, user.id, amountInBase, locale);
     if (!check.ok) return { fieldErrors: { coupon: t(check.key, check.vars) } };
     couponBonusBase = check.bonus;
     couponId = check.couponId;

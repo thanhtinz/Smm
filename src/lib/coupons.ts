@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { formatCount } from "@/lib/numbers";
 
 export type CouponCheck =
   | { ok: true; couponId: string; code: string; bonus: number }
@@ -10,7 +11,13 @@ export type CouponCheck =
  * and returns the bonus it would add. Reads redemptions rather than a counter,
  * so limits cannot drift.
  */
-export async function evaluateCoupon(code: string, userId: string, amountInBase: number): Promise<CouponCheck> {
+export async function evaluateCoupon(
+  code: string,
+  userId: string,
+  amountInBase: number,
+  /** Whose digit grouping the minimum is quoted in. */
+  locale: string,
+): Promise<CouponCheck> {
   const trimmed = code.trim().toUpperCase();
   if (!trimmed) return { ok: false, key: "err.couponRequired" };
 
@@ -21,7 +28,7 @@ export async function evaluateCoupon(code: string, userId: string, amountInBase:
     return { ok: false, key: "err.couponExpired" };
   }
   if (coupon.minAmount > 0 && amountInBase < coupon.minAmount) {
-    return { ok: false, key: "err.couponMin", vars: { amount: coupon.minAmount.toLocaleString() } };
+    return { ok: false, key: "err.couponMin", vars: { amount: formatCount(coupon.minAmount, locale) } };
   }
 
   if (coupon.maxUses > 0) {

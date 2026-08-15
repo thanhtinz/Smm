@@ -8,6 +8,7 @@ import Combobox from "@/components/ui/combobox";
 import ServicePicker from "@/components/orders/service-picker";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
+import { counter } from "@/lib/numbers";
 import OrderFacts, { type Fact } from "@/components/orders/order-facts";
 import ServiceSearch from "@/components/orders/service-search";
 import PlatformMark from "@/components/platform-mark";
@@ -251,9 +252,9 @@ export default function NewOrderForm({
     service && !subscription && qty > 0 && (qty < service.min || qty > service.max);
   const fmt = (base: number) => formatCurrency(base, currency);
   // Plain numbers follow the reader too: toLocaleString() with no locale uses
-  // the server's, so a Vietnamese page was printing "5,000" for 5.000.
-  const num = (value: number) =>
-    new Intl.NumberFormat(currency.locale === "vi" ? "vi-VN" : currency.locale).format(value);
+  // the browser's here and the server's on a page rendered there, so the same
+  // quantity read "5,000" beside a price of "5.000 ₫".
+  const num = useMemo(() => counter(currency.locale), [currency.locale]);
 
   /**
    * Everything, searchable, for customers who already know what they want.
@@ -599,7 +600,7 @@ export default function NewOrderForm({
             error={
               state.fieldErrors?.comments ??
               (outOfRange && service
-                ? `${labels.min} ${service.min.toLocaleString()} — ${labels.max} ${service.max.toLocaleString()}`
+                ? `${labels.min} ${num(service.min)} — ${labels.max} ${num(service.max)}`
                 : undefined)
             }
             hint={labels.commentsHint.replace("{count}", String(commentLines))}
@@ -621,12 +622,12 @@ export default function NewOrderForm({
           error={
             state.fieldErrors?.quantity ??
             (outOfRange && service
-              ? `${labels.min} ${service.min.toLocaleString()} — ${labels.max} ${service.max.toLocaleString()}`
+              ? `${labels.min} ${num(service.min)} — ${labels.max} ${num(service.max)}`
               : undefined)
           }
           hint={
             service
-              ? `${labels.min} ${service.min.toLocaleString()} · ${labels.max} ${service.max.toLocaleString()}`
+              ? `${labels.min} ${num(service.min)} · ${labels.max} ${num(service.max)}`
               : undefined
           }
           required
@@ -765,7 +766,7 @@ export default function NewOrderForm({
 
               <dl className="space-y-2.5 text-sm">
                 <Row label={labels.id} value={<span className="font-mono text-xs">#{service.publicId}</span>} />
-                <Row label={labels.limits} value={`${service.min.toLocaleString()} – ${service.max.toLocaleString()}`} />
+                <Row label={labels.limits} value={`${num(service.min)} – ${num(service.max)}`} />
                 {/* A discount nobody can compare against is not persuasive, so
                     the list price stays visible with a line through it. */}
                 {service.listRate > service.rate ? (
@@ -781,16 +782,16 @@ export default function NewOrderForm({
                 )}
                 {subscription ? (
                   <>
-                    <Row label={labels.posts} value={Number(posts) > 0 ? Number(posts).toLocaleString() : "—"} />
-                    <Row label={labels.total} value={qty > 0 ? qty.toLocaleString() : "—"} />
+                    <Row label={labels.posts} value={Number(posts) > 0 ? num(Number(posts)) : "—"} />
+                    <Row label={labels.total} value={qty > 0 ? num(qty) : "—"} />
                   </>
                 ) : (
-                  <Row label={labels.quantity} value={qty > 0 ? qty.toLocaleString() : "—"} />
+                  <Row label={labels.quantity} value={qty > 0 ? num(qty) : "—"} />
                 )}
                 {dripfeed && runsNum > 1 && (
                   <>
-                    <Row label={labels.runs} value={runsNum.toLocaleString()} />
-                    <Row label={labels.total} value={units.toLocaleString()} />
+                    <Row label={labels.runs} value={num(runsNum)} />
+                    <Row label={labels.total} value={num(units)} />
                   </>
                 )}
               </dl>

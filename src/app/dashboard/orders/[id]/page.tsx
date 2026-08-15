@@ -11,6 +11,7 @@ import OrderTimeline from "@/components/orders/order-timeline";
 import { ORDER_STATUSES, customerStatus } from "@/lib/orders";
 import OrderActions from "@/components/orders/order-actions";
 import { reorderHref } from "@/lib/reorder";
+import { formatCount } from "@/lib/numbers";
 
 export const metadata: Metadata = { title: "Order" };
 
@@ -64,7 +65,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
       : null;
 
   const facts: { label: string; value: string }[] = [
-    { label: t("order.quantity"), value: order.quantity.toLocaleString() },
+    { label: t("order.quantity"), value: formatCount(order.quantity, locale) },
     // Only while it is still ahead: once it has run, the time it was due says
     // nothing the timeline does not say better.
     ...(order.startAt && order.startAt > new Date()
@@ -74,7 +75,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     { label: t("common.date"), value: dates.full(order.createdAt) },
     ...(order.settledAt ? [{ label: t("order.finished"), value: dates.full(order.settledAt) }] : []),
     ...(took ? [{ label: t("order.took"), value: took }] : []),
-    ...(reported ? [{ label: t("order.startCount"), value: order.startCount.toLocaleString() }] : []),
+    ...(reported ? [{ label: t("order.startCount"), value: formatCount(order.startCount, locale) }] : []),
     ...(order.runs ? [{ label: t("order.runs"), value: `${order.runs} × ${order.interval} ${t("order.minutes")}` }] : []),
     ...(order.posts
       ? [
@@ -107,7 +108,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
             <div className="flex items-baseline justify-between gap-3 text-sm">
               <span className="muted">{t("order.delivered")}</span>
               <span className="font-semibold tabular-nums">
-                {delivered.toLocaleString()} / {order.quantity.toLocaleString()}
+                {formatCount(delivered, locale)} / {formatCount(order.quantity, locale)}
               </span>
             </div>
             <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--surface2)]">
@@ -162,7 +163,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
               canRefill: order.service.refill && ["completed", "partial"].includes(order.status),
               canCancel: order.service.cancel && ["pending", "processing"].includes(shown),
               openRequest: order.requests.find((r) => ["pending", "approved"].includes(r.status))?.type ?? null,
-              reorderHref: order.service.enabled ? reorderHref(order) : null,
+              reorderHref: order.service.enabled ? reorderHref(order, timezone) : null,
             }}
             labels={{
               refill: t("order.refill"),
@@ -206,6 +207,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         <h2 className="font-semibold">{t("order.timeline")}</h2>
         <div className="mt-4">
           <OrderTimeline
+            locale={locale}
             createdAt={dates.full(order.createdAt)}
             steps={order.events.map((e) => ({
               id: e.id,

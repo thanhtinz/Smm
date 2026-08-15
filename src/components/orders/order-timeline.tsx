@@ -1,4 +1,5 @@
 import { Icon, type IconName } from "@/components/icons";
+import { formatCount } from "@/lib/numbers";
 
 export type Step = {
   id: string;
@@ -37,10 +38,13 @@ export default function OrderTimeline({
   steps,
   createdAt,
   labels,
+  locale,
 }: {
   steps: Step[];
   createdAt: string;
   labels: Record<string, string>;
+  /** Counts are grouped the reader's way, not the server's. */
+  locale: string;
 }) {
   return (
     <ol className="space-y-3">
@@ -68,8 +72,8 @@ export default function OrderTimeline({
               {s.at}
               {/* Only where they say something: a step that moved neither
                   count would just be repeating the row above it. */}
-              {s.startCount > 0 && ` · ${labels.startCount} ${s.startCount.toLocaleString()}`}
-              {s.remains > 0 && ` · ${labels.remains} ${s.remains.toLocaleString()}`}
+              {s.startCount > 0 && ` · ${labels.startCount} ${formatCount(s.startCount, locale)}`}
+              {s.remains > 0 && ` · ${labels.remains} ${formatCount(s.remains, locale)}`}
             </p>
             {s.note && <p className="muted mt-0.5 text-xs italic">{s.note}</p>}
           </div>

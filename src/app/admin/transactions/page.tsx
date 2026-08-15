@@ -5,6 +5,7 @@ import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import TransactionManager from "@/components/admin/transaction-manager";
 import { Icon } from "@/components/icons";
+import { formatCount } from "@/lib/numbers";
 
 export const metadata: Metadata = { title: "Transactions" };
 
@@ -62,7 +63,7 @@ export default async function AdminTransactionsPage({
           publicId: r.publicId,
           username: r.user.username,
           method: r.method?.name ?? "—",
-          paid: `${r.paidAmount.toLocaleString()} ${r.currency}`,
+          paid: `${formatCount(r.paidAmount, locale)} ${r.currency}`,
           credited: displayMoney(r.amount, currency, locale),
           status: r.status,
           reference: r.reference,
