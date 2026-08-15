@@ -222,6 +222,7 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     dripfeed: bool(form, "dripfeed"),
     autoPrice: bool(form, "autoPrice"),
     averageTime: String(form.get("averageTime") ?? "").trim(),
+    tags: String(form.get("tags") ?? "").trim(),
     // The three figures this market quotes. Negative is meaningless and zero
     // already means "not stated", so both land on zero.
     warrantyDays: Math.max(0, num(form, "warrantyDays")),

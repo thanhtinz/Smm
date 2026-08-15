@@ -5,6 +5,7 @@ import { useActionState, useMemo, useState } from "react";
 import { placeOrderAction, type OrderState } from "@/app/actions/orders";
 import { Field, TextInput } from "@/components/ui/field";
 import Combobox from "@/components/ui/combobox";
+import ServicePicker from "@/components/orders/service-picker";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
 import OrderFacts, { type Fact } from "@/components/orders/order-facts";
@@ -37,6 +38,8 @@ export type ServiceOption = {
   speedPerDay: number;
   /** What the panel measured from this service's own orders, pre-worded. */
   measured?: { start?: string; finish?: string; refill?: string };
+  /** The operator's short labels, already split into wording and colour. */
+  tags: { label: string; tone: string }[];
 };
 
 /**
@@ -427,25 +430,26 @@ export default function NewOrderForm({
         </Field>
         )}
 
-        {/* A catalogue runs to hundreds of services, so this is a searchable
-            listbox rather than a native select. */}
+        {/* Cards rather than a dropdown: the cascade has already narrowed
+            this to one category, and which service inside it — the cheap one,
+            the fast one, the one that does not drop — is the whole decision.
+            A closed control hides exactly the thing being weighed. */}
         <Field name="serviceId" label={labels.service} error={state.fieldErrors?.serviceId}>
-          <Combobox
+          <ServicePicker
             name="serviceId"
             value={serviceId}
             onChange={setServiceId}
             disabled={!categoryId}
-            disabledLabel={categoryId ? labels.selectService : labels.selectCategoryFirst}
-            placeholder={labels.selectService}
-            searchPlaceholder={labels.searchService}
+            disabledLabel={labels.selectCategoryFirst}
             emptyLabel={labels.noResults}
-            invalid={Boolean(state.fieldErrors?.serviceId)}
-            options={visibleServices.map((s) => ({
-              value: s.id,
-              label: s.name,
-              code: String(s.publicId),
-              meta: fmt(s.rate),
-              keywords: s.description,
+            services={visibleServices.map((s) => ({
+              id: s.id,
+              publicId: s.publicId,
+              name: s.name,
+              price: fmt(s.rate),
+              wasPrice: s.listRate > s.rate ? fmt(s.listRate) : undefined,
+              limits: `${labels.limits} ${num(s.min)} – ${num(s.max)}`,
+              tags: s.tags,
             }))}
           />
         </Field>

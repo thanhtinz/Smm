@@ -1,6 +1,7 @@
 import type { ServiceOption } from "@/components/orders/new-order-form";
 import type { ServiceStats } from "@/lib/service-stats";
 import type { Translator } from "@/lib/i18n";
+import { parseServiceTags } from "@/lib/service-tags";
 
 /** Everything the order form needs off a Service row. */
 export type ServiceRow = {
@@ -21,6 +22,7 @@ export type ServiceRow = {
   warrantyDays: number;
   startMinutes: number;
   speedPerDay: number;
+  tags: string;
 };
 
 export type LinkExamples = { postExample?: string | null; profileExample?: string | null } | null;
@@ -65,6 +67,7 @@ export function toServiceOption(
     warrantyDays: service.warrantyDays,
     startMinutes: service.startMinutes,
     speedPerDay: service.speedPerDay,
+    tags: parseServiceTags(service.tags),
     measured: measuredWords(stats, t),
   };
 }
