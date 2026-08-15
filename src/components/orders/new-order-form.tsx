@@ -144,6 +144,7 @@ export default function NewOrderForm({
   currency,
   accountCard,
   prefill,
+  locked,
   labels,
 }: {
   platforms: PlatformOption[];
@@ -155,6 +156,13 @@ export default function NewOrderForm({
   accountCard?: React.ReactNode;
   /** Starting values from a "order this again" link. */
   prefill?: Prefill;
+  /**
+   * The page has already answered the first two steps — a category's own
+   * order page is reached by picking a platform and a category, so asking
+   * again would be asking the customer to repeat themselves. The service step
+   * stays: a category holds several, and which one is the whole decision.
+   */
+  locked?: boolean;
   labels: OrderLabels;
 }) {
   const [state, action] = useActionState<OrderState, FormData>(placeOrderAction, {});
@@ -166,8 +174,10 @@ export default function NewOrderForm({
 
   // Strictly cascading: nothing is preselected, and each step only unlocks
   // once the step above it has been answered.
-  const [platformId, setPlatformId] = useState(repeatCategory?.platformId ?? "");
-  const [categoryId, setCategoryId] = useState(repeat?.categoryId ?? "");
+  const [platformId, setPlatformId] = useState(
+    repeatCategory?.platformId ?? (locked ? (platforms[0]?.id ?? "") : ""),
+  );
+  const [categoryId, setCategoryId] = useState(repeat?.categoryId ?? (locked ? (categories[0]?.id ?? "") : ""));
   const [serviceId, setServiceId] = useState(repeat?.id ?? "");
 
   const visibleCategories = useMemo(
@@ -305,6 +315,7 @@ export default function NewOrderForm({
 
         {/* For the buyer who already knows the service. Above the cascade
             because it replaces it, not because it refines it. */}
+        {!locked && (
         <Field name="quickFind" label={labels.quickFind} hint={labels.quickFindHint}>
           <ServiceSearch
             options={everything.map(({ service }) => ({
@@ -319,12 +330,14 @@ export default function NewOrderForm({
             emptyLabel={labels.noResults}
           />
         </Field>
+        )}
 
         {/* A native select cannot draw the platform's mark, and the mark is
             how a customer picks: they recognise the logo before they read the
             word. Same control as the service step, with its search off — the
             whole list fits on screen and a search field over eight rows is in
             the way rather than a help. */}
+        {!locked && (
         <Field name="platformId" label={labels.platform}>
           <Combobox
             name="platformId"
@@ -345,7 +358,9 @@ export default function NewOrderForm({
             }))}
           />
         </Field>
+        )}
 
+        {!locked && (
         <Field name="categoryId" label={labels.category}>
           <select
             id="categoryId"
@@ -366,6 +381,7 @@ export default function NewOrderForm({
             ))}
           </select>
         </Field>
+        )}
 
         {/* A catalogue runs to hundreds of services, so this is a searchable
             listbox rather than a native select. */}

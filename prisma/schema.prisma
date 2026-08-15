@@ -315,12 +315,17 @@ model Category {
   panel       Panel     @relation("PanelCategories", fields: [panelId], references: [id], onDelete: Cascade)
   platformId  String?
   platform    Platform? @relation(fields: [platformId], references: [id], onDelete: SetNull)
+  /// The category's own address, under its platform: /services/tiktok/follow.
+  /// Unique per platform rather than per panel, so two platforms can both have
+  /// a "follow" without one of them having to be called "follow-2".
+  slug        String    @default("")
   name        String
   description String    @default("")
   visible     Boolean   @default(true)
   position    Int       @default(0)
   services    Service[]
 
+  @@unique([panelId, platformId, slug])
   @@index([platformId])
   @@index([panelId])
 }

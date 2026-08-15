@@ -11,6 +11,7 @@ import PlatformMark from "@/components/platform-mark";
 export type CategoryRow = {
   id: string;
   name: string;
+  slug: string;
   description: string;
   platformId: string | null;
   visible: boolean;
@@ -131,7 +132,7 @@ export default function CategoryManager({
                       </td>
                       <td>
                         <span className="font-medium">{row.name}</span>
-                        {row.description && <span className="muted mt-0.5 block truncate text-xs">{row.description}</span>}
+                        <span className="muted mt-0.5 block truncate font-mono text-xs">/{row.slug}</span>
                       </td>
                       <td className="text-right tabular-nums">{row.serviceCount}</td>
                       <td>
@@ -236,6 +237,19 @@ function CategoryForm({
 
       <Field name="name" label={labels.name} error={state.fieldErrors?.name} required>
         <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder={labels.egName} />
+      </Field>
+
+      {/* Left blank it is derived from the name, which is right the first
+          time and wrong after a rename — an address that moves loses whatever
+          was linking to it, so it is a field rather than a mirror. */}
+      <Field name="slug" label={labels.slug} error={state.fieldErrors?.slug} hint={labels.slugHint}>
+        <TextInput
+          name="slug"
+          defaultValue={row?.slug}
+          error={state.fieldErrors?.slug}
+          hint={labels.slugHint}
+          placeholder="follow"
+        />
       </Field>
 
       <Field name="description" label={labels.description}>

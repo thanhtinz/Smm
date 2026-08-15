@@ -316,6 +316,57 @@ hơn.
 chính nó; "chạy tất cả" ghi một dòng `SyncRun` mới, đóng lại, và đóng dấu tên
 người bấm.
 
+## Thêm: menu nền tảng và trang đặt đơn theo danh mục
+
+Bạn yêu cầu thêm, không nằm trong kế hoạch ban đầu.
+
+**Đã làm.** Ảnh `docs/screenshots/cat-page-order.png`,
+`docs/screenshots/cat-page-guest.png`.
+
+- **Menu trên cùng là các nền tảng**, mỗi nền tảng thả xuống **danh mục của
+  nó**. Bấm một danh mục là vào `/services/<nền-tảng>/<danh-mục>`.
+- **Trang đó có form đặt đơn thật**, không phải danh sách rồi bấm sang chỗ
+  khác. Hai bước đầu của cascade đã được trả lời bằng chính việc tới được
+  trang này, nên form bỏ chúng đi và mở thẳng ở bước còn lại: chọn dịch vụ nào.
+  Dưới form là bảng giá của danh mục — thứ để quyết định chọn cái nào.
+- **Chưa đăng nhập vẫn là một trang thật**: giá vẫn hiện, vì giá là lý do người
+  ta từ tìm kiếm đi vào đây. Chỉ form là không có, kèm lời mời đăng nhập.
+- **Danh mục có `slug` riêng**, unique theo **từng nền tảng** chứ không theo cả
+  panel — để TikTok và Instagram cùng có "follow" mà không phải đổi tên một cái
+  thành "follow-2". Sửa được trong Admin → Danh mục.
+- **Form đặt đơn vẫn chỉ có một cái.** Trang danh mục dùng đúng component mà
+  bảng điều khiển dùng, không phải bản sao: một bộ giới hạn, một cách tính
+  tiền, một lần kiểm số dư. Bản sao trông giống nhau đúng tới lần đầu một trong
+  hai cái được sửa. Danh sách nhãn cũng gộp về `src/lib/order-form-labels.ts`
+  vì giờ có hai trang dùng.
+
+**Ba lỗi thật bắt được khi kiểm.**
+- **Header tràn.** 8 nền tảng cộng Trang chủ/API/Điều khoản không vừa một màn
+  1440px — chúng đè lên nút đăng nhập. Số nền tảng là do catalogue quyết định
+  chứ không phải file này, nên thanh menu **tự đo mình** và đẩy phần không vừa
+  vào một menu "Thêm". Bản đo được vẽ ẩn, ngoài luồng, vì đo bản đang hiện thì
+  phải giãn nó ra hết cỡ trước — đúng cái nháy mà nó sinh ra để tránh.
+- **Hover mở menu rồi click lại đóng ngay.** Chuột rê vào là mở, bấm vào là
+  toggle → tự đóng cái mà chính nó vừa mở. Giờ tách hẳn: máy có chuột thì rê để
+  xem danh mục, bấm là vào trang nền tảng; máy cảm ứng không có hover nên chạm
+  là mở/đóng. Vẫn là thẻ link ở cả hai kiểu nên HTML server và client giống
+  nhau, và bàn phím tới được cả hai (focus mở, Escape đóng).
+- **Seed sẽ hỏng ở lần cài mới**: nó tạo danh mục không có slug, mọi danh mục
+  cùng một nền tảng sẽ đụng nhau ở giá trị mặc định rỗng.
+
+**Migration đi hai bước** — thêm cột, chạy `scripts/backfill-category-slug.mjs`,
+rồi mới thêm unique index. Gộp một bước thì mọi dòng đang có đều đụng nhau ở
+chuỗi rỗng.
+
+**Chứng minh.** 21/21 điểm trong trình duyệt thật: menu không tràn, mỗi mục có
+ảnh nền tảng, danh mục trong menu **khớp đúng catalogue** (không phải bản chép
+cũ), Escape đóng; trang khách chưa đăng nhập có giá mà không có form; trang đã
+đăng nhập có form, **không còn bước nền tảng/danh mục/tìm nhanh**, và chỉ chào
+bán dịch vụ của đúng danh mục đó; **đặt thật một đơn từ trang đó** và đơn rơi
+đúng dịch vụ đã chọn; slug không tồn tại trả 404 chứ không phải trang trắng.
+
+---
+
 ## Đã cân nhắc và loại
 
 - **Tool buff trực tiếp / kịch bản seeding / spam fanpage** — gian lận nền

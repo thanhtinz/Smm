@@ -122,8 +122,20 @@ export async function saveCategoryAction(_prev: ActionResult, form: FormData): P
   const platformId = String(form.get("platformId") ?? "").trim();
   if (!platformId) return { fieldErrors: { platformId: t("adm.choosePlatform") } };
 
+  // The category's own address. Unique under its platform rather than across
+  // the panel, so "follow" can exist under both TikTok and Instagram.
+  const slug = slugify(String(form.get("slug") ?? "").trim() || name);
+  if (!slug) return { fieldErrors: { slug: t("adm.slugRequired") } };
+
+  const clash = await db.category.findFirst({
+    where: { slug, platformId, ...(id ? { NOT: { id } } : {}) },
+    select: { id: true },
+  });
+  if (clash) return { fieldErrors: { slug: t("adm.slugTaken") } };
+
   const data = {
     name,
+    slug,
     platformId,
     description: String(form.get("description") ?? "").trim(),
     visible: bool(form, "visible"),

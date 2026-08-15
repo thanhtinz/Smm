@@ -65,6 +65,17 @@ function describe(name: string): string {
   return bits.join(" ");
 }
 
+/** The same rule the admin form and the backfill use. */
+function slugify(input: string) {
+  return input
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
 async function main() {
   // Every request resolves to a panel by host, and every row below belongs to
   // one, so the root panel comes first.
@@ -334,7 +345,16 @@ async function main() {
       const category =
         existing ??
         (await db.category.create({
-          data: { panelId: PANEL, name: group.category, platformId: platform.id, position: gi },
+          data: {
+            panelId: PANEL,
+            name: group.category,
+            // Its address, unique under this platform. Without one every
+            // category on a platform would share the empty default and the
+            // second create would collide.
+            slug: slugify(group.category),
+            platformId: platform.id,
+            position: gi,
+          },
         }));
       for (const [si, [name, rate, min, max]] of group.services.entries()) {
         const found = await db.service.findFirst({ where: { panelId: PANEL, name } });
