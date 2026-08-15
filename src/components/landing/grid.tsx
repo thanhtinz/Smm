@@ -2,15 +2,20 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import { displayMoney } from "@/lib/currency";
+import PlatformField from "./platform-field";
 import { ClosingCta, Faqs, PaymentStrip, Quotes, Steps } from "./sections";
 import type { LayoutProps } from "./types";
 
 /**
  * Grid.
  *
- * A ruled plane with the platforms sitting in its cells and the claim in the
- * middle of it. The device says the thing the sentence would otherwise have
- * to: this panel covers all of these, and they are all the same kind of work.
+ * A ruled plane with the platforms scattered across it and the claim in the
+ * middle. The device says the thing the sentence would otherwise have to:
+ * this panel covers all of these, and they are all the same kind of work.
+ *
+ * The marks are not pinned to the grid's cells. They sit where the field puts
+ * them, shy away from the pointer and move on when tapped — see
+ * platform-field.tsx.
  *
  * Below the fold, where pages of this shape usually paste a screenshot of a
  * dashboard, is the actual board — the catalogue this panel is selling today,
@@ -20,16 +25,6 @@ import type { LayoutProps } from "./types";
 export default function Grid(props: LayoutProps) {
   const { data, t, currency, locale, settings, signedIn } = props;
   const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
-
-  // Four a side, which is what fits the cells without the marks crowding.
-  const left = data.platforms.filter((_, i) => i % 2 === 0).slice(0, 4);
-  const right = data.platforms.filter((_, i) => i % 2 === 1).slice(0, 4);
-
-  const Cell = ({ platform }: { platform: (typeof data.platforms)[number] }) => (
-    <li className="flex items-center justify-center py-7">
-      <PlatformMark platform={platform} size={26} box={54} />
-    </li>
-  );
 
   return (
     <>
@@ -47,14 +42,10 @@ export default function Grid(props: LayoutProps) {
           }}
         />
 
-        <div className="container-page relative py-16 sm:py-24">
-          <div className="grid items-center gap-8 lg:grid-cols-[auto_minmax(0,36rem)_auto]">
-            <ul aria-hidden className="hidden grid-cols-1 lg:grid">
-              {left.map((p) => (
-                <Cell key={p.id} platform={p} />
-              ))}
-            </ul>
+        <PlatformField platforms={data.platforms} />
 
+        <div className="container-page relative py-16 sm:py-24">
+          <div className="mx-auto max-w-[36rem]">
             <div className="text-center">
               {data.completedCount > 0 && (
                 <p className="surface-2 muted mx-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-sm">
@@ -92,12 +83,6 @@ export default function Grid(props: LayoutProps) {
                 )}
               </div>
             </div>
-
-            <ul aria-hidden className="hidden grid-cols-1 lg:grid">
-              {right.map((p) => (
-                <Cell key={p.id} platform={p} />
-              ))}
-            </ul>
           </div>
 
           {/* The same platforms, in a row, for the widths where the cells are
