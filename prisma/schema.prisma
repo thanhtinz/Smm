@@ -400,7 +400,15 @@ model Service {
   refill                  Boolean        @default(false)
   cancel                  Boolean        @default(false)
   dripfeed                Boolean        @default(false)
+  /// Free text from the provider, shown as written. It cannot be compared,
+  /// sorted or added up, which is why the three numbers below exist.
   averageTime             String         @default("")
+  /// The three figures this market quotes, as numbers the operator states.
+  /// Zero means "not stated" and shows nothing — a service that has never
+  /// been sold saying "0 minutes" is a lie in the other direction.
+  warrantyDays            Int            @default(0)
+  startMinutes            Int            @default(0)
+  speedPerDay             Int            @default(0)
   enabled                 Boolean        @default(true)
   position                Int            @default(0)
   orders                  Order[]

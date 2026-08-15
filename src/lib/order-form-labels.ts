@@ -43,6 +43,8 @@ export function orderFormLabels(t: (key: string) => string): OrderLabels {
     quickFindHint: t("order.quickFindHint"),
     quickFindPlaceholder: t("order.quickFindPlaceholder"),
     factTime: t("order.factTime"),
+    factSpeed: t("order.factSpeed"),
+    perDay: t("order.perDay"),
     factUnknown: t("order.factUnknown"),
     factCancel: t("order.factCancel"),
     factWarranty: t("order.factWarranty"),
@@ -66,5 +68,8 @@ export function orderFormLabels(t: (key: string) => string): OrderLabels {
     interval: t("order.interval"),
     intervalHint: t("order.intervalHint"),
     total: t("order.totalQuantity"),
+    // Templates: the form fills {n} with the operator's figure.
+    minutesN: t("time.minutes"),
+    daysN: t("time.days"),
   };
 }

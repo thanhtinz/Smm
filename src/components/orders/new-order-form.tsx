@@ -31,6 +31,12 @@ export type ServiceOption = {
   linkExample: string;
   averageTime: string;
   description: string;
+  /** What the operator states. Zero means unstated and shows nothing. */
+  warrantyDays: number;
+  startMinutes: number;
+  speedPerDay: number;
+  /** What the panel measured from this service's own orders, pre-worded. */
+  measured?: { start?: string; finish?: string; refill?: string };
 };
 
 /**
@@ -81,6 +87,7 @@ export type OrderLabels = Record<
   | "quickFindHint"
   | "quickFindPlaceholder"
   | "factTime"
+  | "factSpeed"
   | "factUnknown"
   | "factCancel"
   | "factWarranty"
@@ -115,6 +122,9 @@ export type OrderLabels = Record<
   | "runs"
   | "interval"
   | "intervalHint"
+  | "perDay"
+  | "minutesN"
+  | "daysN"
   | "total",
   string
 >;
@@ -223,6 +233,10 @@ export default function NewOrderForm({
   const outOfRange =
     service && !subscription && qty > 0 && (qty < service.min || qty > service.max);
   const fmt = (base: number) => formatCurrency(base, currency);
+  // Plain numbers follow the reader too: toLocaleString() with no locale uses
+  // the server's, so a Vietnamese page was printing "5,000" for 5.000.
+  const num = (value: number) =>
+    new Intl.NumberFormat(currency.locale === "vi" ? "vi-VN" : currency.locale).format(value);
 
   /**
    * Everything, searchable, for customers who already know what they want.
@@ -251,17 +265,39 @@ export default function NewOrderForm({
   // No "Status: on sale" tile: a service that is not on sale never reaches
   // this list, so that tile was a tick that could never say anything else and
   // it cost a quarter of the row.
+  /**
+   * The three or four things a buyer here checks, with what the panel has
+   * measured under each. A figure the operator never stated shows nothing
+   * rather than a zero — a service that has never been sold claiming "0
+   * minutes to start" is a lie in the other direction — so the row is as long
+   * as there are answers.
+   */
   const facts: Fact[] = service
     ? [
         {
           key: "time",
           label: labels.factTime,
-          // Free text from the provider, so it is shown as written rather than
-          // parsed into a number this panel cannot vouch for.
-          value: service.averageTime || labels.factUnknown,
-          tone: service.averageTime ? "neutral" : "neutral",
+          value: service.startMinutes
+            ? labels.minutesN.replace("{n}", num(service.startMinutes))
+            : // Free text from the provider, shown as written rather than
+              // parsed into a number this panel cannot vouch for.
+              service.averageTime || labels.factUnknown,
+          note: service.measured?.start,
+          tone: "neutral",
           icon: "clock",
         },
+        ...(service.speedPerDay
+          ? [
+              {
+                key: "speed",
+                label: labels.factSpeed,
+                value: `${num(service.speedPerDay)}/${labels.perDay}`,
+                note: service.measured?.finish,
+                tone: "neutral" as const,
+                icon: "trending" as const,
+              },
+            ]
+          : []),
         {
           key: "cancel",
           label: labels.factCancel,
@@ -272,7 +308,12 @@ export default function NewOrderForm({
         {
           key: "warranty",
           label: labels.factWarranty,
-          value: service.refill ? labels.factYes : labels.factNo,
+          value: service.refill
+            ? service.warrantyDays
+              ? labels.daysN.replace("{n}", num(service.warrantyDays))
+              : labels.factYes
+            : labels.factNo,
+          note: service.refill ? service.measured?.refill : undefined,
           tone: service.refill ? "good" : "bad",
           icon: service.refill ? "shield" : "close",
         },
