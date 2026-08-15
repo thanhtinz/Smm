@@ -133,6 +133,10 @@ export const settingDefinitions = {
   /// leaving an empty box, because a panel with nothing to warn about should
   /// not look like one that forgot to fill this in.
   "order.notes": { group: "order", type: "textarea", value: "" },
+  /// How far ahead an order may be scheduled. Zero hides the control entirely
+  /// — an operator who does not want to hold paid orders should not have to
+  /// explain to customers why theirs is not moving.
+  "order.scheduleMaxDays": { group: "order", type: "number", value: 0 },
 
   // --- Abuse controls -----------------------------------------------------
   // Every one of these is off at zero, and every one ships at zero. A panel

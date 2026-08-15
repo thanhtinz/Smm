@@ -126,6 +126,9 @@ export type OrderLabels = Record<
   | "interval"
   | "intervalHint"
   | "perDay"
+  | "schedule"
+  | "scheduleHint"
+  | "scheduleAt"
   | "minutesN"
   | "daysN"
   | "total",
@@ -157,6 +160,7 @@ export default function NewOrderForm({
   currency,
   accountCard,
   prefill,
+  scheduleMaxDays = 0,
   locked,
   labels,
 }: {
@@ -169,6 +173,8 @@ export default function NewOrderForm({
   accountCard?: React.ReactNode;
   /** Starting values from a "order this again" link. */
   prefill?: Prefill;
+  /** How many days ahead an order may be scheduled. Zero hides the control. */
+  scheduleMaxDays?: number;
   /**
    * The page has already answered the first two steps — a category's own
    * order page is reached by picking a platform and a category, so asking
@@ -203,6 +209,12 @@ export default function NewOrderForm({
   );
   const service = visibleServices.find((s) => s.id === serviceId);
 
+  // Controlled like every other field, and for a reason worth stating: React
+  // resets a form once a server action returns, which empties any input whose
+  // value lives only in the DOM. This one was the last of those, so every
+  // refused order — a bad quantity, a duplicate, not enough balance — wiped
+  // the link the customer had just pasted.
+  const [link, setLink] = useState(prefill?.link ?? "");
   const [quantity, setQuantity] = useState(prefill?.quantity ?? "");
   const [comments, setComments] = useState(prefill?.comments ?? "");
 
@@ -210,6 +222,8 @@ export default function NewOrderForm({
   // quantity is however many lines the customer wrote.
   const custom = service?.type === "custom_comments";
   const commentLines = comments.split("\n").map((l) => l.trim()).filter(Boolean).length;
+  const [schedule, setSchedule] = useState(false);
+  const [startAt, setStartAt] = useState("");
   const [dripfeed, setDripfeed] = useState(Boolean(prefill?.runs));
   const [runs, setRuns] = useState(prefill?.runs ?? "");
   const [interval, setInterval] = useState(prefill?.interval ?? "");
@@ -570,7 +584,8 @@ export default function NewOrderForm({
               name="link"
               type="url"
               inputMode="url"
-              defaultValue={prefill?.link ?? ""}
+              value={link}
+              onChange={(e) => setLink(e.target.value)}
               placeholder={service?.linkExample || ""}
               error={state.fieldErrors?.link}
             />
@@ -631,18 +646,62 @@ export default function NewOrderForm({
         </Field>
         )}
 
+        {/* Charged now, sent later. Off unless the operator allowed it: a
+            panel that does not want to hold paid orders should not have to
+            explain to customers why theirs is not moving. */}
+        {scheduleMaxDays > 0 && service && (
+          <div className="surface-2 rounded-xl p-4">
+            <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={schedule}
+                onChange={(e) => setSchedule(e.target.checked)}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              {schedule && <input type="hidden" name="schedule" value="on" />}
+              <Icon name="clock" size={16} />
+              {labels.schedule}
+            </label>
+
+            {schedule && (
+              <div className="mt-4">
+                <Field
+                  name="startAt"
+                  label={labels.scheduleAt}
+                  error={state.fieldErrors?.startAt}
+                  hint={labels.scheduleHint.replace("{n}", String(scheduleMaxDays))}
+                  required
+                >
+                  <TextInput
+                    name="startAt"
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                    error={state.fieldErrors?.startAt}
+                    hint={labels.scheduleHint}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Progressive disclosure: drip-feed appears only for services that
             support it, and its inputs stay collapsed until it is switched on. */}
         {service?.dripfeed && !subscription && (
           <div className="surface-2 rounded-xl p-4">
             <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium">
+              {/* The box is the control; the hidden input is what is sent.
+                  A server action resets the form when it returns, which
+                  unchecks every box while React's state stays put — so a
+                  refused order would come back with drip-feed silently off. */}
               <input
                 type="checkbox"
-                name="dripfeed"
                 checked={dripfeed}
                 onChange={(e) => setDripfeed(e.target.checked)}
                 className="h-4 w-4 accent-[var(--primary)]"
               />
+              {dripfeed && <input type="hidden" name="dripfeed" value="on" />}
               <Icon name="clock" size={16} />
               {labels.dripfeed}
             </label>

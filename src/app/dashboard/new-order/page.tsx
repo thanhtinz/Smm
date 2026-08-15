@@ -47,6 +47,7 @@ export default async function NewOrderPage({
     }),
   ]);
 
+  const scheduleMaxDays = Number(await getSetting("order.scheduleMaxDays")) || 0;
   const tier = await resolveTier(user);
   const rates = await priceServices(tier, services);
 
@@ -152,6 +153,7 @@ export default async function NewOrderPage({
               balance={user.balance}
               currency={currency}
               prefill={prefill}
+              scheduleMaxDays={scheduleMaxDays}
               labels={orderFormLabels(t)}
             />
           ),

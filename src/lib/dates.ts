@@ -109,3 +109,61 @@ export function describeZone(name: string, locale: string): string {
     return name;
   }
 }
+
+/**
+ * "2026-08-20T14:30" in a named zone, as the instant it names.
+ *
+ * A `datetime-local` field sends a wall clock with no zone attached, and the
+ * only sensible reading of it is the reader's own. Doing that without a
+ * library takes two passes: build the instant as if the text were UTC, ask
+ * what that instant looks like in the target zone, and shift by the gap. Once
+ * is not enough at a daylight-saving boundary, where the gap itself moves.
+ *
+ * Returns null on anything that is not a well-formed local time, so a hand
+ * edited field cannot land a nonsense date in the database.
+ */
+export function parseLocalTime(value: string, timeZone: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+
+  const [, y, mo, d, h, mi] = match.map(Number) as unknown as number[];
+  // Date.UTC rolls over rather than refusing: month 13 becomes next January
+  // and hour 99 becomes four days later, so "2026-13-40T99:99" would quietly
+  // become a real instant nobody typed. The ranges are checked first.
+  if (mo < 1 || mo > 12 || d < 1 || d > 31 || h > 23 || mi > 59) return null;
+
+  const asUtc = Date.UTC(y, mo - 1, d, h, mi);
+  if (!Number.isFinite(asUtc)) return null;
+  // And the day has to exist in that month: 31 February passes the ranges.
+  const rolled = new Date(asUtc);
+  if (rolled.getUTCMonth() !== mo - 1 || rolled.getUTCDate() !== d) return null;
+
+  const offsetAt = (instant: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour12: false,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).formatToParts(new Date(instant));
+    const at = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+    // 24 is how this formatter spells midnight.
+    const hour = at("hour") % 24;
+    return Date.UTC(at("year"), at("month") - 1, at("day"), hour, at("minute"), at("second")) - instant;
+  };
+
+  let instant: number;
+  try {
+    instant = asUtc - offsetAt(asUtc);
+    instant = asUtc - offsetAt(instant);
+  } catch {
+    // An unknown zone name.
+    return null;
+  }
+
+  const out = new Date(instant);
+  return Number.isNaN(out.getTime()) ? null : out;
+}

@@ -199,6 +199,10 @@ export async function dispatchPendingOrders(limit = 25) {
     where: {
       status: "pending",
       providerOrderId: "",
+      // Scheduled orders wait. Null is every order nobody scheduled, and the
+      // comparison is made here rather than after fetching so a queue full of
+      // tomorrow's orders cannot starve today's.
+      OR: [{ startAt: null }, { startAt: { lte: new Date() } }],
       // A service supplied only through routes has no provider of its own,
       // and would otherwise never be picked up.
       service: { OR: [{ providerId: { not: null } }, { routes: { some: { enabled: true } } }] },
