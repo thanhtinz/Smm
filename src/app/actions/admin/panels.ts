@@ -8,21 +8,12 @@ import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { currentPanelId, normaliseHost, runAsPanel } from "@/lib/tenancy";
+import { slugify } from "@/lib/panel-requests";
 import { createChildPanel, effectiveMaxDepth, subtreeOf } from "@/lib/panels";
 import type { ActionResult } from "./catalogue";
 import { readerMessages } from "@/lib/context";
 
 export type { ActionResult };
-
-function slugify(input: string) {
-  return input
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/đ/gi, "d")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 /** Rejects anything that is not a plain hostname — no scheme, path or port. */
 function validHost(host: string) {
@@ -79,7 +70,7 @@ export async function createChildPanelAction(_prev: ActionResult, form: FormData
 
   const adminUsername = String(form.get("adminUsername") ?? "").trim();
   if (!/^[a-zA-Z0-9_.-]{3,32}$/.test(adminUsername)) {
-    return { fieldErrors: { adminUsername: "3-32 characters, letters, numbers, dot, dash or underscore" } };
+    return { fieldErrors: { adminUsername: t("adm.usernameShape") } };
   }
   const adminEmail = String(form.get("adminEmail") ?? "").trim().toLowerCase();
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(adminEmail)) {

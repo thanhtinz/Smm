@@ -156,6 +156,7 @@ model User {
   notifications   Notification[]
   activityLogs    ActivityLog[]
   orderRequests   OrderRequest[]
+  panelRequests   PanelRequest[]     @relation("UserPanelRequests")
   redemptions     CouponRedemption[]
   referralsEarned ReferralEarning[]  @relation("ReferralEarned")
   referralSource  ReferralEarning[]  @relation("ReferralSource")
@@ -1141,6 +1142,7 @@ model Panel {
   keywordRanks   KeywordRank[]      @relation("PanelKeywordRanks")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
+  panelRequests  PanelRequest[]     @relation("PanelPanelRequests")
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -1151,6 +1153,56 @@ model Panel {
 /// Hostnames that serve a panel. One panel can have several (the working
 /// hostname it was created with, plus custom domains added later), so this is
 /// a table rather than a column.
+/// A customer asking for a panel of their own.
+///
+/// The reseller owns a domain and wants it to be their storefront. Rather
+/// than mail the operator and wait, they ask here: the panel adds their
+/// domain to its own Cloudflare account, hands back the two nameservers to
+/// set at their registrar, and watches for the delegation to take effect.
+/// Changing the nameservers is itself the proof of ownership — nobody can
+/// point a domain they do not control — so no TXT record is needed on top.
+///
+/// The operator still approves. What is automatic is the DNS and the panel
+/// that gets built on approval, not the decision to take somebody on.
+model PanelRequest {
+  id       String @id @default(cuid())
+  /// The panel being asked, which is the parent the new one would sit under.
+  panelId  String @default("")
+  panel    Panel  @relation("PanelPanelRequests", fields: [panelId], references: [id], onDelete: Cascade)
+  publicId Int
+  /// The customer asking, who holds the balance rent comes out of.
+  userId   String
+  user     User   @relation("UserPanelRequests", fields: [userId], references: [id], onDelete: Cascade)
+
+  name String
+  slug String
+  host String
+
+  /// The zone created for their domain in the operator's Cloudflare account,
+  /// and the nameservers it was assigned. Both blank until Cloudflare is
+  /// configured and the zone has been created.
+  zoneId      String @default("")
+  nameServers String @default("")
+
+  /// pending — waiting for the customer to move their nameservers
+  /// delegated — Cloudflare answers for the domain; ready to approve
+  /// approved — the panel exists
+  /// rejected — the operator said no, with a reason
+  status         String @default("pending")
+  /// Why it was rejected, or what went wrong creating the zone.
+  note           String @default("")
+  /// The panel this became, once approved.
+  createdPanelId String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([panelId, publicId])
+  @@unique([panelId, host])
+  @@index([panelId, status])
+  @@index([userId])
+}
+
 model PanelDomain {
   id          String   @id @default(cuid())
   panelId     String

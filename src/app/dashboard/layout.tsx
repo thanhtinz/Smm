@@ -35,8 +35,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!ctx.user) redirect(`/login${nextQuery((await headers()).get(PATHNAME_HEADER))}`);
 
   const { t } = ctx;
-  const [openTickets, platforms] = await Promise.all([
+  const [openTickets, resell, platforms] = await Promise.all([
     db.ticket.count({ where: { userId: ctx.user.id, status: { in: ["open", "answered"] } } }),
+    // The link only appears where the offer is actually open, so a customer
+    // is not shown a page that only tells them no.
+    Promise.all([getSetting("panel.childrenEnabled"), getSetting("panel.selfServeEnabled")]).then(
+      ([children, self]) => Boolean(children) && Boolean(self),
+    ),
     // Only what is actually on sale: a platform whose categories are all
     // empty opens onto nothing, and a category with no enabled service is a
     // page with a service picker that cannot be answered.
@@ -75,6 +80,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         { href: "/dashboard/wallet", label: t("dash.addFunds"), icon: "wallet" },
         { href: "/dashboard/transactions", label: t("wallet.history"), icon: "creditCard" },
         { href: "/dashboard/affiliate", label: t("affiliate.title"), icon: "gift" },
+        ...(resell ? [{ href: "/dashboard/panel", label: t("nav.ownPanel"), icon: "server" as const }] : []),
       ],
     },
     {

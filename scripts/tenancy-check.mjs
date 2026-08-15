@@ -12,8 +12,15 @@
  *      data — checked by seeding a marker string into panel B and grepping
  *      panel A's responses for it.
  *
+ * Before either, a static one: every model carrying a panelId is registered
+ * with the filter. Adding a panel-scoped table and forgetting that line is a
+ * silent cross-panel leak, and it is the mistake the schema makes easy — the
+ * column is right there in the model, and the list that matters is in another
+ * file.
+ *
  * Usage: node scripts/tenancy-check.mjs   (needs the dev server running)
  */
+import { readFileSync } from "node:fs";
 import { PrismaClient } from "@prisma/client";
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
@@ -25,6 +32,34 @@ const fail = (msg) => {
   console.error(`  FAIL  ${msg}`);
 };
 const pass = (msg) => console.log(`  ok    ${msg}`);
+
+// --- 0. Every panel-scoped model is registered with the filter -------------
+
+console.log("\nEvery model with a panelId is filtered");
+{
+  const schema = readFileSync("prisma/schema.prisma", "utf8");
+  const scoped = [...schema.matchAll(/model\s+(\w+)\s*\{([^}]*)\}/g)]
+    .filter(([, , body]) => /^\s*panelId\s/m.test(body))
+    .map(([, name]) => name);
+
+  const registered = new Set(
+    (/const TENANT_MODELS = new Set\(\[([\s\S]*?)\]\)/.exec(readFileSync("src/lib/db.ts", "utf8"))?.[1] ?? "")
+      .split(",")
+      .map((line) => line.trim().replace(/^"|"$/g, ""))
+      .filter(Boolean),
+  );
+
+  // Panel itself carries no panelId; PanelDomain is addressed by host before
+  // any panel is known, which is how a request finds its panel at all.
+  const EXEMPT = new Set(["PanelDomain"]);
+
+  const missing = scoped.filter((m) => !registered.has(m) && !EXEMPT.has(m));
+  if (missing.length) fail(`not in TENANT_MODELS: ${missing.join(", ")}`);
+  else pass(`${scoped.length} panel-scoped models, all registered`);
+
+  const stale = [...registered].filter((m) => !scoped.includes(m));
+  if (stale.length) fail(`in TENANT_MODELS but has no panelId: ${stale.join(", ")}`);
+}
 
 // --- 1. Foreign keys stay inside a panel -----------------------------------
 
