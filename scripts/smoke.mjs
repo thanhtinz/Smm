@@ -91,8 +91,13 @@ async function walk(label, paths, login) {
     await Promise.all([page.waitForURL(/dashboard|admin/, { timeout: 20000 }), page.click('button[type="submit"]')]);
   }
 
+  // A list, or a function that works one out once signed in — which is how
+  // the settings sections are walked without this file holding a copy of the
+  // registry that would quietly go stale.
+  const list = typeof paths === "function" ? await paths(page) : paths;
+
   console.log(`\n${label}`);
-  for (const path of paths) {
+  for (const path of list) {
     noise.length = 0;
     let status = 0;
     try {
@@ -153,6 +158,18 @@ await walk(
 );
 
 await walk("As an admin", ADMIN, ["admin", "Admin@123"]);
+
+// Settings is a section per page now, so the index is the list of them.
+await walk(
+  "Settings sections",
+  async (page) => {
+    await page.goto(`${BASE}/admin/settings`, { waitUntil: "networkidle" });
+    return page.$$eval('a[href^="/admin/settings/"]', (links) => [
+      ...new Set(links.map((a) => a.getAttribute("href")).filter(Boolean)),
+    ]);
+  },
+  ["admin", "Admin@123"],
+);
 
 await browser.close();
 await db.$disconnect();

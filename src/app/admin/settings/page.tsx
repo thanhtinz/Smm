@@ -1,75 +1,64 @@
-import type { Metadata } from "next";
+import Link from "next/link";
+import { pageTitle } from "@/lib/page-title";
 import { getAppContext } from "@/lib/context";
-import { getSettings, settingDefinitions } from "@/lib/settings";
-import SettingsForm, { type SettingField } from "@/components/admin/settings-form";
+import { Icon } from "@/components/icons";
+import { groupSummary, groupTitle, settingBands, settingCount } from "@/lib/setting-groups";
 
-export const metadata: Metadata = { title: "Settings" };
+export const generateMetadata = pageTitle("admin.settings");
 
-/** The same fallback rule as a field's: a group nobody has named keeps its own. */
-function groupTitle(group: string, t: (key: string) => string): string {
-  const named = t(`settingGroup.${group}`);
-  return named === `settingGroup.${group}` ? group : named;
-}
-
+/**
+ * Where the settings start.
+ *
+ * Every one of the hundred and eighteen used to be on this page at once, two
+ * columns of thirteen forms in registry order. Finding the minimum deposit
+ * meant scrolling past the SMTP server. This is a table of contents instead:
+ * the sections in the order an operator thinks about them, each saying what it
+ * holds and how much of it there is, so the scrolling is over names rather
+ * than over fields.
+ */
 export default async function AdminSettingsPage() {
   const { t } = await getAppContext();
-  const current = await getSettings();
-
-  // Grouped straight from the registry, so a new setting shows up here
-  // without touching this page.
-  const groups = new Map<string, SettingField[]>();
-  for (const [key, def] of Object.entries(settingDefinitions)) {
-    // t() answers with the key when there is no entry, which is how a setting
-    // added since is left to the form's derived name rather than showing
-    // "setting.foo.bar" to an operator.
-    const named = t(`setting.${key}`);
-    const options = (def as { options?: readonly string[] }).options;
-    const entry: SettingField = {
-      key,
-      label: named === `setting.${key}` ? "" : named,
-      // The image control needs its own three, and only it uses them.
-      hint: t("setting.imageHint"),
-      uploadLabel: t("admin.upload"),
-      removeLabel: t("admin.remove"),
-      type: (def as { type: string }).type,
-      options: options ? [...options] : undefined,
-      // A stored value like "priceBoard" is a code, not a word. Where the
-      // dictionary names one, the operator reads the name; where it does
-      // not, the code stands in rather than an empty option.
-      optionLabels: options
-        ? Object.fromEntries(
-            options.map((o) => {
-              const label = t(`settingOption.${key}.${o}`);
-              return [o, label === `settingOption.${key}.${o}` ? o : label];
-            }),
-          )
-        : undefined,
-      value: (current as Record<string, unknown>)[key],
-    };
-    const group = (def as { group: string }).group;
-    groups.set(group, [...(groups.get(group) ?? []), entry]);
-  }
+  const bands = settingBands();
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
+    <div className="mx-auto max-w-4xl space-y-8">
       <h2 className="text-2xl font-bold tracking-tight">{t("admin.settings")}</h2>
 
-      <div className="grid gap-5 lg:grid-cols-2">
-        {[...groups.entries()].map(([group, fields]) => (
-          <SettingsForm
-            key={group}
-            group={group}
-            title={groupTitle(group, t)}
-            fields={fields}
-            labels={{
-              save: t("common.save"),
-              saved: t("admin.saved"),
-              perLine: t("admin.onePerLine"),
-              json: t("admin.jsonValue"),
-            }}
-          />
-        ))}
-      </div>
+      {bands.map((band) => (
+        <section key={band.key} className="space-y-3">
+          <h3 className="muted text-[0.68rem] font-semibold tracking-widest uppercase">
+            {t(`settingBand.${band.key}`)}
+          </h3>
+
+          <ul className="grid gap-3 sm:grid-cols-2">
+            {band.groups.map((group) => {
+              const summary = groupSummary(group, t);
+              return (
+                <li key={group}>
+                  <Link
+                    href={`/admin/settings/${group}`}
+                    className="ring-focus card card-pad group flex h-full items-start gap-3 transition-colors hover:border-[var(--primary)]"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="flex items-baseline gap-2">
+                        <span className="font-semibold">{groupTitle(group, t)}</span>
+                        <span className="muted font-mono text-xs tabular-nums">{settingCount(group)}</span>
+                      </span>
+                      {summary && <span className="muted mt-1 block text-sm leading-relaxed">{summary}</span>}
+                    </span>
+                    {/* No nudge on hover: `translate-x` is a physical
+                        direction and would push the arrow backwards on a
+                        right-to-left page. */}
+                    <span className="muted mt-0.5 shrink-0 transition-colors group-hover:text-[var(--primary)]">
+                      <Icon name="arrowRight" size={16} />
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </div>
   );
 }
