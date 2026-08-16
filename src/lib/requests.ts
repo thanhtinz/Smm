@@ -9,6 +9,7 @@ import { requestProviderCancel, requestProviderRefill } from "./providers";
 import { notification, requestKey } from "./notify";
 import { englishMessage, type Fault } from "./fault";
 import { withSettled, recordOrderStep, notStartedYet } from "./orders";
+import { refundOwed } from "./refunds";
 
 /**
  * Refusals here are read three ways at once: shown to an admin, written into
@@ -116,22 +117,27 @@ async function cancelBeforeStart(order: {
     await tx.order.update({ where: { id: fresh.id }, data: withSettled({ status: "canceled" }) });
     await recordOrderStep(tx, fresh, { status: "canceled" }, "customer");
 
+    // notStartedYet already guarantees nothing was sent and nothing refunded,
+    // so this is the full charge — but it is asked rather than assumed, so
+    // every refund in the codebase now comes from one place.
+    const owed = await refundOwed(tx, fresh);
+
     const user = await tx.user.findUniqueOrThrow({
       where: { id: fresh.userId },
       select: { balance: true, spent: true },
     });
-    const balanceAfter = user.balance + fresh.charge;
+    const balanceAfter = user.balance + owed;
 
     await tx.user.update({
       where: { id: fresh.userId },
-      data: { balance: balanceAfter, spent: Math.max(0, user.spent - fresh.charge) },
+      data: { balance: balanceAfter, spent: Math.max(0, user.spent - owed) },
     });
     await tx.transaction.create({
       data: {
         publicId: refundPublicId,
         userId: fresh.userId,
         type: "refund",
-        amount: fresh.charge,
+        amount: owed,
         status: "completed",
         reference: String(fresh.publicId),
         note: `Cancellation of scheduled order #${fresh.publicId}`,
@@ -272,29 +278,44 @@ export async function resolveRequest(
 
     if (!refundsNow) return;
 
-    // Guarded on the order's own status so a second approval cannot pay twice.
     const order = await tx.order.findUniqueOrThrow({ where: { id: request.orderId } });
-    if (order.status === "canceled" || order.status === "refunded") return;
 
-    await tx.order.update({ where: { id: order.id }, data: withSettled({ status: "canceled" }) });
-    await recordOrderStep(tx, order, { status: "canceled" }, "customer");
+    // What is still owed, not the whole charge.
+    //
+    // This used to guard on the order's status being `canceled`/`refunded` and
+    // then hand back `order.charge`. That is the wrong question, and it is the
+    // exact 130% overpayment lib/refunds.ts was written to end — this was the
+    // one refund site left outside it. A cancel request may be raised while an
+    // order is `processing` (see CANCELLABLE), and the provider may report a
+    // partial before an operator gets to it: the partial refunds its share and
+    // leaves the status `partial`, which is not in that guard set, so
+    // approving the cancel paid the full price a second time. A $10 order
+    // refunded $3 on a partial then cancelled put $13 back.
+    const owed = await refundOwed(tx, order);
+
+    const settling = order.status !== "canceled" && order.status !== "refunded";
+    if (settling) {
+      await tx.order.update({ where: { id: order.id }, data: withSettled({ status: "canceled" }) });
+      await recordOrderStep(tx, order, { status: "canceled" }, "customer");
+    }
+    if (owed <= 0) return;
 
     const user = await tx.user.findUniqueOrThrow({
       where: { id: order.userId },
       select: { balance: true, spent: true },
     });
-    const balanceAfter = user.balance + order.charge;
+    const balanceAfter = user.balance + owed;
 
     await tx.user.update({
       where: { id: order.userId },
-      data: { balance: balanceAfter, spent: Math.max(0, user.spent - order.charge) },
+      data: { balance: balanceAfter, spent: Math.max(0, user.spent - owed) },
     });
     await tx.transaction.create({
       data: {
         publicId: refundPublicId,
         userId: order.userId,
         type: "refund",
-        amount: order.charge,
+        amount: owed,
         status: "completed",
         reference: String(order.publicId),
         note: `Cancellation of order #${order.publicId}`,
