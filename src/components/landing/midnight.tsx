@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import { displayMoney } from "@/lib/currency";
-import { ClosingCta, Faqs, PaymentStrip, Quotes, Steps } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, Quotes, Steps, rateLabel } from "./sections";
 import type { LayoutProps } from "./types";
 
 /**
@@ -76,7 +75,7 @@ export default function Midnight(props: LayoutProps) {
 
           {data.from > 0 && (
             <p className="mt-6 text-sm" style={{ color: "var(--muted)" }}>
-              {t("landing.spot.from", { amount: displayMoney(data.from, currency, locale) })}
+              {t("landing.spot.from", rateLabel(data.from, currency, locale, settings, t))}
             </p>
           )}
         </div>
@@ -121,8 +120,12 @@ export default function Midnight(props: LayoutProps) {
                   </p>
                 </div>
               </div>
+              {/* A price with no unit beside it is the reader's guess. */}
               <p className="mt-4 font-mono text-lg font-semibold tabular-nums">
-                {displayMoney(p.from, currency, locale)}
+                {rateLabel(p.from, currency, locale, settings, t).amount}
+                <span className="ml-1.5 font-sans text-xs font-normal" style={{ color: "var(--muted)" }}>
+                  {rateLabel(p.from, currency, locale, settings, t).unit}
+                </span>
               </p>
             </li>
           ))}

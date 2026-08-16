@@ -96,7 +96,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   }
 
   const ctx = await getAppContext();
-  const { theme, locale } = ctx;
+  const { theme, locale, direction } = ctx;
 
   // The home page is drawn for one background — see LANDING_MODE — so it
   // overrules the reader's light/dark preference there and only there. The
@@ -106,7 +106,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const mode = path === "/" ? LANDING_MODE[chosenLayout(ctx.settings)] : ctx.mode;
 
   return (
-    <html lang={locale} className={fontVars} data-theme={theme} data-mode={mode} suppressHydrationWarning>
+    <html
+      lang={locale}
+      dir={direction}
+      className={fontVars}
+      data-theme={theme}
+      data-mode={mode}
+      suppressHydrationWarning
+    >
       <head>
         <ThemeStyles />
       </head>

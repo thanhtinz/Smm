@@ -2,9 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import { displayMoney } from "@/lib/currency";
 import PlatformCluster from "./platform-cluster";
-import { ClosingCta, Faqs, PaymentStrip, Quotes, Steps } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, Quotes, Steps, rateLabel } from "./sections";
 import type { LayoutProps } from "./types";
 import type { IconName } from "@/components/icons";
 
@@ -103,7 +102,7 @@ export default function Showcase(props: LayoutProps) {
 
             {data.from > 0 && (
               <p className="muted mt-5 text-sm">
-                {t("landing.spot.from", { amount: displayMoney(data.from, currency, locale) })}
+                {t("landing.spot.from", rateLabel(data.from, currency, locale, settings, t))}
               </p>
             )}
           </div>

@@ -120,11 +120,17 @@ model User {
   role          String    @default("user") // user | support | admin
   balance       Float     @default(0)
   spent         Float     @default(0)
-  currency      String    @default("VND")
-  locale        String    @default("vi")
-  theme         String    @default("aurora")
-  colorMode     String    @default("dark") // dark | light | system
-  timezone      String    @default("Asia/Ho_Chi_Minh")
+  /// Blank means "has not chosen", which is not the same as a preference that
+  /// happens to match the panel's. Every one of these falls through to the
+  /// panel's setting while it is blank, so an operator changing the default
+  /// language or currency changes it for the accounts that never picked one —
+  /// and leaves alone the accounts that did. Baking "VND" and "vi" in here
+  /// made every new account Vietnamese no matter what the panel was set to.
+  currency      String    @default("")
+  locale        String    @default("")
+  theme         String    @default("")
+  colorMode     String    @default("") // dark | light | system
+  timezone      String    @default("")
   apiKey        String    @unique @default(cuid())
   /// Where to POST when one of this account's orders finishes. Set by the
   /// reseller on their own API page; empty means they poll instead, which is

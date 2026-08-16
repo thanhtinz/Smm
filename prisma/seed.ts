@@ -109,14 +109,43 @@ async function main() {
   const landingVi = landingLocale === "vi";
 
   // --- Languages ----------------------------------------------------------
+  // English is the default and Vietnamese sits beside it as an option; both
+  // ship with a full dictionary, which is what "enabled" has to mean.
+  //
+  // The rest arrive switched off, and that is not caution — a language with
+  // no strings falls through to English, so enabling one would give a reader
+  // an English panel wearing a different name. Admin → Languages lists each
+  // with how many of the keys are translated and opens an editor; the switch
+  // is theirs to throw once that number is not zero. Seeding the rows saves
+  // the operator writing out the code, the native name and the reading
+  // direction for a language they were always going to add.
   const languages = [
-    { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", isDefault: true, position: 0 },
-    { code: "en", name: "English", nativeName: "English", isDefault: false, position: 1 },
+    { code: "en", name: "English", nativeName: "English", isDefault: true, enabled: true, position: 0 },
+    { code: "vi", name: "Vietnamese", nativeName: "Tiếng Việt", isDefault: false, enabled: true, position: 1 },
+    { code: "es", name: "Spanish", nativeName: "Español", isDefault: false, enabled: false, position: 2 },
+    { code: "pt", name: "Portuguese", nativeName: "Português", isDefault: false, enabled: false, position: 3 },
+    { code: "fr", name: "French", nativeName: "Français", isDefault: false, enabled: false, position: 4 },
+    { code: "de", name: "German", nativeName: "Deutsch", isDefault: false, enabled: false, position: 5 },
+    { code: "it", name: "Italian", nativeName: "Italiano", isDefault: false, enabled: false, position: 6 },
+    { code: "ru", name: "Russian", nativeName: "Русский", isDefault: false, enabled: false, position: 7 },
+    { code: "tr", name: "Turkish", nativeName: "Türkçe", isDefault: false, enabled: false, position: 8 },
+    { code: "ar", name: "Arabic", nativeName: "العربية", direction: "rtl", isDefault: false, enabled: false, position: 9 },
+    { code: "ur", name: "Urdu", nativeName: "اردو", direction: "rtl", isDefault: false, enabled: false, position: 10 },
+    { code: "hi", name: "Hindi", nativeName: "हिन्दी", isDefault: false, enabled: false, position: 11 },
+    { code: "bn", name: "Bengali", nativeName: "বাংলা", isDefault: false, enabled: false, position: 12 },
+    { code: "id", name: "Indonesian", nativeName: "Bahasa Indonesia", isDefault: false, enabled: false, position: 13 },
+    { code: "th", name: "Thai", nativeName: "ไทย", isDefault: false, enabled: false, position: 14 },
+    { code: "zh", name: "Chinese", nativeName: "中文", isDefault: false, enabled: false, position: 15 },
+    { code: "ja", name: "Japanese", nativeName: "日本語", isDefault: false, enabled: false, position: 16 },
+    { code: "ko", name: "Korean", nativeName: "한국어", isDefault: false, enabled: false, position: 17 },
   ];
   for (const lang of languages) {
     const row = await db.language.upsert({
       where: { code: lang.code },
       create: lang,
+      // Not `enabled`, and not `isDefault`: an operator who switched a
+      // language on, or made one the default, has said something this file
+      // has no business undoing on the next deploy.
       update: { name: lang.name, nativeName: lang.nativeName },
     });
     const dict = bundledDictionaries[lang.code] ?? {};
@@ -129,16 +158,46 @@ async function main() {
     }
   }
 
-  // --- Currencies (base = VND) --------------------------------------------
+  // --- Currencies (base = USD) --------------------------------------------
+  // `rate` is what one dollar is worth in this currency, and every stored
+  // amount in the panel is in dollars.
+  //
+  // These are starting rates, not live ones — they are as good as the day
+  // this file was written and no better. Admin → Localisation has an
+  // automatic updater (`currency.autoUpdate`) that replaces them from a feed;
+  // an operator who leaves it off is quoting yesterday's prices, which is
+  // fine at these margins and their choice either way. A row edited by hand
+  // clears its own `autoUpdate` and stops being overwritten.
+  //
+  // The set is the markets SMM panels actually sell into. Adding another is
+  // one row in Admin → Currencies; nothing here is a fixed list.
   const currencies = [
-    { code: "VND", name: "Vietnamese Dong", symbol: "₫", symbolBefore: false, decimals: 0, rate: 1, isBase: true, position: 0 },
-    { code: "USD", name: "US Dollar", symbol: "$", symbolBefore: true, decimals: 2, rate: 1 / 25400, isBase: false, position: 1 },
-    { code: "EUR", name: "Euro", symbol: "€", symbolBefore: true, decimals: 2, rate: 1 / 27600, isBase: false, position: 2 },
-    { code: "TRY", name: "Turkish Lira", symbol: "₺", symbolBefore: true, decimals: 2, rate: 1 / 740, isBase: false, position: 3 },
-    { code: "INR", name: "Indian Rupee", symbol: "₹", symbolBefore: true, decimals: 2, rate: 1 / 300, isBase: false, position: 4 },
+    { code: "USD", name: "US Dollar", symbol: "$", symbolBefore: true, decimals: 2, rate: 1, isBase: true, position: 0 },
+    { code: "EUR", name: "Euro", symbol: "€", symbolBefore: true, decimals: 2, rate: 0.92, isBase: false, position: 1 },
+    { code: "GBP", name: "Pound Sterling", symbol: "£", symbolBefore: true, decimals: 2, rate: 0.79, isBase: false, position: 2 },
+    { code: "VND", name: "Vietnamese Dong", symbol: "₫", symbolBefore: false, decimals: 0, rate: 25400, isBase: false, position: 3 },
+    { code: "INR", name: "Indian Rupee", symbol: "₹", symbolBefore: true, decimals: 2, rate: 83.5, isBase: false, position: 4 },
+    { code: "BRL", name: "Brazilian Real", symbol: "R$", symbolBefore: true, decimals: 2, rate: 5.45, isBase: false, position: 5 },
+    { code: "TRY", name: "Turkish Lira", symbol: "₺", symbolBefore: true, decimals: 2, rate: 32.5, isBase: false, position: 6 },
+    { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp", symbolBefore: true, decimals: 0, rate: 15800, isBase: false, position: 7 },
+    { code: "PHP", name: "Philippine Peso", symbol: "₱", symbolBefore: true, decimals: 2, rate: 57.5, isBase: false, position: 8 },
+    { code: "THB", name: "Thai Baht", symbol: "฿", symbolBefore: true, decimals: 2, rate: 36.5, isBase: false, position: 9 },
+    { code: "NGN", name: "Nigerian Naira", symbol: "₦", symbolBefore: true, decimals: 0, rate: 1500, isBase: false, position: 10 },
+    { code: "PKR", name: "Pakistani Rupee", symbol: "₨", symbolBefore: true, decimals: 0, rate: 278, isBase: false, position: 11 },
+    { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", symbolBefore: true, decimals: 0, rate: 117, isBase: false, position: 12 },
+    { code: "RUB", name: "Russian Ruble", symbol: "₽", symbolBefore: false, decimals: 2, rate: 92, isBase: false, position: 13 },
+    { code: "MXN", name: "Mexican Peso", symbol: "MX$", symbolBefore: true, decimals: 2, rate: 17.2, isBase: false, position: 14 },
+    { code: "AED", name: "UAE Dirham", symbol: "د.إ", symbolBefore: false, decimals: 2, rate: 3.67, isBase: false, position: 15 },
   ];
   for (const c of currencies) {
-    await db.currency.upsert({ where: { code: c.code }, create: c, update: { name: c.name, symbol: c.symbol } });
+    await db.currency.upsert({
+      where: { code: c.code },
+      create: c,
+      // Never the rate: a panel that has been running has either updated it
+      // from the feed or pinned it by hand, and both are worth more than the
+      // number frozen into this file.
+      update: { name: c.name, symbol: c.symbol },
+    });
   }
 
   // --- Themes -------------------------------------------------------------
@@ -186,8 +245,8 @@ async function main() {
       password: userPass,
       fullName: "Demo Reseller",
       role: "user",
-      balance: 2_500_000,
-      spent: 1_240_000,
+      balance: 100,
+      spent: 48.5,
       emailVerified: true,
     },
     update: {},
@@ -296,28 +355,32 @@ async function main() {
     });
   }
 
+  // [name, price per 1000, minimum, maximum]. The price is in the base
+  // currency — dollars — and every one of these is a plausible market rate
+  // rather than a real supplier's, because there is no supplier until the
+  // operator connects one.
   const catalogue: Record<string, { category: string; services: [string, number, number, number][] }[]> = {
     instagram: [
       {
         category: "Instagram Followers",
         services: [
-          ["Instagram Followers - Real Mix [30 days refill]", 21000, 100, 100000],
-          ["Instagram Followers - Vietnam Targeted", 38000, 50, 50000],
-          ["Instagram Followers - Instant Start [No refill]", 12000, 100, 200000],
+          ["Instagram Followers - Real Mix [30 days refill]", 0.85, 100, 100000],
+          ["Instagram Followers - Vietnam Targeted", 1.5, 50, 50000],
+          ["Instagram Followers - Instant Start [No refill]", 0.48, 100, 200000],
         ],
       },
       {
         category: "Instagram Likes",
         services: [
-          ["Instagram Likes - Real Accounts", 6500, 20, 50000],
-          ["Instagram Likes - Vietnam Users", 14000, 20, 20000],
+          ["Instagram Likes - Real Accounts", 0.26, 20, 50000],
+          ["Instagram Likes - Vietnam Users", 0.55, 20, 20000],
         ],
       },
       {
         category: "Instagram Views",
         services: [
-          ["Instagram Reels Views - Fast", 900, 100, 10000000],
-          ["Instagram Story Views", 4200, 100, 50000],
+          ["Instagram Reels Views - Fast", 0.04, 100, 10000000],
+          ["Instagram Story Views", 0.17, 100, 50000],
         ],
       },
     ],
@@ -325,15 +388,15 @@ async function main() {
       {
         category: "TikTok Followers",
         services: [
-          ["TikTok Followers - Global Mix", 24000, 100, 100000],
-          ["TikTok Followers - Vietnam Real", 46000, 50, 30000],
+          ["TikTok Followers - Global Mix", 0.95, 100, 100000],
+          ["TikTok Followers - Vietnam Real", 1.8, 50, 30000],
         ],
       },
       {
         category: "TikTok Views & Likes",
         services: [
-          ["TikTok Video Views - Instant", 400, 100, 50000000],
-          ["TikTok Likes - High Quality", 7800, 20, 100000],
+          ["TikTok Video Views - Instant", 0.02, 100, 50000000],
+          ["TikTok Likes - High Quality", 0.31, 20, 100000],
         ],
       },
     ],
@@ -341,34 +404,34 @@ async function main() {
       {
         category: "YouTube Views",
         services: [
-          ["YouTube Views - Non Drop [Ads safe]", 62000, 500, 1000000],
-          ["YouTube Shorts Views", 9000, 500, 5000000],
+          ["YouTube Views - Non Drop [Ads safe]", 2.45, 500, 1000000],
+          ["YouTube Shorts Views", 0.36, 500, 5000000],
         ],
       },
       {
         category: "YouTube Subscribers",
-        services: [["YouTube Subscribers - 60 days refill", 340000, 50, 20000]],
+        services: [["YouTube Subscribers - 60 days refill", 13.4, 50, 20000]],
       },
     ],
     facebook: [
       {
         category: "Facebook Page & Profile",
         services: [
-          ["Facebook Page Likes - Global", 28000, 100, 100000],
-          ["Facebook Profile Followers - Vietnam", 33000, 100, 50000],
+          ["Facebook Page Likes - Global", 1.1, 100, 100000],
+          ["Facebook Profile Followers - Vietnam", 1.3, 100, 50000],
         ],
       },
       {
         category: "Facebook Engagement",
-        services: [["Facebook Post Reactions - Mixed", 15000, 50, 30000]],
+        services: [["Facebook Post Reactions - Mixed", 0.6, 50, 30000]],
       },
     ],
     twitter: [
       {
         category: "X / Twitter Growth",
         services: [
-          ["X Followers - Global", 96000, 100, 50000],
-          ["X Post Likes", 18000, 20, 20000],
+          ["X Followers - Global", 3.8, 100, 50000],
+          ["X Post Likes", 0.7, 20, 20000],
         ],
       },
     ],
@@ -376,15 +439,15 @@ async function main() {
       {
         category: "Telegram Members & Views",
         services: [
-          ["Telegram Channel Members - Real", 32000, 100, 100000],
-          ["Telegram Post Views - Last 5 posts", 1200, 100, 1000000],
+          ["Telegram Channel Members - Real", 1.25, 100, 100000],
+          ["Telegram Post Views - Last 5 posts", 0.05, 100, 1000000],
         ],
       },
     ],
     spotify: [
       {
         category: "Spotify Plays",
-        services: [["Spotify Track Plays - Premium", 27000, 1000, 1000000]],
+        services: [["Spotify Track Plays - Premium", 1.05, 1000, 1000000]],
       },
     ],
   };
@@ -418,7 +481,12 @@ async function main() {
             categoryId: category.id,
             name,
             rate,
-            providerRate: Math.round(rate * 0.62),
+            // A notional cost price, so the margin column has something to
+            // show. Rounded to four places, not to a whole unit: in dollars a
+            // whole unit is the entire price — Math.round would have put the
+            // cost of a $0.85 service at $1 and shown the panel losing money
+            // on every order.
+            providerRate: Math.round(rate * 0.62 * 10000) / 10000,
             min,
             max,
             refill: /refill/i.test(name) && !/no refill/i.test(name),
@@ -460,7 +528,9 @@ async function main() {
       name: inVietnamese ? "SePay — Chuyển khoản ngân hàng" : "SePay — Vietnam bank transfer",
       driver: "seapay",
       icon: "qrcode",
-      description: "Chuyển khoản ngân hàng nội địa, tự động cộng tiền qua webhook SePay.",
+      description: inVietnamese
+        ? "Chuyển khoản ngân hàng nội địa, tự động cộng tiền qua webhook SePay."
+        : "Vietnamese domestic bank transfer, credited automatically by the SePay webhook.",
       enabled: true,
       currencies: JSON.stringify(["VND"]),
       minAmount: 20000,
