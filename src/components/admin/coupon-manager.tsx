@@ -69,11 +69,11 @@ export default function CouponManager({
                 <tr>
                   <th className="w-36">{labels.code}</th>
                   <th className="w-32">{labels.bonus}</th>
-                  <th className="w-32 text-right">{labels.minAmount}</th>
-                  <th className="w-28 text-right">{labels.used}</th>
+                  <th className="w-32 text-end">{labels.minAmount}</th>
+                  <th className="w-28 text-end">{labels.used}</th>
                   <th className="w-32">{labels.expires}</th>
                   <th className="w-28">{labels.status}</th>
-                  <th className="w-24 text-right">{labels.actions}</th>
+                  <th className="w-24 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -87,8 +87,8 @@ export default function CouponManager({
                       </span>
                       {row.firstDepositOnly && <span className="muted mt-0.5 block text-xs">{labels.firstOnly}</span>}
                     </td>
-                    <td className="muted text-right tabular-nums">{row.minAmount ? formatCount(row.minAmount, locale) : "—"}</td>
-                    <td className="text-right tabular-nums">
+                    <td className="muted text-end tabular-nums">{row.minAmount ? formatCount(row.minAmount, locale) : "—"}</td>
+                    <td className="text-end tabular-nums">
                       {row.used}
                       {row.maxUses > 0 ? ` / ${row.maxUses}` : ""}
                     </td>

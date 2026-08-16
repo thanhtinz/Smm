@@ -193,7 +193,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
                 <div className="min-w-0">
                   <p className="text-sm font-medium">
                     {r.type === "refill" ? t("order.refill") : t("order.cancel")}
-                    <span className="muted ml-2 font-mono text-xs">#{r.publicId}</span>
+                    <span className="muted ms-2 font-mono text-xs">#{r.publicId}</span>
                   </p>
                   {/* An operator's note is prose and is shown as written; the
                       panel's own is a key, so it is read in the reader's

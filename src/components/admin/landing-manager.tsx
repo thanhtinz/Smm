@@ -97,7 +97,7 @@ export default function LandingManager({
                     <p className="font-medium">
                       {row.name}
                       {row.role && <span className="muted font-normal"> · {row.role}</span>}
-                      {!row.visible && <span className="badge badge-muted ml-2">{labels.hidden}</span>}
+                      {!row.visible && <span className="badge badge-muted ms-2">{labels.hidden}</span>}
                     </p>
                     <p className="muted mt-1 line-clamp-2 text-sm">{row.body}</p>
                   </div>
@@ -134,7 +134,7 @@ export default function LandingManager({
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">
                       {row.question}
-                      {!row.visible && <span className="badge badge-muted ml-2">{labels.hidden}</span>}
+                      {!row.visible && <span className="badge badge-muted ms-2">{labels.hidden}</span>}
                     </p>
                     <p className="muted mt-1 line-clamp-2 text-sm">{row.answer}</p>
                   </div>

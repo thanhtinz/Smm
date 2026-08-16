@@ -96,7 +96,7 @@ export default async function TransactionsPage({
                     <th className="w-24">{t("order.id")}</th>
                     <th className="w-40">{t("wallet.type")}</th>
                     <th>{t("wallet.method")}</th>
-                    <th className="w-36 text-right">{t("common.amount")}</th>
+                    <th className="w-36 text-end">{t("common.amount")}</th>
                     <th className="w-32">{t("common.status")}</th>
                     <th className="w-36">{t("common.date")}</th>
                   </tr>
@@ -112,7 +112,7 @@ export default async function TransactionsPage({
                         </span>
                       </td>
                       <td className="muted max-w-[18rem] truncate">{r.method?.name ?? r.note ?? "—"}</td>
-                      <td className={`text-right font-semibold tabular-nums ${r.amount < 0 ? "" : "text-[var(--success)]"}`}>
+                      <td className={`text-end font-semibold tabular-nums ${r.amount < 0 ? "" : "text-[var(--success)]"}`}>
                         {r.amount < 0 ? "−" : "+"}
                         {displayMoney(Math.abs(r.amount), currency, locale)}
                       </td>

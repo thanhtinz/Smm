@@ -146,7 +146,7 @@ export default function ServicePicker({
           the panel exists to close orders on. */}
       <div
         ref={box}
-        className="max-h-[26rem] space-y-2 overflow-y-auto pr-1"
+        className="max-h-[26rem] space-y-2 overflow-y-auto pe-1"
         role="radiogroup"
         aria-label={placeholder}
       >

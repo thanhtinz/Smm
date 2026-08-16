@@ -124,7 +124,7 @@ export default function Midnight(props: LayoutProps) {
               {/* A price with no unit beside it is the reader's guess. */}
               <p className="mt-4 font-mono text-lg font-semibold tabular-nums">
                 {rateLabel(p.from, currency, locale, settings, t).amount}
-                <span className="ml-1.5 font-sans text-xs font-normal" style={{ color: "var(--muted)" }}>
+                <span className="ms-1.5 font-sans text-xs font-normal" style={{ color: "var(--muted)" }}>
                   {rateLabel(p.from, currency, locale, settings, t).unit}
                 </span>
               </p>

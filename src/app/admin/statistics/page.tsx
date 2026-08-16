@@ -223,10 +223,10 @@ export default async function AdminStatisticsPage({
                 .map((row) => (
                   <li key={row.status} className="flex items-center gap-3 px-4 py-3 sm:px-5">
                     <StatusBadge status={row.status} label={t(`status.${row.status}`)} />
-                    <span className="muted ml-auto text-xs tabular-nums">
+                    <span className="muted ms-auto text-xs tabular-nums">
                       {orderTotal ? Math.round((row._count._all / orderTotal) * 100) : 0}%
                     </span>
-                    <span className="w-10 text-right font-semibold tabular-nums">{row._count._all}</span>
+                    <span className="w-10 text-end font-semibold tabular-nums">{row._count._all}</span>
                   </li>
                 ))}
             </ul>
@@ -249,7 +249,7 @@ export default async function AdminStatisticsPage({
                       <span className="muted font-mono text-xs">#{service?.publicId}</span>
                     </span>
                     <span className="muted shrink-0 text-xs tabular-nums">{share}%</span>
-                    <span className="shrink-0 text-right font-semibold tabular-nums">{money(row.profit)}</span>
+                    <span className="shrink-0 text-end font-semibold tabular-nums">{money(row.profit)}</span>
                   </li>
                 );
               })}
@@ -272,7 +272,7 @@ export default async function AdminStatisticsPage({
                       <span className="muted font-mono text-xs">#{service?.publicId}</span>
                     </span>
                     <span className="muted shrink-0 text-xs tabular-nums">{row._count._all}</span>
-                    <span className="shrink-0 text-right font-semibold tabular-nums">{money(row._sum.charge ?? 0)}</span>
+                    <span className="shrink-0 text-end font-semibold tabular-nums">{money(row._sum.charge ?? 0)}</span>
                   </li>
                 );
               })}

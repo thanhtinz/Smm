@@ -74,12 +74,12 @@ export default function UserManager({
                 <tr>
                   <th className="w-20">ID</th>
                   <th>{labels.user}</th>
-                  <th className="w-32 text-right">{labels.balance}</th>
-                  <th className="w-32 text-right">{labels.spent}</th>
+                  <th className="w-32 text-end">{labels.balance}</th>
+                  <th className="w-32 text-end">{labels.spent}</th>
                   <th className="w-36">{labels.tier}</th>
                   <th className="w-36">{labels.role}</th>
                   <th className="w-28">{labels.status}</th>
-                  <th className="w-32 text-right">{labels.actions}</th>
+                  <th className="w-32 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -90,8 +90,8 @@ export default function UserManager({
                       <span className="font-medium">{row.username}</span>
                       <span className="muted mt-0.5 block truncate text-xs">{row.email}</span>
                     </td>
-                    <td className="text-right font-semibold tabular-nums">{row.balance}</td>
-                    <td className="muted text-right tabular-nums">{row.spent}</td>
+                    <td className="text-end font-semibold tabular-nums">{row.balance}</td>
+                    <td className="muted text-end tabular-nums">{row.spent}</td>
                     <td>
                       <label htmlFor={`tier-${row.id}`} className="sr-only">
                         {labels.tier}

@@ -161,7 +161,7 @@ export default function ServiceManager({
 
       <div className="flex flex-wrap gap-2">
         <div className="relative min-w-56 flex-1">
-          <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+          <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
             <Icon name="search" size={16} />
           </span>
           <label htmlFor="service-filter" className="sr-only">
@@ -173,7 +173,7 @@ export default function ServiceManager({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={labels.search}
-            className="field pl-11"
+            className="field ps-11"
           />
         </div>
         <label htmlFor="service-platform" className="sr-only">
@@ -208,11 +208,11 @@ export default function ServiceManager({
                 <tr>
                   <th className="w-16">ID</th>
                   <th>{labels.name}</th>
-                  <th className="w-32 text-right">{labels.rate}</th>
-                  <th className="w-32 text-right">{labels.margin}</th>
-                  <th className="w-32 text-right">{labels.limits}</th>
+                  <th className="w-32 text-end">{labels.rate}</th>
+                  <th className="w-32 text-end">{labels.margin}</th>
+                  <th className="w-32 text-end">{labels.limits}</th>
                   <th className="w-28">{labels.status}</th>
-                  <th className="w-24 text-right">{labels.actions}</th>
+                  <th className="w-24 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -233,11 +233,11 @@ export default function ServiceManager({
                         </span>
                         <span className="muted mt-0.5 block text-xs">{category?.name}</span>
                       </td>
-                      <td className="text-right font-semibold tabular-nums">{rate(row.rate)}</td>
-                      <td className="text-right tabular-nums">
+                      <td className="text-end font-semibold tabular-nums">{rate(row.rate)}</td>
+                      <td className="text-end tabular-nums">
                         {margin === null ? <span className="muted">—</span> : `${margin.toFixed(0)}%`}
                       </td>
-                      <td className="muted text-right text-xs tabular-nums">
+                      <td className="muted text-end text-xs tabular-nums">
                         {formatCount(row.min, locale)}–{formatCount(row.max, locale)}
                       </td>
                       <td>

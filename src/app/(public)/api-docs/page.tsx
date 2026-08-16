@@ -225,7 +225,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
       <dt className="muted text-[0.82rem]">{label}</dt>
-      <dd className={`break-all sm:text-right ${mono ? "font-mono text-xs" : "font-medium"}`}>{value}</dd>
+      <dd className={`break-all sm:text-end ${mono ? "font-mono text-xs" : "font-medium"}`}>{value}</dd>
     </div>
   );
 }

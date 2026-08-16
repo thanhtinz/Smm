@@ -80,7 +80,7 @@ export function PlatformStrip({ platforms, label }: { platforms: PlatformLine[];
   return (
     <section className="border-y border-[var(--border)] bg-[var(--surface)]">
       <div className="container-page flex flex-wrap items-center gap-x-3 gap-y-2 py-4">
-        <span className="muted mr-1 text-xs font-semibold tracking-[0.16em] uppercase">{label}</span>
+        <span className="muted me-1 text-xs font-semibold tracking-[0.16em] uppercase">{label}</span>
         {platforms.map((p) => (
           <Link
             key={p.id}
@@ -187,7 +187,7 @@ export function Steps({ t }: Pick<LandingProps, "t">) {
       <ol className="mt-10 grid gap-5 md:grid-cols-3">
         {steps.map((s, i) => (
           <li key={s.title} className="card card-pad relative px-6 py-7">
-            <span className="muted absolute top-5 right-6 font-mono text-3xl font-bold opacity-25">
+            <span className="muted absolute top-5 end-6 font-mono text-3xl font-bold opacity-25">
               {String(i + 1).padStart(2, "0")}
             </span>
             <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[color-mix(in_srgb,var(--primary)_15%,transparent)] text-[var(--primary)]">
@@ -302,7 +302,7 @@ export function PaymentStrip({
   return (
     <section className="container-page py-10">
       <div className="card card-pad flex flex-wrap items-center gap-x-6 gap-y-4 px-6 py-6">
-        <div className="mr-auto">
+        <div className="me-auto">
           <h2 className="font-semibold">{title}</h2>
           <p className="muted mt-1 text-sm">{note}</p>
         </div>

@@ -52,7 +52,7 @@ export default function NotificationList({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">
           {labels.title}
-          {unread > 0 && <span className="badge badge-info ml-2.5 align-middle">{unread}</span>}
+          {unread > 0 && <span className="badge badge-info ms-2.5 align-middle">{unread}</span>}
         </h2>
         <div className="flex gap-2">
           {unread > 0 && (

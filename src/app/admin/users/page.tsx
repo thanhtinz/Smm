@@ -52,13 +52,13 @@ export default async function AdminUsersPage({
 
       <form className="flex flex-wrap gap-2">
         <div className="relative min-w-56 flex-1">
-          <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+          <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
             <Icon name="search" size={16} />
           </span>
           <label htmlFor="q" className="sr-only">
             {t("common.search")}
           </label>
-          <input id="q" name="q" type="search" defaultValue={q} placeholder={t("common.search")} className="field pl-11" />
+          <input id="q" name="q" type="search" defaultValue={q} placeholder={t("common.search")} className="field ps-11" />
         </div>
         <button type="submit" className="btn btn-ghost">
           <Icon name="filter" size={15} />

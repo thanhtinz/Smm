@@ -80,7 +80,7 @@ export default function PanelRequestQueue({
                 <div className="min-w-0">
                   <p className="font-medium">
                     {row.name}
-                    <span className="muted ml-2 font-mono text-xs">#{row.publicId}</span>
+                    <span className="muted ms-2 font-mono text-xs">#{row.publicId}</span>
                   </p>
                   <p className="muted mt-1 text-sm">
                     {row.host} · {row.slug} · {row.owner}

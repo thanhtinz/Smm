@@ -96,8 +96,8 @@ export default async function AffiliatePage() {
               <thead>
                 <tr>
                   <th>{t("auth.username")}</th>
-                  <th className="w-28 text-right">{t("common.amount")}</th>
-                  <th className="w-24 text-right">{t("affiliate.rate")}</th>
+                  <th className="w-28 text-end">{t("common.amount")}</th>
+                  <th className="w-24 text-end">{t("affiliate.rate")}</th>
                   <th className="w-32">{t("common.status")}</th>
                   <th className="w-36">{t("common.date")}</th>
                 </tr>
@@ -106,10 +106,10 @@ export default async function AffiliatePage() {
                 {earnings.map((e) => (
                   <tr key={e.id}>
                     <td>{e.referred.username}</td>
-                    <td className="text-right font-semibold tabular-nums text-[var(--success)]">
+                    <td className="text-end font-semibold tabular-nums text-[var(--success)]">
                       +{displayMoney(e.amount, currency, locale)}
                     </td>
-                    <td className="muted text-right tabular-nums">{e.ratePercent}%</td>
+                    <td className="muted text-end tabular-nums">{e.ratePercent}%</td>
                     <td>
                       <span className={`badge ${e.status === "earned" ? "badge-info" : "badge-muted"}`}>
                         {t(`affiliate.status.${e.status}`)}

@@ -59,7 +59,7 @@ export default function Editorial({ data, t, currency, locale, settings }: Layou
                     .map((c) => c.name)
                     .join(", ")}
                 </span>
-                <span className="ml-auto shrink-0 text-right sm:ml-0">
+                <span className="ms-auto shrink-0 text-end sm:ms-0">
                   <span className="block font-mono text-lg">{displayMoney(p.from, currency, locale)}</span>
                   <span className="muted mt-0.5 block text-[0.68rem]">{t("landing.board.per")}</span>
                 </span>

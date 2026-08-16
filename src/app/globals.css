@@ -263,7 +263,7 @@ body {
     background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%;
     background-size: 5px 5px, 5px 5px;
     background-repeat: no-repeat;
-    padding-right: 2.25rem;
+    padding-inline-end: 2.25rem;
   }
   .label {
     display: block;
@@ -471,4 +471,14 @@ body {
    see DIRECTIONAL there for why it is not every asymmetric shape. */
 [dir="rtl"] svg[data-dir] {
   transform: scaleX(-1);
+}
+
+/* A select's chevron is painted as a background, and a background does not
+   know which way the page reads — so it stayed pinned to the right edge while
+   the padding that makes room for it moved to the left. */
+[dir="rtl"] select.field {
+  /* Mirrored, which means the two halves of the chevron swap places as well
+     as sides — put them back in the wrong order and it draws as two slivers
+     with a gap down the middle. */
+  background-position: 13px 55%, 18px 55%;
 }

@@ -44,7 +44,7 @@ export default function Catalogue(props: LayoutProps) {
                     {t("landing.catalogue.count", { n: p.services })}
                   </p>
                 </div>
-                <span className="shrink-0 text-right">
+                <span className="shrink-0 text-end">
                   <span className="block font-mono text-base font-bold">{rate(p.from).amount}</span>
                   <span className="muted block text-[0.65rem]">{rate(p.from).unit}</span>
                 </span>

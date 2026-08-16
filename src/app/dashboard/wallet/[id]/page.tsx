@@ -197,7 +197,7 @@ function Row({ label, value, strong }: { label: string; value: string; strong?: 
   return (
     <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
       <dt className="muted text-[0.82rem]">{label}</dt>
-      <dd className={`tabular-nums sm:text-right ${strong ? "text-base font-bold" : "font-medium"}`}>{value}</dd>
+      <dd className={`tabular-nums sm:text-end ${strong ? "text-base font-bold" : "font-medium"}`}>{value}</dd>
     </div>
   );
 }

@@ -103,8 +103,8 @@ export default function OrderManager({
                   <th className="w-24">{labels.id}</th>
                   <th className="w-32">{labels.user}</th>
                   <th>{labels.service}</th>
-                  <th className="w-24 text-right">{labels.quantity}</th>
-                  <th className="w-28 text-right">{labels.charge}</th>
+                  <th className="w-24 text-end">{labels.quantity}</th>
+                  <th className="w-28 text-end">{labels.charge}</th>
                   <th className="w-44">{labels.status}</th>
                   <th className="w-32">{labels.date}</th>
                   <th className="w-px" />
@@ -126,8 +126,8 @@ export default function OrderManager({
                         {row.link}
                       </a>
                     </td>
-                    <td className="text-right tabular-nums">{formatCount(row.quantity, locale)}</td>
-                    <td className="text-right tabular-nums">{money[row.id]}</td>
+                    <td className="text-end tabular-nums">{formatCount(row.quantity, locale)}</td>
+                    <td className="text-end tabular-nums">{money[row.id]}</td>
                     <td>
                       {row.status === "held" ? (
                         // A held order gets a decision, not a dropdown: the
@@ -342,7 +342,7 @@ function Row({ label, value, mono }: { label: string; value: string; mono?: bool
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="muted shrink-0 text-xs">{label}</dt>
-      <dd className={`min-w-0 truncate text-right ${mono ? "font-mono text-xs" : ""}`}>{value}</dd>
+      <dd className={`min-w-0 truncate text-end ${mono ? "font-mono text-xs" : ""}`}>{value}</dd>
     </div>
   );
 }

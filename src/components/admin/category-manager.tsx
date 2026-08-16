@@ -110,9 +110,9 @@ export default function CategoryManager({
                 <tr>
                   <th className="w-48">{labels.platform}</th>
                   <th>{labels.name}</th>
-                  <th className="w-28 text-right">{labels.services}</th>
+                  <th className="w-28 text-end">{labels.services}</th>
                   <th className="w-28">{labels.status}</th>
-                  <th className="w-24 text-right">{labels.actions}</th>
+                  <th className="w-24 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -134,7 +134,7 @@ export default function CategoryManager({
                         <span className="font-medium">{row.name}</span>
                         <span className="muted mt-0.5 block truncate font-mono text-xs">/{row.slug}</span>
                       </td>
-                      <td className="text-right tabular-nums">{row.serviceCount}</td>
+                      <td className="text-end tabular-nums">{row.serviceCount}</td>
                       <td>
                         <span className={`badge ${row.visible ? "badge-success" : "badge-muted"}`}>
                           <Icon name={row.visible ? "eye" : "close"} size={11} />

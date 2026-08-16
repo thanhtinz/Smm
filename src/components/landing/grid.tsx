@@ -113,7 +113,7 @@ export default function Grid(props: LayoutProps) {
                 <tr className="muted text-left text-xs tracking-wider uppercase">
                   <th className="px-5 py-3 font-semibold">{t("order.platform")}</th>
                   <th className="px-5 py-3 font-semibold">{t("admin.services")}</th>
-                  <th className="px-5 py-3 text-right font-semibold">{t("landing.grid.from")}</th>
+                  <th className="px-5 py-3 text-end font-semibold">{t("landing.grid.from")}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--border)]">
@@ -126,7 +126,7 @@ export default function Grid(props: LayoutProps) {
                       </span>
                     </td>
                     <td className="muted px-5 py-3.5 tabular-nums">{count.format(p.services)}</td>
-                    <td className="px-5 py-3.5 text-right font-mono font-semibold tabular-nums">
+                    <td className="px-5 py-3.5 text-end font-mono font-semibold tabular-nums">
                       {displayMoney(p.from, currency, locale)}
                     </td>
                   </tr>

@@ -61,7 +61,7 @@ export default function TicketThread({
               </span>
               <span className="text-sm font-semibold">{m.author}</span>
               {m.fromStaff && <span className="badge badge-info">{labels.staff}</span>}
-              <span className="muted ml-auto text-xs">{m.createdAt}</span>
+              <span className="muted ms-auto text-xs">{m.createdAt}</span>
             </div>
             <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap">{m.body}</p>
           </li>
