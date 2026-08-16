@@ -7,6 +7,8 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { getCurrencies, getBaseCurrency } from "@/lib/currency";
 import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
+import { captureOrder } from "@/lib/payments/paypal";
+import { creditDeposit } from "@/lib/payments/credit";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
 import { panelBaseUrl, getCurrentPanel } from "@/lib/tenancy";
 import { readerText } from "@/lib/context";
@@ -100,6 +102,51 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
 
   await logActivity(user.id, "deposit.create", `#${publicId} ${totals.payable} ${currency.code} via ${method.code}`);
   redirect(`/dashboard/wallet/${transaction.id}`);
+}
+
+/**
+ * Takes the money a PayPal payer has just approved.
+ *
+ * PayPal's order is created with `intent: "CAPTURE"`, and approving one moves
+ * nothing — capturing it does. Nothing called capture, so every PayPal deposit
+ * ended with the payer believing they had paid and the panel holding a
+ * `pending` row for ever.
+ *
+ * Called from the payment page when the payer returns, with the order id
+ * PayPal puts in the `token` query parameter. The webhook does the same job
+ * for a payer who never comes back; both end at `creditDeposit`, which is
+ * idempotent, so the two racing is the ordinary case.
+ */
+export async function capturePaypalReturn(transactionId: string, orderId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user || !orderId) return;
+
+  const txn = await db.transaction.findFirst({
+    where: { id: transactionId, userId: user.id, type: "deposit", status: "pending" },
+    include: { method: true },
+  });
+  if (!txn?.method || txn.method.driver !== "paypal") return;
+
+  const config = parseConfig(txn.method.config);
+  const captured = await captureOrder(config, orderId);
+
+  // Already captured means the webhook got here first, and there is nothing
+  // to do — creditDeposit has run or is about to.
+  if (!captured.ok) return;
+
+  // What PayPal took, against what the panel asked for.
+  if (
+    captured.currency.toUpperCase() !== txn.currency.toUpperCase() ||
+    captured.amount + 0.005 < txn.paidAmount
+  ) {
+    await db.transaction.update({
+      where: { id: txn.id },
+      data: { note: `Underpaid: received ${captured.amount} ${captured.currency}, expected ${txn.paidAmount} ${txn.currency}` },
+    });
+    return;
+  }
+
+  await creditDeposit(txn.id, captured.captureId, { automatic: true });
 }
 
 /**

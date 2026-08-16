@@ -4,18 +4,37 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
-import { prepareDeposit, cancelDepositAction } from "@/app/actions/wallet";
+import { prepareDeposit, cancelDepositAction, capturePaypalReturn } from "@/app/actions/wallet";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import CopyField from "@/components/ui/copy-field";
 
 export const metadata: Metadata = { title: "Payment" };
 
-export default async function DepositPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DepositPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
+  const query = await searchParams;
   const ctx = await getAppContext();
   const user = ctx.user!;
   const { t } = ctx;
+
+  // The payer is back from PayPal having approved the order, which moves no
+  // money on its own — capture does, and this is where it happens. Before the
+  // read below, so the page they land on already says "credited" rather than
+  // showing a pending deposit that quietly completes a moment later.
+  //
+  // `token` is PayPal's own name for the order id on the return URL. A payer
+  // who never comes back is covered by the webhook instead.
+  if (query.paypal === "return") {
+    const orderId = typeof query.token === "string" ? query.token : "";
+    if (orderId) await capturePaypalReturn(id, orderId);
+  }
 
   const txn = await db.transaction.findFirst({
     where: { id, userId: user.id, type: "deposit" },
