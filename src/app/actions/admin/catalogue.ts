@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
+import { roundMoney } from "@/lib/money";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { nextPublicId } from "@/lib/ids";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
@@ -365,7 +366,11 @@ export async function massEditRatesAction(
       db.service.update({
         where: { id: service.id },
         data: {
-          rate: mode === "set" ? value : Math.max(0, service.rate * (1 + value / 100)),
+          // To the four places the catalogue keeps rates at — the same
+          // precision provider-sync writes through sellPrice. Left raw, a
+          // percentage shift stored 14.740000000000002, and could push a cheap
+          // service to five places, which is finer than anything that reads it.
+          rate: mode === "set" ? value : Math.max(0, roundMoney(service.rate * (1 + value / 100), 4)),
           // A hand-moved price is a pinned price. Leaving autoPrice on would
           // have the next sync undo the operator's whole afternoon.
           ...(mode === "set" ? { autoPrice: false } : {}),

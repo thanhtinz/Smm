@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireRootAdmin, logActivity } from "@/lib/auth";
-import { dispatchPendingOrders, fetchProviderBalance, syncOrderStatuses } from "@/lib/providers";
+import { dispatchPendingOrders, fetchProviderBalance, providerLabel, syncOrderStatuses } from "@/lib/providers";
 import { syncProviderCatalogue, type SyncReport } from "@/lib/provider-sync";
 import type { ActionResult } from "./catalogue";
 import { readerMessages } from "@/lib/context";
@@ -106,7 +106,7 @@ export async function importProviderServicesAction(id: string): Promise<SyncResu
   await logActivity(
     admin.id,
     "admin.provider.import",
-    `${provider.name}: +${report.created} ~${report.updated} price ${report.repriced}`,
+    `${providerLabel(provider)}: +${report.created} ~${report.updated} price ${report.repriced}`,
   );
   revalidatePath("/admin/providers");
   revalidatePath("/admin/services");
@@ -123,7 +123,7 @@ export async function syncProviderPricesAction(id: string): Promise<SyncResult> 
   const report = await syncProviderCatalogue(provider);
   if (report.fault) return { error: t(report.fault.key, report.fault.vars) };
 
-  await logActivity(admin.id, "admin.provider.sync.prices", `${provider.name}: ${report.repriced} repriced`);
+  await logActivity(admin.id, "admin.provider.sync.prices", `${providerLabel(provider)}: ${report.repriced} repriced`);
   revalidatePath("/admin/providers");
   revalidatePath("/admin/services");
   return { ok: true, message: summarise(report) };

@@ -358,7 +358,9 @@ export async function syncOrderStatuses(limit = 100) {
       group.map((o) => o.providerOrderId)
     );
     if (!result.ok) {
-      failures.push(`${provider.name}: ${result.error}`);
+      // The alias, like the dispatch path above — an operator who renamed a
+      // supplier should not meet its real name on the overview page.
+      failures.push(`${providerLabel(provider)}: ${result.error}`);
       continue;
     }
 
@@ -390,7 +392,9 @@ export async function syncOrderStatuses(limit = 100) {
       } else {
         await db.order.update({ where: { id: order.id }, data: withSettled(data) });
       }
-      await recordOrderStep(db, order, data, provider.name);
+      // Dispatch records the alias (route.providerName); this recorded the
+      // real name, so one order timeline showed a supplier under two names.
+      await recordOrderStep(db, order, data, providerLabel(provider));
       updated += 1;
     }
   }
