@@ -1,3 +1,5 @@
+import { floorMoney } from "./money";
+import { getBaseCurrency } from "./currency";
 import { db } from "@/lib/db";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "./notify";
@@ -283,6 +285,9 @@ export async function dispatchPendingOrders(limit = 25) {
 
 /** Pulls status for orders already sent upstream. */
 export async function syncOrderStatuses(limit = 100) {
+  // A partial refund is a share of the charge, rounded down to the base
+  // currency's smallest unit so the panel never pays back more than it took.
+  const money = (await getBaseCurrency()).decimals;
   const orders = await db.order.findMany({
     where: {
       providerOrderId: { not: "" },
@@ -336,7 +341,7 @@ export async function syncOrderStatuses(limit = 100) {
         status === "canceled" || status === "refunded"
           ? order.charge
           : status === "partial" && Number.isFinite(remains) && remains > 0
-            ? Math.round((order.charge * Math.min(remains, order.quantity)) / order.quantity)
+            ? floorMoney((order.charge * Math.min(remains, order.quantity)) / order.quantity, money)
             : 0;
 
       if (refundable > 0) {

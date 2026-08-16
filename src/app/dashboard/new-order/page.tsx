@@ -152,6 +152,7 @@ export default async function NewOrderPage({
               services={serviceOptions}
               balance={user.balance}
               currency={currency}
+              baseDecimals={ctx.baseCurrency.decimals}
               prefill={prefill}
               scheduleMaxDays={scheduleMaxDays}
               labels={orderFormLabels(t)}
@@ -162,6 +163,7 @@ export default async function NewOrderPage({
               services={serviceOptions}
               balance={user.balance}
               currency={currency}
+              baseDecimals={ctx.baseCurrency.decimals}
               labels={{
                 title: t("order.massTitle"),
                 format: t("order.massFormat"),

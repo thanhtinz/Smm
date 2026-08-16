@@ -237,7 +237,8 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   const rate = await priceService(await resolveTier(user), service);
-  const charge = calculateCharge(rate, totalQuantity);
+  const money = (await getBaseCurrency()).decimals;
+  const charge = calculateCharge(rate, totalQuantity, money);
 
   const guarded = await guardOrder(userId, service.id, link, 1, { username: user.username, charge });
   // The API answers in English whatever the account's own language is: these
@@ -285,7 +286,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           runs: dripfeed ? runs : null,
           interval: dripfeed ? interval : null,
           startAt,
-          cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity),
+          cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity, money),
           ...subscriptionFields(subscription),
         },
       });

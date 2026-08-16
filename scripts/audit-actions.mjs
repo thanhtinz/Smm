@@ -28,7 +28,7 @@ const GUARDS = /\b(requireAdmin|requireRootAdmin|requireStaff|requireUser|getCur
 const PUBLIC = {
   "auth.ts": ["loginAction", "registerAction", "logoutAction", "resendVerificationAction"],
   "password-reset.ts": ["requestPasswordResetAction", "completePasswordResetAction"],
-  "preferences.ts": ["setLocale", "setCurrency", "setTheme", "setTimezone", "setColorMode"],
+  "preferences.ts": ["setLocale", "setCurrency", "setTheme", "setTimezone", "setColorMode", "setDirection"],
   // The challenge is answered by someone who has passed the password but has
   // no session yet, so there is nothing to require.
   "two-factor.ts": ["submitCodeAction", "cancelPendingLoginAction"],

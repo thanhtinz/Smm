@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
+import { getBaseCurrency } from "@/lib/currency";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import {
@@ -172,7 +173,10 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   // The tier price, not the list price — the same number the order form showed.
   const rate = await priceService(await resolveTier(user), service);
-  const charge = calculateCharge(rate, totalQuantity);
+  // Rounded to the base currency's own precision — see roundMoney. On a
+  // dollar panel a bare Math.round here charged whole dollars.
+  const money = (await getBaseCurrency()).decimals;
+  const charge = calculateCharge(rate, totalQuantity, money);
   const minCharge = Number(await getSetting("order.minCharge")) || 0;
   if (charge < minCharge) {
     return { fieldErrors: { quantity: t("err.minCharge", { amount: formatCount(minCharge, locale) }) } };
@@ -231,7 +235,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           startAt,
           // On a child panel the cost is what the panel above charges, which
           // the first hop already worked out.
-          cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity),
+          cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity, money),
           ...subscriptionFields(subscription),
         },
       });
@@ -339,6 +343,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
 
   const rates = await priceServices(await resolveTier(user), services);
   const rateOf = (id: string, fallback: number) => rates.get(id) ?? fallback;
+  const money = (await getBaseCurrency()).decimals;
 
   type Parsed = { line: number; raw: string; service: (typeof services)[number]; link: string; quantity: number; charge: number };
   const parsed: Parsed[] = [];
@@ -384,7 +389,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
       });
       return;
     }
-    parsed.push({ line, raw, service, link, quantity, charge: calculateCharge(rateOf(service.id, service.rate), quantity) });
+    parsed.push({ line, raw, service, link, quantity, charge: calculateCharge(rateOf(service.id, service.rate), quantity, money) });
   });
 
   const throttled = await orderRateLimit(user.id, parsed.length);
@@ -441,7 +446,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
             charge: p.charge,
             remains: p.quantity,
             status: "pending",
-            cost: (plans.get(p.line) ?? [])[0]?.charge ?? orderCost(p.service.providerRate, p.quantity),
+            cost: (plans.get(p.line) ?? [])[0]?.charge ?? orderCost(p.service.providerRate, p.quantity, money),
           },
         });
         await writeUpstream(tx, plans.get(p.line) ?? [], {

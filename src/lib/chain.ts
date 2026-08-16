@@ -5,6 +5,7 @@ import { runAsPanel } from "./tenancy";
 import { nextPublicId } from "./ids";
 import { calculateCharge, orderCost, subscriptionFields, type Subscription } from "./orders";
 import { priceService, resolveTier } from "./pricing";
+import { getBaseCurrency } from "./currency";
 
 /**
  * A child panel sells what its parent sells. When one of its customers orders,
@@ -49,6 +50,9 @@ export async function planUpstream(
   totalQuantity: number,
 ): Promise<ChainPlan> {
   const hops: ChainHop[] = [];
+  // Currencies are shared by every panel in the tree, so the base — and its
+  // precision — is the same at every hop and is read once.
+  const money = (await getBaseCurrency()).decimals;
 
   let current = service;
   for (let hop = 0; hop < MAX_HOPS; hop++) {
@@ -96,7 +100,7 @@ export async function planUpstream(
           serviceId: parentService.id,
           serviceName: parentService.name,
           rate,
-          charge: calculateCharge(rate, totalQuantity),
+          charge: calculateCharge(rate, totalQuantity, money),
           providerRate: parentService.providerRate,
           orderPublicId,
           txPublicId,
@@ -141,6 +145,7 @@ export async function writeUpstream(
   },
 ): Promise<string[]> {
   const created: string[] = [];
+  const money = (await getBaseCurrency()).decimals;
   let downstream = base.downstreamOrderId;
 
   for (const [index, hop] of hops.entries()) {
@@ -169,7 +174,7 @@ export async function writeUpstream(
           interval: base.interval,
           // Each hop is bought from the one above it; the topmost buys from a
           // provider, so its cost comes from the service instead.
-          cost: hops[index + 1]?.charge ?? orderCost(hop.providerRate, base.quantity),
+          cost: hops[index + 1]?.charge ?? orderCost(hop.providerRate, base.quantity, money),
           ...subscriptionFields(base.subscription ?? null),
         },
       });

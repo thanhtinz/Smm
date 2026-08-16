@@ -1,5 +1,7 @@
 import { randomBytes } from "crypto";
 import { db } from "@/lib/db";
+import { floorMoney } from "./money";
+import { getBaseCurrency } from "./currency";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "./notify";
@@ -60,7 +62,10 @@ export async function payReferralCommission(transactionId: string): Promise<numb
   const percent = Number(await getSetting("affiliate.commissionPercent")) || 0;
   if (percent <= 0) return 0;
 
-  const amount = Math.round((txn.amount * percent) / 100);
+  // Down to the base currency's smallest unit: this is money the panel pays
+  // out, so a half-cent goes to the panel, not out of it. Math.round here
+  // paid whole dollars on a dollar panel.
+  const amount = floorMoney((txn.amount * percent) / 100, (await getBaseCurrency()).decimals);
   if (amount <= 0) return 0;
 
   try {

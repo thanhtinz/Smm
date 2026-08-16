@@ -131,6 +131,11 @@ model User {
   theme         String    @default("")
   colorMode     String    @default("") // dark | light | system
   timezone      String    @default("")
+  /// "ltr" | "rtl", or blank to read the language's own direction — which is
+  /// right for almost everyone and is why blank is the default. It is here at
+  /// all because a bilingual reader may want the interface laid out the way
+  /// they read rather than the way the language they picked is written.
+  direction     String    @default("")
   apiKey        String    @unique @default(cuid())
   /// Where to POST when one of this account's orders finishes. Set by the
   /// reseller on their own API page; empty means they poll instead, which is

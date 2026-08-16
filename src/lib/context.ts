@@ -11,6 +11,7 @@ export const CURRENCY_COOKIE = "nova_currency";
 export const THEME_COOKIE = "nova_theme";
 export const MODE_COOKIE = "nova_mode";
 export const TIMEZONE_COOKIE = "nova_tz";
+export const DIRECTION_COOKIE = "nova_dir";
 
 export type AppContext = {
   user: Awaited<ReturnType<typeof getCurrentUser>>;
@@ -21,8 +22,10 @@ export type AppContext = {
   baseCurrency: CurrencyInfo;
   currencies: CurrencyInfo[];
   theme: string;
-  /** "rtl" for Arabic and Urdu, "ltr" for everything else. */
+  /** How the page is laid out: the language's own direction, or the reader's override. */
   direction: "ltr" | "rtl";
+  /** The reader's own override, blank when they follow the language. */
+  directionChoice: string;
   mode: "dark" | "light";
   /** IANA name every date on the page is rendered in. */
   timezone: string;
@@ -121,8 +124,17 @@ export async function getAppContext(): Promise<AppContext> {
   // used it — an operator could add Arabic, set it to rtl, and get a page
   // that still ran left to right. The browser lays out the whole document
   // from this one attribute, so it belongs on <html> or nowhere.
+  //
+  // The language's own direction, unless the reader has overridden it. Blank
+  // is not "ltr" — it means "whatever this language is written in", so a
+  // reader who never touched the control follows Arabic into rtl and back out
+  // again when they switch away.
+  const languageDirection = languages.find((l) => l.code === locale)?.direction === "rtl" ? "rtl" : "ltr";
+  const chosenDirection = allowLocale
+    ? user?.direction || jar.get(DIRECTION_COOKIE)?.value || ""
+    : "";
   const direction: "ltr" | "rtl" =
-    languages.find((l) => l.code === locale)?.direction === "rtl" ? "rtl" : "ltr";
+    chosenDirection === "rtl" ? "rtl" : chosenDirection === "ltr" ? "ltr" : languageDirection;
 
   const allowCurrency = settings["currency.allowUserCurrency"] !== false;
   const currencyCode = allowCurrency
@@ -164,6 +176,7 @@ export async function getAppContext(): Promise<AppContext> {
     currencies,
     theme,
     direction,
+    directionChoice: chosenDirection,
     mode,
     timezone,
     themes: themeRows,

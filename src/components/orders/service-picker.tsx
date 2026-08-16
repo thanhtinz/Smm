@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
+import Combobox from "@/components/ui/combobox";
 
 export type PickerService = {
   id: string;
@@ -18,13 +19,23 @@ export type PickerService = {
 };
 
 /**
- * Which service, as a list of cards rather than a dropdown.
+ * Which service — in one of two shapes, because the question is not the same
+ * one in both places it is asked.
  *
- * A dropdown asks the customer to open it, read, close it, and remember. This
- * market's panels put the choice on the page because the choice *is* the page:
- * the same category holds a cheap one, a fast one and one that does not drop,
- * and the difference between them is what the customer is here to weigh. A
- * closed control hides exactly that.
+ * On a category's own page the choice *is* the page. The customer arrived
+ * already knowing they want Instagram likes; what is left to decide is which
+ * of the cheap one, the fast one and the one that does not drop they want,
+ * and that comparison is the whole reason the page exists. So there: cards,
+ * side by side, with the price and the badges showing.
+ *
+ * On the general order form it is the third step of a cascade — platform,
+ * then category, then this — and the reader has already made two choices from
+ * closed controls. A third one that suddenly unfurls into a wall of cards
+ * shoves the rest of the form off the screen, and the details it shows are
+ * repeated in the summary beside it the moment anything is picked. So there:
+ * a dropdown, matching the two steps above it.
+ *
+ * `shape` says which. Neither is the fallback for the other.
  *
  * They are radios so a keyboard moves through them with the arrow keys for
  * free — but what the form submits is the hidden input beside them, not the
@@ -42,12 +53,18 @@ export default function ServicePicker({
   disabled,
   disabledLabel,
   emptyLabel,
+  shape = "cards",
+  placeholder,
 }: {
   name: string;
   services: PickerService[];
   value: string;
   onChange: (id: string) => void;
   disabled?: boolean;
+  /** "cards" on a category page, "dropdown" in the cascading order form. */
+  shape?: "cards" | "dropdown";
+  /** The unchosen state of the dropdown. Unused by the card shape. */
+  placeholder?: string;
   /** Why there is nothing to choose from yet. */
   disabledLabel: string;
   emptyLabel: string;
@@ -79,6 +96,38 @@ export default function ServicePicker({
   if (disabled || services.length === 0) {
     return (
       <p className="surface-2 muted rounded-xl px-3.5 py-3 text-sm">{disabled ? disabledLabel : emptyLabel}</p>
+    );
+  }
+
+  if (shape === "dropdown") {
+    return (
+      // The same Combobox the platform step uses, so the three steps of the
+      // cascade are one control repeated rather than three different ones. A
+      // native <select> was the first attempt and is wrong here for the
+      // reason the Combobox exists: a real category runs to dozens of
+      // services and a native list cannot be typed at, cannot show the id and
+      // the price in their own columns, and concatenates all three into one
+      // unreadable line.
+      //
+      // Everything the cards would have shown beyond the id, the name and the
+      // price — limits, warranty, start time, the badges — is in the summary
+      // beside the form the moment a service is chosen, so closing the
+      // control loses nothing.
+      <Combobox
+        name={name}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder ?? ""}
+        searchPlaceholder={placeholder ?? ""}
+        emptyLabel={emptyLabel}
+        options={services.map((service) => ({
+          value: service.id,
+          label: service.name,
+          code: String(service.publicId),
+          meta: service.price,
+          keywords: service.tags.map((tag) => tag.label).join(" "),
+        }))}
+      />
     );
   }
 

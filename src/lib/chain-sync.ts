@@ -1,3 +1,5 @@
+import { floorMoney } from "./money";
+import { getBaseCurrency } from "./currency";
 import { db } from "./db";
 import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
@@ -33,6 +35,8 @@ export async function propagateChainStatuses(limit = 200) {
   // Ascending depth means a status reaching the root is carried to the leaf in
   // one pass, instead of one level per cron tick.
   const panels = await basePrisma.panel.findMany({ orderBy: { depth: "asc" } });
+  // Currencies are global, so the base's precision is the same at every hop.
+  const money = (await getBaseCurrency()).decimals;
 
   let updated = 0;
   let refunded = 0;
@@ -63,8 +67,9 @@ export async function propagateChainStatuses(limit = 200) {
         upstream.status === "canceled" || upstream.status === "refunded"
           ? downstream.charge
           : upstream.status === "partial" && upstream.remains > 0
-            ? Math.floor(
+            ? floorMoney(
                 (downstream.charge * Math.min(upstream.remains, downstream.quantity)) / downstream.quantity,
+                money,
               )
             : 0;
 

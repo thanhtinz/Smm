@@ -1,3 +1,6 @@
+import { roundMoney } from "@/lib/money";
+import { getBaseCurrency } from "@/lib/currency";
+
 /**
  * How much of an order's charge is still owed back.
  *
@@ -38,7 +41,8 @@ export async function refundOwed(
   });
 
   // Rounded because a partial refund is a rounded share of the charge, and a
-  // sum of those against an unrounded charge would leave a stray dong owed
-  // for ever.
-  return Math.max(0, Math.round(order.charge - (paid._sum.amount ?? 0)));
+  // sum of those against an unrounded charge would leave a stray unit owed
+  // for ever. To the base currency's precision, not to whole units — on a
+  // dollar panel that rounding was eating the cents of every refund.
+  return Math.max(0, roundMoney(order.charge - (paid._sum.amount ?? 0), (await getBaseCurrency()).decimals));
 }

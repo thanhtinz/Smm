@@ -336,7 +336,19 @@ export const Icons = {
 
 export type IconName = keyof typeof Icons;
 
+/**
+ * The glyphs that point somewhere, rather than the ones that merely have a
+ * shape. An arrow means "onward", and onward is to the left in Arabic and
+ * Urdu — a right-to-left panel with every arrow still aimed right is the
+ * half-finished version of supporting the language at all. Marked here and
+ * mirrored in globals.css, so a component never has to think about it.
+ *
+ * Deliberately not every asymmetric icon: a play triangle, a send arrow and a
+ * logout door keep their handedness in every language.
+ */
+const DIRECTIONAL = new Set<IconName>(["arrowRight", "arrowLeft", "chevronRight", "chevronLeft"]);
+
 export function Icon({ name, ...props }: { name: IconName } & IconProps) {
   const C = Icons[name] ?? Icons.info;
-  return <C {...props} />;
+  return <C {...(DIRECTIONAL.has(name) ? { "data-dir": "" } : {})} {...props} />;
 }
