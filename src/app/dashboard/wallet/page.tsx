@@ -27,6 +27,7 @@ export default async function WalletPage() {
           symbol: c.symbol,
           symbolBefore: c.symbolBefore,
           decimals: c.decimals,
+          numberFormat: c.numberFormat,
         }))}
         presets={presets as Record<string, number[]>}
         locale={ctx.locale}

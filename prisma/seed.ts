@@ -172,22 +172,22 @@ async function main() {
   // The set is the markets SMM panels actually sell into. Adding another is
   // one row in Admin → Currencies; nothing here is a fixed list.
   const currencies = [
-    { code: "USD", name: "US Dollar", symbol: "$", symbolBefore: true, decimals: 2, rate: 1, isBase: true, position: 0 },
-    { code: "EUR", name: "Euro", symbol: "€", symbolBefore: true, decimals: 2, rate: 0.92, isBase: false, position: 1 },
-    { code: "GBP", name: "Pound Sterling", symbol: "£", symbolBefore: true, decimals: 2, rate: 0.79, isBase: false, position: 2 },
-    { code: "VND", name: "Vietnamese Dong", symbol: "₫", symbolBefore: false, decimals: 0, rate: 25400, isBase: false, position: 3 },
-    { code: "INR", name: "Indian Rupee", symbol: "₹", symbolBefore: true, decimals: 2, rate: 83.5, isBase: false, position: 4 },
-    { code: "BRL", name: "Brazilian Real", symbol: "R$", symbolBefore: true, decimals: 2, rate: 5.45, isBase: false, position: 5 },
-    { code: "TRY", name: "Turkish Lira", symbol: "₺", symbolBefore: true, decimals: 2, rate: 32.5, isBase: false, position: 6 },
-    { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp", symbolBefore: true, decimals: 0, rate: 15800, isBase: false, position: 7 },
-    { code: "PHP", name: "Philippine Peso", symbol: "₱", symbolBefore: true, decimals: 2, rate: 57.5, isBase: false, position: 8 },
-    { code: "THB", name: "Thai Baht", symbol: "฿", symbolBefore: true, decimals: 2, rate: 36.5, isBase: false, position: 9 },
-    { code: "NGN", name: "Nigerian Naira", symbol: "₦", symbolBefore: true, decimals: 0, rate: 1500, isBase: false, position: 10 },
-    { code: "PKR", name: "Pakistani Rupee", symbol: "₨", symbolBefore: true, decimals: 0, rate: 278, isBase: false, position: 11 },
-    { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", symbolBefore: true, decimals: 0, rate: 117, isBase: false, position: 12 },
-    { code: "RUB", name: "Russian Ruble", symbol: "₽", symbolBefore: false, decimals: 2, rate: 92, isBase: false, position: 13 },
-    { code: "MXN", name: "Mexican Peso", symbol: "MX$", symbolBefore: true, decimals: 2, rate: 17.2, isBase: false, position: 14 },
-    { code: "AED", name: "UAE Dirham", symbol: "د.إ", symbolBefore: false, decimals: 2, rate: 3.67, isBase: false, position: 15 },
+    { code: "USD", name: "US Dollar", symbol: "$", symbolBefore: true, numberFormat: "comma-dot", decimals: 2, rate: 1, isBase: true, position: 0 },
+    { code: "EUR", name: "Euro", symbol: "€", symbolBefore: true, numberFormat: "dot-comma", decimals: 2, rate: 0.92, isBase: false, position: 1 },
+    { code: "GBP", name: "Pound Sterling", symbol: "£", symbolBefore: true, numberFormat: "comma-dot", decimals: 2, rate: 0.79, isBase: false, position: 2 },
+    { code: "VND", name: "Vietnamese Dong", symbol: "₫", symbolBefore: false, numberFormat: "dot-comma", decimals: 0, rate: 25400, isBase: false, position: 3 },
+    { code: "INR", name: "Indian Rupee", symbol: "₹", symbolBefore: true, numberFormat: "indian", decimals: 2, rate: 83.5, isBase: false, position: 4 },
+    { code: "BRL", name: "Brazilian Real", symbol: "R$", symbolBefore: true, numberFormat: "dot-comma", decimals: 2, rate: 5.45, isBase: false, position: 5 },
+    { code: "TRY", name: "Turkish Lira", symbol: "₺", symbolBefore: true, numberFormat: "dot-comma", decimals: 2, rate: 32.5, isBase: false, position: 6 },
+    { code: "IDR", name: "Indonesian Rupiah", symbol: "Rp", symbolBefore: true, numberFormat: "dot-comma", decimals: 0, rate: 15800, isBase: false, position: 7 },
+    { code: "PHP", name: "Philippine Peso", symbol: "₱", symbolBefore: true, numberFormat: "comma-dot", decimals: 2, rate: 57.5, isBase: false, position: 8 },
+    { code: "THB", name: "Thai Baht", symbol: "฿", symbolBefore: true, numberFormat: "comma-dot", decimals: 2, rate: 36.5, isBase: false, position: 9 },
+    { code: "NGN", name: "Nigerian Naira", symbol: "₦", symbolBefore: true, numberFormat: "comma-dot", decimals: 0, rate: 1500, isBase: false, position: 10 },
+    { code: "PKR", name: "Pakistani Rupee", symbol: "₨", symbolBefore: true, numberFormat: "indian", decimals: 0, rate: 278, isBase: false, position: 11 },
+    { code: "BDT", name: "Bangladeshi Taka", symbol: "৳", symbolBefore: true, numberFormat: "indian", decimals: 0, rate: 117, isBase: false, position: 12 },
+    { code: "RUB", name: "Russian Ruble", symbol: "₽", symbolBefore: false, numberFormat: "space-comma", decimals: 2, rate: 92, isBase: false, position: 13 },
+    { code: "MXN", name: "Mexican Peso", symbol: "MX$", symbolBefore: true, numberFormat: "comma-dot", decimals: 2, rate: 17.2, isBase: false, position: 14 },
+    { code: "AED", name: "UAE Dirham", symbol: "د.إ", symbolBefore: false, numberFormat: "comma-dot", decimals: 2, rate: 3.67, isBase: false, position: 15 },
   ];
   for (const c of currencies) {
     await db.currency.upsert({

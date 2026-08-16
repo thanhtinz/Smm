@@ -1,5 +1,6 @@
 "use client";
 
+import { formatAmount } from "@/lib/money";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
@@ -13,14 +14,11 @@ import type { PickableService, PlatformLine } from "@/lib/landing";
  * browser; the calculator needs the few fields that actually do the
  * formatting and nothing else.
  */
-export type Money = { rate: number; symbol: string; symbolBefore: boolean; decimals: number; locale: string };
+export type Money = { rate: number; symbol: string; symbolBefore: boolean; decimals: number;
+  numberFormat: string; locale: string };
 
 export function money(amountInBase: number, m: Money) {
-  const value = new Intl.NumberFormat(m.locale === "vi" ? "vi-VN" : m.locale, {
-    minimumFractionDigits: m.decimals,
-    maximumFractionDigits: m.decimals,
-  }).format(amountInBase * (m.rate || 1));
-  return m.symbolBefore ? `${m.symbol}${value}` : `${value}${m.symbol}`;
+  return formatAmount(amountInBase * (m.rate || 1), m);
 }
 
 /** Plain counts, grouped the way the reader's language groups them. */

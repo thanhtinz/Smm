@@ -1,5 +1,6 @@
 "use client";
 
+import { formatAmount } from "@/lib/money";
 import { useActionState, useState, useTransition } from "react";
 import { deleteTierAction, saveTierAction, type ActionResult } from "@/app/actions/admin/tiers";
 import { Field, TextInput } from "@/components/ui/field";
@@ -25,19 +26,13 @@ export type MoneyFormat = {
   symbol: string;
   symbolBefore: boolean;
   decimals: number;
+  numberFormat: string;
   rate: number;
   locale: string;
 };
 
 function formatter(money: MoneyFormat) {
-  return (amountInBase: number) => {
-    const value = amountInBase * money.rate;
-    const text = new Intl.NumberFormat(money.locale === "vi" ? "vi-VN" : money.locale, {
-      minimumFractionDigits: money.decimals,
-      maximumFractionDigits: money.decimals,
-    }).format(value);
-    return money.symbolBefore ? `${money.symbol}${text}` : `${text}${money.symbol}`;
-  };
+  return (amountInBase: number) => formatAmount(amountInBase * money.rate, money);
 }
 
 export default function TierManager({

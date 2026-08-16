@@ -42,3 +42,90 @@ export function floorMoney(amount: number, decimals: number): number {
   const settled = Math.round(amount * factor * 1e6) / 1e6;
   return Math.floor(settled) / factor;
 }
+
+/**
+ * The shape formatting needs: everything about how a currency writes a number
+ * and nothing about where it came from. Declared here rather than imported
+ * from lib/currency so this module stays free of the database — the order
+ * form and the wallet form are client components and import it directly.
+ */
+export type MoneyShape = {
+  symbol: string;
+  symbolBefore: boolean;
+  decimals: number;
+  numberFormat: string;
+};
+
+/**
+ * How a currency punctuates its digits.
+ *
+ * This belongs to the currency, not to the reader, and it used to be taken
+ * from the reader's locale — so an English visitor saw the dong as
+ * "1,234,568₫" and a Vietnamese one saw the dollar as "$1.234.567,50". Two of
+ * the four combinations were wrong. A price in dong is written the Vietnamese
+ * way to everybody, the same way $1,234.56 is written that way to everybody;
+ * how many of something you have is what follows the reader, and that stays
+ * with `formatCount` in lib/numbers.ts.
+ *
+ * Offered as five named conventions rather than two boxes to type punctuation
+ * into: an operator picks one by looking at the sample, and cannot set the
+ * group and decimal marks to the same character.
+ */
+export const NUMBER_FORMATS = ["comma-dot", "dot-comma", "space-comma", "indian", "plain"] as const;
+export type NumberFormat = (typeof NUMBER_FORMATS)[number];
+
+const MARKS: Record<NumberFormat, { group: string; decimal: string }> = {
+  "comma-dot": { group: ",", decimal: "." },
+  "dot-comma": { group: ".", decimal: "," },
+  // A non-breaking space, so a price never wraps mid-number.
+  "space-comma": { group: "\u00a0", decimal: "," },
+  indian: { group: ",", decimal: "." },
+  plain: { group: "", decimal: "." },
+};
+
+function marksFor(format: string) {
+  return MARKS[(NUMBER_FORMATS as readonly string[]).includes(format) ? (format as NumberFormat) : "comma-dot"];
+}
+
+/**
+ * Digits, grouped. Threes from the right everywhere except the Indian system,
+ * which groups the last three and then twos — 12,34,568, not 1,234,568.
+ */
+function group(digits: string, format: string): string {
+  const { group: mark } = marksFor(format);
+  if (!mark || digits.length < 4) return digits;
+
+  if (format === "indian") {
+    const last = digits.slice(-3);
+    const rest = digits.slice(0, -3);
+    return `${rest.replace(/\B(?=(\d{2})+(?!\d))/g, mark)}${mark}${last}`;
+  }
+  return digits.replace(/\B(?=(\d{3})+(?!\d))/g, mark);
+}
+
+/**
+ * The digits of one amount, unsigned and without a symbol, written the way its
+ * own currency writes numbers. The sign is the caller's to place, because it
+ * goes outside the symbol — a refund is -$5.00, never $-5.00.
+ */
+export function formatDigits(amount: number, currency: MoneyShape): string {
+  const { decimal } = marksFor(currency.numberFormat);
+  const fixed = Math.abs(amount).toFixed(Math.max(0, Math.min(8, currency.decimals)));
+  const [whole, fraction] = fixed.split(".");
+  const grouped = group(whole, currency.numberFormat);
+  return fraction ? `${grouped}${decimal}${fraction}` : grouped;
+}
+
+/**
+ * An amount with its symbol, written the way its own currency writes numbers.
+ *
+ * `locale` is not a parameter and that is the point: punctuation belongs to
+ * the currency. How many of something you have follows the reader instead —
+ * that is `formatCount` in lib/numbers.ts.
+ */
+export function formatAmount(amount: number, currency: MoneyShape): string {
+  const value = formatDigits(amount, currency);
+  const body = currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+  // Outside the symbol: a refund reads -$5.00, not $-5.00.
+  return amount < 0 ? `-${body}` : body;
+}

@@ -21,6 +21,7 @@ export default function OrderFirst(props: LayoutProps) {
     symbol: currency.symbol,
     symbolBefore: currency.symbolBefore,
     decimals: currency.decimals,
+    numberFormat: currency.numberFormat,
     locale,
   };
 

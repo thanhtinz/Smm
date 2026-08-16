@@ -1,5 +1,6 @@
 "use client";
 
+import { formatAmount } from "@/lib/money";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { deleteServiceAction, saveServiceAction, toggleServiceAction, type ActionResult } from "@/app/actions/admin/catalogue";
 import { Field, TextInput } from "@/components/ui/field";
@@ -79,7 +80,7 @@ export default function ServiceManager({
   sourceServices: SourceOption[];
   tiers: TierPriceOption[];
   isChild: boolean;
-  currency: { symbol: string; symbolBefore: boolean; decimals: number; rate: number; locale: string };
+  currency: { symbol: string; symbolBefore: boolean; decimals: number; numberFormat: string; rate: number; locale: string };
   labels: Record<string, string>;
   /** The supplier list has its own words: several names collide. */
   routeLabels: Record<string, string>;
@@ -96,13 +97,7 @@ export default function ServiceManager({
     setCreating(false);
   };
 
-  const fmt = (base: number) => {
-    const text = new Intl.NumberFormat(currency.locale === "vi" ? "vi-VN" : currency.locale, {
-      minimumFractionDigits: currency.decimals,
-      maximumFractionDigits: currency.decimals,
-    }).format(base * currency.rate);
-    return currency.symbolBefore ? `${currency.symbol}${text}` : `${text}${currency.symbol}`;
-  };
+  const fmt = (base: number) => formatAmount(base * currency.rate, currency);
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const platformById = useMemo(() => new Map(platforms.map((p) => [p.id, p])), [platforms]);

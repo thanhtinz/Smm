@@ -85,6 +85,11 @@ model Currency {
   symbol       String
   symbolBefore Boolean  @default(true)
   decimals     Int      @default(2)
+  /// How the digits are punctuated: comma-dot, dot-comma, space-comma, indian
+  /// or plain. It belongs to the currency and not to the reader — 2.500₫ is
+  /// 2.500₫ to everybody, the same way $1,234.56 is $1,234.56 to everybody —
+  /// which is why this is a column and not a locale lookup.
+  numberFormat String   @default("comma-dot")
   rate         Float    @default(1) // value of 1 base currency in this currency
   enabled      Boolean  @default(true)
   isBase       Boolean  @default(false)

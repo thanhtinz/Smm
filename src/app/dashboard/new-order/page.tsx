@@ -113,6 +113,7 @@ export default async function NewOrderPage({
     symbol: ctx.currency.symbol,
     symbolBefore: ctx.currency.symbolBefore,
     decimals: ctx.currency.decimals,
+    numberFormat: ctx.currency.numberFormat,
     rate: ctx.currency.rate,
     locale: ctx.locale,
   };

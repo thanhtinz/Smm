@@ -1,5 +1,6 @@
 "use client";
 
+import { formatAmount } from "@/lib/money";
 import { roundMoney } from "@/lib/money";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
@@ -143,16 +144,13 @@ export type Currency = {
   symbol: string;
   symbolBefore: boolean;
   decimals: number;
+  numberFormat: string;
   rate: number;
   locale: string;
 };
 
 export function formatCurrency(base: number, currency: Currency) {
-  const value = new Intl.NumberFormat(currency.locale === "vi" ? "vi-VN" : currency.locale, {
-    minimumFractionDigits: currency.decimals,
-    maximumFractionDigits: currency.decimals,
-  }).format(base * currency.rate);
-  return currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+  return formatAmount(base * currency.rate, currency);
 }
 
 export default function NewOrderForm({
