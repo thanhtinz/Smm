@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { twoFactorRequired, STAFF_ROLES } from "@/lib/two-factor";
 import { PATHNAME_HEADER } from "@/lib/panel-host";
 import { nextQuery } from "@/lib/next-path";
+import { groupTitle, settingGroups } from "@/lib/setting-groups";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const panel = await guardPanel();
@@ -61,7 +62,17 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ] as NavItem[])
       : []),
     ...(childPanelsOn ? [{ href: "/admin/panels", label: t("panel.title"), icon: "layers" } as NavItem] : []),
-    { href: "/admin/settings", label: t("admin.settings"), icon: "settings" },
+    {
+      href: "/admin/settings",
+      label: t("admin.settings"),
+      icon: "settings",
+      // A section per page, listed here rather than as tabs inside the page:
+      // the sidebar is this panel's one navigation and the sections are pages.
+      children: settingGroups().map((group) => ({
+        href: `/admin/settings/${group}`,
+        label: groupTitle(group, t),
+      })),
+    },
   ];
 
   // Support only reaches the desk, so it is the only thing they are offered.

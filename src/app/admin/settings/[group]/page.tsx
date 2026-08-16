@@ -17,9 +17,9 @@ export async function generateMetadata({ params }: { params: Promise<{ group: st
 /**
  * One section of the settings.
  *
- * The other sections stay in view as a row of links: an operator changing the
- * base currency often wants the language beside it, and making that two clicks
- * through the index would have traded one kind of tedium for another.
+ * The other sections are in the sidebar, under Settings, which is where a page
+ * belongs — a row of tabs inside the page would have been a second navigation
+ * for the same thing. So this is the section and nothing else.
  */
 export default async function AdminSettingGroupPage({ params }: { params: Promise<{ group: string }> }) {
   const { group } = await params;
@@ -42,23 +42,6 @@ export default async function AdminSettingGroupPage({ params }: { params: Promis
         <h2 className="mt-2 text-2xl font-bold tracking-tight">{groupTitle(group, t)}</h2>
         {summary && <p className="muted mt-1 text-sm leading-relaxed">{summary}</p>}
       </div>
-
-      <nav aria-label={t("admin.settings")} className="flex flex-wrap gap-1.5">
-        {groups.map((other) => (
-          <Link
-            key={other}
-            href={`/admin/settings/${other}`}
-            aria-current={other === group ? "page" : undefined}
-            className={`ring-focus rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
-              other === group
-                ? "bg-[color-mix(in_srgb,var(--primary)_16%,transparent)] font-semibold text-[var(--primary)]"
-                : "muted hover:text-[var(--text)]"
-            }`}
-          >
-            {groupTitle(other, t)}
-          </Link>
-        ))}
-      </nav>
 
       <SettingsForm
         group={group}
