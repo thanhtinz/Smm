@@ -9,7 +9,9 @@ export const metadata: Metadata = { title: "Pages" };
 export default async function AdminPagesPage() {
   const { t, locale, timezone } = await getAppContext();
   const dates = dateFormats(locale, timezone);
-  const rows = await db.page.findMany({ orderBy: [{ position: "asc" }, { title: "asc" }] });
+  const rows = await db.page.findMany({
+    orderBy: [{ position: "asc" }, { title: "asc" }],
+  });
 
   return (
     <div className="mx-auto max-w-4xl space-y-5">
@@ -41,6 +43,21 @@ export default async function AdminPagesPage() {
           delete: t("admin.delete"),
           confirmDelete: t("admin.confirmDelete"),
           save: t("common.save"),
+        }}
+        editor={{
+          bold: t("editor.bold"),
+          italic: t("editor.italic"),
+          underline: t("editor.underline"),
+          strike: t("editor.strike"),
+          h2: t("editor.h2"),
+          h3: t("editor.h3"),
+          bullets: t("editor.bullets"),
+          numbers: t("editor.numbers"),
+          quote: t("editor.quote"),
+          link: t("editor.link"),
+          unlink: t("editor.unlink"),
+          clear: t("editor.clear"),
+          linkPrompt: t("editor.linkPrompt"),
         }}
       />
     </div>

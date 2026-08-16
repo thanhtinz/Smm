@@ -13,7 +13,9 @@ export default async function AdminBlogPage() {
   // Newest first, drafts among them: a draft is a post that has not gone out
   // yet, not a different kind of thing, and burying them under the published
   // ones is how one sits unfinished for a month.
-  const rows = await db.blogPost.findMany({ orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }] });
+  const rows = await db.blogPost.findMany({
+    orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+  });
   const now = new Date();
 
   return (
@@ -30,7 +32,9 @@ export default async function AdminBlogPage() {
           author: p.author,
           metaTitle: p.metaTitle,
           metaDescription: p.metaDescription,
-          publishedAt: p.publishedAt ? formatLocalInput(p.publishedAt, timezone) : "",
+          publishedAt: p.publishedAt
+            ? formatLocalInput(p.publishedAt, timezone)
+            : "",
           live: p.publishedAt !== null && p.publishedAt <= now,
           scheduled: p.publishedAt !== null && p.publishedAt > now,
           publishedLabel: p.publishedAt ? dates.stamp(p.publishedAt) : "",
@@ -71,6 +75,21 @@ export default async function AdminBlogPage() {
           publishedAtHint: t("blog.publishedAtHint"),
           save: t("common.save"),
           cancel: t("common.cancel"),
+        }}
+        editor={{
+          bold: t("editor.bold"),
+          italic: t("editor.italic"),
+          underline: t("editor.underline"),
+          strike: t("editor.strike"),
+          h2: t("editor.h2"),
+          h3: t("editor.h3"),
+          bullets: t("editor.bullets"),
+          numbers: t("editor.numbers"),
+          quote: t("editor.quote"),
+          link: t("editor.link"),
+          unlink: t("editor.unlink"),
+          clear: t("editor.clear"),
+          linkPrompt: t("editor.linkPrompt"),
         }}
       />
     </div>

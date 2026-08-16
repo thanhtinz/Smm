@@ -8,6 +8,7 @@ import { getSetting } from "@/lib/settings";
 import { parseLocalTime } from "@/lib/dates";
 import { pingIndexNow } from "@/lib/seo";
 import { checkCallbackUrl } from "@/lib/callbacks";
+import { sanitiseRichText } from "@/lib/rich-text";
 import type { ActionResult } from "./catalogue";
 
 export type { ActionResult };
@@ -86,9 +87,10 @@ export async function saveBlogPostAction(_prev: ActionResult, form: FormData): P
     slug,
     title,
     excerpt: String(form.get("excerpt") ?? "").trim(),
-    // HTML written by the panel's own admin, the same author as every other
-    // string on the site — there is no untrusted author here.
-    body: String(form.get("body") ?? "").trim(),
+    // Narrowed to the tags that make an article. The editor in admin produces
+    // this shape already; the filter is here because a server action takes
+    // whatever is POSTed to it, browser or not.
+    body: sanitiseRichText(String(form.get("body") ?? "")),
     coverUrl,
     tags: String(form.get("tags") ?? "").trim(),
     author: String(form.get("author") ?? "").trim(),

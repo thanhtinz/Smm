@@ -6,6 +6,7 @@ import { requireAdmin, logActivity } from "@/lib/auth";
 import type { ActionResult } from "./catalogue";
 import { readerMessages } from "@/lib/context";
 import { pingIndexNow } from "@/lib/seo";
+import { sanitiseRichText } from "@/lib/rich-text";
 
 export type { ActionResult };
 
@@ -45,7 +46,8 @@ export async function savePageAction(_prev: ActionResult, form: FormData): Promi
     title,
     // Written as HTML by the panel's own admin, who is also the only author of
     // every other string on the site — there is no untrusted author here.
-    body: String(form.get("body") ?? "").trim(),
+    // Same filter as a blog post, and for the same reason.
+    body: sanitiseRichText(String(form.get("body") ?? "")),
     published: form.get("published") === "on",
     showInFooter: form.get("showInFooter") === "on",
     position: Number(String(form.get("position") ?? "0")) || 0,

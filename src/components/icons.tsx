@@ -266,6 +266,18 @@ export const Icons = {
   ),
   rocket: path("M5 15c-1.5 1.5-2 6-2 6s4.5-.5 6-2c.8-.8.8-2.2 0-3s-2.2-.8-4-1z|M9 13c-2-3 .5-9 7-11 2 6.5-2 10-5 12z|M14.5 8.5h.01"),
   link: path("M9.5 14.5a4 4 0 0 0 5.7 0l3-3a4 4 0 1 0-5.7-5.7l-1 1|M14.5 9.5a4 4 0 0 0-5.7 0l-3 3a4 4 0 1 0 5.7 5.7l1-1"),
+
+  // --- Writing ----------------------------------------------------------
+  // The toolbar of the rich editor. Drawn rather than lettered: a "B" and an
+  // "I" are letters in one alphabet, and this panel is read in several.
+  bold: path("M7 5h6.5a3.5 3.5 0 0 1 0 7H7z|M7 12h7.5a3.5 3.5 0 0 1 0 7H7z"),
+  italic: path("M15 5h-5|M14 19H9|M14.5 5 10 19"),
+  underline: path("M7 4v6a5 5 0 0 0 10 0V4|M5.5 20h13"),
+  strikethrough: path("M4 12h16|M8.5 8a3.5 3.5 0 0 1 3.5-3h1.5a3.4 3.4 0 0 1 3.3 2.4|M15.5 16a3.5 3.5 0 0 1-3.5 3h-1.5a3.4 3.4 0 0 1-3.3-2.4"),
+  heading: path("M6 5v14|M18 5v14|M6 12h12"),
+  listOrdered: path("M10 6h11|M10 12h11|M10 18h11|M4 6h1v4|M3.5 10h2.5|M3.5 15.5a1.2 1.2 0 0 1 2 .8c0 .9-2 1.4-2 2.7H6"),
+  quote: path("M9 7c-2.5 0-4 1.8-4 4v6h5v-6H7c0-1.4.8-2 2-2z|M19 7c-2.5 0-4 1.8-4 4v6h5v-6h-3c0-1.4.8-2 2-2z"),
+  unlink: path("M9.5 14.5a4 4 0 0 0 5.7 0l1-1|M14.5 9.5a4 4 0 0 0-5.7 0l-1 1|M4 4l16 16"),
   bitcoin: path("M9 4v16|M13 4v16|M6.5 8H15a3 3 0 0 1 0 6H6.5|M6.5 14H15.5a3 3 0 0 1 0 6H6.5|M6.5 8V20"),
   play: path("M6 4.5v15l13-7.5z"),
   pause: path("M9.5 5v14|M14.5 5v14"),

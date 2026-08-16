@@ -11,6 +11,9 @@ import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import { Icon } from "@/components/icons";
+import RichEditor, {
+  type RichEditorLabels,
+} from "@/components/admin/rich-editor";
 
 export type PageRow = {
   id: string;
@@ -23,7 +26,15 @@ export type PageRow = {
   updatedAt: string;
 };
 
-export default function PageManager({ rows, labels }: { rows: PageRow[]; labels: Record<string, string> }) {
+export default function PageManager({
+  rows,
+  labels,
+  editor,
+}: {
+  rows: PageRow[];
+  labels: Record<string, string>;
+  editor: RichEditorLabels;
+}) {
   const [editing, setEditing] = useState<PageRow | null>(null);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -41,7 +52,11 @@ export default function PageManager({ rows, labels }: { rows: PageRow[]; labels:
     <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
-        <button type="button" onClick={() => setCreating(true)} className="btn btn-primary btn-sm">
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="btn btn-primary btn-sm"
+        >
           <Icon name="plus" size={15} />
           {labels.new}
         </button>
@@ -60,10 +75,15 @@ export default function PageManager({ rows, labels }: { rows: PageRow[]; labels:
         ) : (
           <ul className="divide-y divide-[var(--border)]">
             {rows.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-start gap-3 p-4 sm:px-5">
+              <li
+                key={row.id}
+                className="flex flex-wrap items-start gap-3 p-4 sm:px-5"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{row.title}</p>
-                  <p className="muted mt-0.5 font-mono text-xs">/p/{row.slug}</p>
+                  <p className="muted mt-0.5 font-mono text-xs">
+                    /p/{row.slug}
+                  </p>
                   <p className="muted mt-1 text-xs">
                     {row.updatedAt}
                     {row.showInFooter ? ` · ${labels.footer}` : ""}
@@ -75,7 +95,11 @@ export default function PageManager({ rows, labels }: { rows: PageRow[]; labels:
                       type="checkbox"
                       checked={row.published}
                       disabled={pending}
-                      onChange={(e) => run(() => setPagePublishedAction(row.id, e.target.checked))}
+                      onChange={(e) =>
+                        run(() =>
+                          setPagePublishedAction(row.id, e.target.checked),
+                        )
+                      }
                       className="h-4 w-4 accent-[var(--primary)]"
                     />
                     {row.published ? labels.published : labels.hidden}
@@ -101,7 +125,8 @@ export default function PageManager({ rows, labels }: { rows: PageRow[]; labels:
                     type="button"
                     disabled={pending}
                     onClick={() => {
-                      if (confirm(labels.confirmDelete)) run(() => deletePageAction(row.id));
+                      if (confirm(labels.confirmDelete))
+                        run(() => deletePageAction(row.id));
                     }}
                     className="btn btn-danger btn-sm"
                     aria-label={`${labels.delete} ${row.title}`}
@@ -119,6 +144,7 @@ export default function PageManager({ rows, labels }: { rows: PageRow[]; labels:
         <PageDrawer
           row={editing}
           labels={labels}
+          editor={editor}
           onClose={() => {
             setEditing(null);
             setCreating(false);
@@ -132,19 +158,29 @@ export default function PageManager({ rows, labels }: { rows: PageRow[]; labels:
 function PageDrawer({
   row,
   labels,
+  editor,
   onClose,
 }: {
   row: PageRow | null;
   labels: Record<string, string>;
+  editor: RichEditorLabels;
   onClose: () => void;
 }) {
-  const [state, action] = useActionState<ActionResult, FormData>(savePageAction, {});
+  const [state, action] = useActionState<ActionResult, FormData>(
+    savePageAction,
+    {},
+  );
   useEffect(() => {
     if (state.ok) onClose();
   }, [state.ok, onClose]);
 
   return (
-    <EntityDrawer closeLabel={labels.close} open title={row ? labels.edit : labels.new} onClose={onClose}>
+    <EntityDrawer
+      closeLabel={labels.close}
+      open
+      title={row ? labels.edit : labels.new}
+      onClose={onClose}
+    >
       <form action={action} className="space-y-4">
         {state.error && (
           <div className="alert alert-danger" role="alert">
@@ -155,26 +191,46 @@ function PageDrawer({
 
         <input type="hidden" name="id" value={row?.id ?? ""} />
 
-        <Field name="title" label={labels.heading} error={state.fieldErrors?.title} required>
-          <TextInput name="title" defaultValue={row?.title ?? ""} error={state.fieldErrors?.title} />
-        </Field>
-
-        <Field name="slug" label={labels.address} error={state.fieldErrors?.slug}>
-          <TextInput name="slug" defaultValue={row?.slug ?? ""} error={state.fieldErrors?.slug} />
-        </Field>
-
-        <Field name="body" label={labels.content}>
-          <textarea
-            id="body"
-            name="body"
-            rows={14}
-            className="field font-mono text-xs"
-            defaultValue={row?.body ?? ""}
+        <Field
+          name="title"
+          label={labels.heading}
+          error={state.fieldErrors?.title}
+          required
+        >
+          <TextInput
+            name="title"
+            defaultValue={row?.title ?? ""}
+            error={state.fieldErrors?.title}
           />
         </Field>
 
+        <Field
+          name="slug"
+          label={labels.address}
+          error={state.fieldErrors?.slug}
+        >
+          <TextInput
+            name="slug"
+            defaultValue={row?.slug ?? ""}
+            error={state.fieldErrors?.slug}
+          />
+        </Field>
+
+        <div>
+          <label className="label">{labels.content}</label>
+          <RichEditor
+            name="body"
+            defaultValue={row?.body ?? ""}
+            labels={editor}
+          />
+        </div>
+
         <Field name="position" label={labels.position}>
-          <TextInput name="position" type="number" defaultValue={String(row?.position ?? 0)} />
+          <TextInput
+            name="position"
+            type="number"
+            defaultValue={String(row?.position ?? 0)}
+          />
         </Field>
 
         <label className="flex cursor-pointer items-center gap-2.5 text-sm">

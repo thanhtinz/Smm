@@ -12,6 +12,9 @@ import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
 import ImageUpload from "@/components/admin/image-upload";
 import { Icon } from "@/components/icons";
+import RichEditor, {
+  type RichEditorLabels,
+} from "@/components/admin/rich-editor";
 
 export type BlogPostRow = {
   id: string;
@@ -36,9 +39,11 @@ export type BlogPostRow = {
 export default function BlogManager({
   rows,
   labels,
+  editor,
 }: {
   rows: BlogPostRow[];
   labels: Record<string, string>;
+  editor: RichEditorLabels;
 }) {
   const [editing, setEditing] = useState<BlogPostRow | null>(null);
   const [creating, setCreating] = useState(false);
@@ -65,7 +70,11 @@ export default function BlogManager({
           <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
           <p className="muted text-sm">{labels.hint}</p>
         </div>
-        <button type="button" onClick={() => setCreating(true)} className="btn btn-primary btn-sm">
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="btn btn-primary btn-sm"
+        >
           <Icon name="plus" size={15} />
           {labels.new}
         </button>
@@ -84,10 +93,15 @@ export default function BlogManager({
         ) : (
           <ul className="divide-y divide-[var(--border)]">
             {rows.map((row) => (
-              <li key={row.id} className="flex flex-wrap items-start gap-3 p-4 sm:px-5">
+              <li
+                key={row.id}
+                className="flex flex-wrap items-start gap-3 p-4 sm:px-5"
+              >
                 <div className="min-w-0 flex-1">
                   <p className="font-medium">{row.title}</p>
-                  <p className="muted mt-0.5 line-clamp-2 text-sm">{row.excerpt}</p>
+                  <p className="muted mt-0.5 line-clamp-2 text-sm">
+                    {row.excerpt}
+                  </p>
                   <p className="muted mt-1 flex flex-wrap items-center gap-2 text-xs">
                     <span className="font-mono">/blog/{row.slug}</span>
                     {/* Three states, not two: a post dated for next week is
@@ -95,7 +109,11 @@ export default function BlogManager({
                     <span
                       className={`badge ${row.live ? "badge-success" : row.scheduled ? "badge-info" : "badge-muted"}`}
                     >
-                      {row.live ? labels.live : row.scheduled ? labels.scheduled : labels.draft}
+                      {row.live
+                        ? labels.live
+                        : row.scheduled
+                          ? labels.scheduled
+                          : labels.draft}
                     </span>
                     {row.publishedLabel && <span>{row.publishedLabel}</span>}
                   </p>
@@ -104,7 +122,11 @@ export default function BlogManager({
                   <button
                     type="button"
                     disabled={pending}
-                    onClick={() => run(() => setBlogPostPublishedAction(row.id, !row.publishedAt))}
+                    onClick={() =>
+                      run(() =>
+                        setBlogPostPublishedAction(row.id, !row.publishedAt),
+                      )
+                    }
                     className="btn btn-ghost btn-sm"
                   >
                     <Icon name={row.publishedAt ? "eye" : "send"} size={14} />
@@ -122,7 +144,8 @@ export default function BlogManager({
                     type="button"
                     disabled={pending}
                     onClick={() => {
-                      if (confirm(labels.confirmDelete)) run(() => deleteBlogPostAction(row.id));
+                      if (confirm(labels.confirmDelete))
+                        run(() => deleteBlogPostAction(row.id));
                     }}
                     className="btn btn-danger btn-sm"
                     aria-label={`${labels.delete} ${row.title}`}
@@ -142,7 +165,13 @@ export default function BlogManager({
         title={editing ? `${labels.edit} — ${editing.title}` : labels.new}
         onClose={close}
       >
-        <PostForm key={editing?.id ?? "new"} row={editing} labels={labels} onDone={close} />
+        <PostForm
+          key={editing?.id ?? "new"}
+          row={editing}
+          labels={labels}
+          editor={editor}
+          onDone={close}
+        />
       </EntityDrawer>
     </>
   );
@@ -151,17 +180,22 @@ export default function BlogManager({
 function PostForm({
   row,
   labels,
+  editor,
   onDone,
 }: {
   row: BlogPostRow | null;
   labels: Record<string, string>;
+  editor: RichEditorLabels;
   onDone: () => void;
 }) {
-  const [state, action] = useActionState<ActionResult, FormData>(async (prev, form) => {
-    const result = await saveBlogPostAction(prev, form);
-    if (result.ok) onDone();
-    return result;
-  }, {});
+  const [state, action] = useActionState<ActionResult, FormData>(
+    async (prev, form) => {
+      const result = await saveBlogPostAction(prev, form);
+      if (result.ok) onDone();
+      return result;
+    },
+    {},
+  );
 
   return (
     <form action={action} className="space-y-4" noValidate>
@@ -174,28 +208,54 @@ function PostForm({
         </div>
       )}
 
-      <Field name="title" label={labels.postTitle} error={state.fieldErrors?.title} required>
-        <TextInput name="title" defaultValue={row?.title} error={state.fieldErrors?.title} />
+      <Field
+        name="title"
+        label={labels.postTitle}
+        error={state.fieldErrors?.title}
+        required
+      >
+        <TextInput
+          name="title"
+          defaultValue={row?.title}
+          error={state.fieldErrors?.title}
+        />
       </Field>
 
-      <Field name="slug" label={labels.slug} error={state.fieldErrors?.slug} hint={labels.slugHint}>
-        <TextInput name="slug" defaultValue={row?.slug} error={state.fieldErrors?.slug} hint={labels.slugHint} />
+      <Field
+        name="slug"
+        label={labels.slug}
+        error={state.fieldErrors?.slug}
+        hint={labels.slugHint}
+      >
+        <TextInput
+          name="slug"
+          defaultValue={row?.slug}
+          error={state.fieldErrors?.slug}
+          hint={labels.slugHint}
+        />
       </Field>
 
       <div>
         <label htmlFor="excerpt" className="label">
           {labels.excerpt}
         </label>
-        <textarea id="excerpt" name="excerpt" rows={2} defaultValue={row?.excerpt} className="field" />
+        <textarea
+          id="excerpt"
+          name="excerpt"
+          rows={2}
+          defaultValue={row?.excerpt}
+          className="field"
+        />
         <p className="form-hint">{labels.excerptHint}</p>
       </div>
 
       <div>
-        <label htmlFor="body" className="label">
-          {labels.body}
-        </label>
-        <textarea id="body" name="body" rows={14} defaultValue={row?.body} className="field font-mono text-xs" />
-        <p className="form-hint">{labels.bodyHint}</p>
+        <label className="label">{labels.body}</label>
+        <RichEditor
+          name="body"
+          defaultValue={row?.body ?? ""}
+          labels={editor}
+        />
       </div>
 
       <ImageUpload
@@ -212,12 +272,20 @@ function PostForm({
           <TextInput name="author" defaultValue={row?.author} />
         </Field>
         <Field name="tags" label={labels.tags} hint={labels.tagsHint}>
-          <TextInput name="tags" defaultValue={row?.tags} hint={labels.tagsHint} />
+          <TextInput
+            name="tags"
+            defaultValue={row?.tags}
+            hint={labels.tagsHint}
+          />
         </Field>
       </div>
 
       <Field name="metaTitle" label={labels.metaTitle} hint={labels.metaHint}>
-        <TextInput name="metaTitle" defaultValue={row?.metaTitle} hint={labels.metaHint} />
+        <TextInput
+          name="metaTitle"
+          defaultValue={row?.metaTitle}
+          hint={labels.metaHint}
+        />
       </Field>
 
       <div>
