@@ -48,7 +48,7 @@ export default function UserMenu(props: {
       </button>
 
       {open && (
-        <div role="menu" className="popover absolute right-0 z-50 mt-2 w-64 overflow-hidden p-1.5 shadow-2xl">
+        <div role="menu" className="popover absolute end-0 z-50 mt-2 w-64 overflow-hidden p-1.5 shadow-2xl">
           <div className="border-b border-[var(--border)] px-3 py-3">
             <p className="truncate text-sm font-semibold">{props.username}</p>
             <p className="muted truncate text-xs">{props.email}</p>

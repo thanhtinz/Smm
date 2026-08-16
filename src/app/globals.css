@@ -317,7 +317,11 @@ body {
     font-size: 0.875rem;
   }
   .table th {
-    text-align: left;
+    /* start, not left. `.table td` sets none and so follows `dir`, which meant
+       that under a right-to-left reader every column header stayed pinned to
+       the left while its data flowed right — orders, transactions, affiliate,
+       users, services, the activity log, every table in the panel. */
+    text-align: start;
     font-size: 0.72rem;
     text-transform: uppercase;
     letter-spacing: 0.06em;
