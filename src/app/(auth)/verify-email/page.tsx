@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { logActivity } from "@/lib/auth";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Confirm email" };
+export const generateMetadata = pageTitle("auth.verify.title");
 
 export default async function VerifyEmailPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;

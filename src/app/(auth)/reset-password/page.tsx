@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import ResetPasswordForm from "@/components/auth/reset-password-form";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "New password" };
+export const generateMetadata = pageTitle("auth.reset.newTitle");
 
 export default async function ResetPasswordPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;

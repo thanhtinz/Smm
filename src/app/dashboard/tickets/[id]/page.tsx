@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -8,7 +8,7 @@ import TicketThread from "@/components/tickets/ticket-thread";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Ticket" };
+export const generateMetadata = pageTitle("ticket.heading");
 
 export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

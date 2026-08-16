@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import NewOrderForm, { type Currency, type Prefill, type ServiceOption } from "@/components/orders/new-order-form";
@@ -14,7 +14,7 @@ import { orderFormLabels } from "@/lib/order-form-labels";
 import { toServiceOption } from "@/lib/service-option";
 import { serviceStatsMany } from "@/lib/service-stats";
 
-export const metadata: Metadata = { title: "New order" };
+export const generateMetadata = pageTitle("dash.newOrder");
 
 export default async function NewOrderPage({
   searchParams,

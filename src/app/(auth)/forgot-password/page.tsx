@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
 import { mailConfigured } from "@/lib/mail";
 import ForgotPasswordForm from "@/components/auth/forgot-password-form";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Reset password" };
+export const generateMetadata = pageTitle("auth.reset.title");
 
 export default async function ForgotPasswordPage() {
   const { t } = await getAppContext();

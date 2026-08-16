@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
@@ -14,7 +14,7 @@ import OrderActions from "@/components/orders/order-actions";
 import { reorderHref } from "@/lib/reorder";
 import { formatCount } from "@/lib/numbers";
 
-export const metadata: Metadata = { title: "Order" };
+export const generateMetadata = pageTitle("order.heading");
 
 /**
  * One order, in full.

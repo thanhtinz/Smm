@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
@@ -11,7 +11,7 @@ import { CUSTOMER_ORDER_STATUSES, customerStatus, notStartedYet } from "@/lib/or
 import { reorderHref } from "@/lib/reorder";
 import { formatCount } from "@/lib/numbers";
 
-export const metadata: Metadata = { title: "Orders" };
+export const generateMetadata = pageTitle("dash.orders");
 
 const PAGE_SIZE = 25;
 

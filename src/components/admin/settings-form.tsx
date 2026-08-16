@@ -59,7 +59,7 @@ export default function SettingsForm({
       {fields.map((field) => (
         <div key={field.key}>
           <input type="hidden" name="__keys" value={field.key} />
-          <SettingControl field={field} error={state.fieldErrors?.[field.key]} />
+          <SettingControl field={field} error={state.fieldErrors?.[field.key]} labels={labels} />
         </div>
       ))}
 
@@ -73,7 +73,15 @@ export default function SettingsForm({
   );
 }
 
-function SettingControl({ field, error }: { field: SettingField; error?: string }) {
+function SettingControl({
+  field,
+  error,
+  labels,
+}: {
+  field: SettingField;
+  error?: string;
+  labels: Record<string, string>;
+}) {
   // Named on the server where the dictionary lives; the derived name is what
   // a setting nobody has named yet still shows.
   const label = field.label || humanise(field.key);
@@ -129,7 +137,7 @@ function SettingControl({ field, error }: { field: SettingField; error?: string 
 
   if (field.type === "list") {
     return (
-      <Field name={field.key} label={label} error={error} hint="One per line">
+      <Field name={field.key} label={label} error={error} hint={labels.perLine}>
         <textarea
           id={field.key}
           name={field.key}
@@ -160,7 +168,7 @@ function SettingControl({ field, error }: { field: SettingField; error?: string 
 
   if (field.type === "json") {
     return (
-      <Field name={field.key} label={label} error={error} hint="JSON">
+      <Field name={field.key} label={label} error={error} hint={labels.json}>
         <textarea
           id={field.key}
           name={field.key}

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
@@ -8,7 +8,7 @@ import NewTicketForm from "@/components/tickets/new-ticket-form";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Support" };
+export const generateMetadata = pageTitle("dash.tickets");
 
 export default async function TicketsPage() {
   const ctx = await getAppContext();

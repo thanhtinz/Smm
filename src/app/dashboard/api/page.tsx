@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
@@ -10,7 +10,7 @@ import { recentCallbacks } from "@/lib/callbacks";
 import { dateFormats } from "@/lib/dates";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "API" };
+export const generateMetadata = pageTitle("nav.api");
 
 export default async function ApiPage() {
   const ctx = await getAppContext();

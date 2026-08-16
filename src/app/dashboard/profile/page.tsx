@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { cookies } from "next/headers";
 import QRCode from "qrcode";
 import { db } from "@/lib/db";
@@ -14,7 +14,7 @@ import PreferencesPanel from "@/components/account/preferences-panel";
 import SessionsPanel, { type SessionRow } from "@/components/account/sessions-panel";
 import TwoFactorPanel from "@/components/account/two-factor-panel";
 
-export const metadata: Metadata = { title: "Profile" };
+export const generateMetadata = pageTitle("nav.profile");
 
 /**
  * Renders the QR for a secret on the server. Passed down as an action so the

@@ -1,10 +1,10 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { getAppContext } from "@/lib/context";
 import { getAvailableMethods } from "@/lib/payments";
 import { getSetting } from "@/lib/settings";
 import DepositForm from "@/components/wallet/deposit-form";
 
-export const metadata: Metadata = { title: "Add funds" };
+export const generateMetadata = pageTitle("dash.addFunds");
 
 export default async function WalletPage() {
   const ctx = await getAppContext();
