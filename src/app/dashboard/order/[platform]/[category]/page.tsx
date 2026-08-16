@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
-import { priceServices, resolveTier } from "@/lib/pricing";
+import { priceServices, resolvePricing } from "@/lib/pricing";
 import { displayMoney } from "@/lib/currency";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
@@ -59,8 +59,9 @@ export default async function PanelCategoryOrderPage({
   }
 
   const scheduleMaxDays = Number(await getSetting("order.scheduleMaxDays")) || 0;
-  const tier = await resolveTier(user);
-  const rates = await priceServices(tier, category.services);
+  const pricing = await resolvePricing(user);
+  const tier = pricing.tier;
+  const rates = await priceServices(pricing, category.services);
 
   const measured = await serviceStatsMany(category.services.map((s) => s.id));
   const serviceOptions: ServiceOption[] = category.services.map((s) =>

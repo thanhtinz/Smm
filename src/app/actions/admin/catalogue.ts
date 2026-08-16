@@ -12,7 +12,7 @@ import { syncPrimaryRoutes } from "@/lib/routing";
 export type ActionResult = { ok?: true; error?: string; fieldErrors?: Record<string, string> };
 
 /** What the order form asks for: a quantity, or the comments to post. */
-const SERVICE_TYPES = new Set(["default", "custom_comments", "subscription"]);
+const SERVICE_TYPES = new Set(["default", "custom_comments", "subscription", "spread"]);
 
 function slugify(input: string) {
   return input
@@ -228,9 +228,21 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
     warrantyDays: Math.max(0, num(form, "warrantyDays")),
     startMinutes: Math.max(0, num(form, "startMinutes")),
     speedPerDay: Math.max(0, num(form, "speedPerDay")),
+    // A step of 1 is the same as no step, so it is stored as no step — the
+    // form then shows the box empty rather than showing a rule that does
+    // nothing.
+    increment: Math.max(0, Math.round(num(form, "increment"))) === 1 ? 0 : Math.max(0, Math.round(num(form, "increment"))),
+    overflowPercent: Math.max(0, num(form, "overflowPercent")),
     enabled: bool(form, "enabled"),
     position: num(form, "position"),
   };
+
+  // A step the range cannot satisfy would refuse every quantity a customer
+  // could type, so it is caught here rather than at the order form.
+  if (data.increment > 0) {
+    const first = Math.ceil(data.min / data.increment) * data.increment;
+    if (first > data.max) return { fieldErrors: { increment: t("adm.incrementRange") } };
+  }
 
   const service = id
     ? await db.service.update({ where: { id }, data })
@@ -271,21 +283,104 @@ export async function saveServiceAction(_prev: ActionResult, form: FormData): Pr
   return { ok: true };
 }
 
+/**
+ * Takes a service off the panel without destroying it.
+ *
+ * Nothing here deletes a row. Orders point at services for their history, and
+ * the operator who removes the wrong one wants it back rather than an
+ * explanation — so a delete marks the row and disables it, and the deleted
+ * list is where it comes back from. Disabling as well as marking is what makes
+ * this safe to add: every query that already reads `enabled: true` stops
+ * seeing it without a line of it changing.
+ */
 export async function deleteServiceAction(id: string): Promise<ActionResult> {
   const t = await readerMessages();
   const admin = await requireAdmin();
-  const inUse = await db.order.count({ where: { serviceId: id } });
-  if (inUse > 0) {
-    // Orders reference the service for their history, so retire rather than delete.
-    await db.service.update({ where: { id }, data: { enabled: false } });
-    await logActivity(admin.id, "admin.service.disable", id);
-    revalidateCatalogue();
-    return { error: t("adm.serviceInUse", { count: inUse }) };
-  }
-  await db.service.delete({ where: { id } });
-  await logActivity(admin.id, "admin.service.delete", id);
+
+  const service = await db.service.findUnique({ where: { id } });
+  if (!service) return { error: t("adm.serviceMissing") };
+
+  await db.service.update({ where: { id }, data: { deletedAt: new Date(), enabled: false } });
+  await logActivity(admin.id, "admin.service.delete", `#${service.publicId} ${service.name}`);
   revalidateCatalogue();
   return { ok: true };
+}
+
+/** Back onto the panel, still switched off: restoring is not re-listing. */
+export async function restoreServiceAction(id: string): Promise<ActionResult> {
+  const t = await readerMessages();
+  const admin = await requireAdmin();
+
+  const service = await db.service.findUnique({ where: { id } });
+  if (!service) return { error: t("adm.serviceMissing") };
+
+  // A restored service could have been deleted because its category was, and
+  // a service whose category is gone would be unreachable and unsellable.
+  const category = await db.category.findUnique({ where: { id: service.categoryId } });
+  if (!category) return { error: t("adm.categoryGone") };
+
+  await db.service.update({ where: { id }, data: { deletedAt: null } });
+  await logActivity(admin.id, "admin.service.restore", `#${service.publicId} ${service.name}`);
+  revalidateCatalogue();
+  return { ok: true };
+}
+
+/**
+ * Moves many prices at once.
+ *
+ * `percent` shifts each service's own rate by a percentage, keeping the shape
+ * of the catalogue; `set` puts every named service on one figure. A provider
+ * raising its prices is the first; a promotion is the second.
+ *
+ * Services following their provider's price are skipped by the percentage
+ * mode and reported: the next sync would overwrite whatever was written here,
+ * and quietly doing work that gets undone in an hour is worse than saying so.
+ */
+export async function massEditRatesAction(
+  serviceIds: string[],
+  mode: string,
+  value: number,
+): Promise<ActionResult & { changed?: number; skipped?: number }> {
+  const t = await readerMessages();
+  const admin = await requireAdmin();
+
+  if (mode !== "percent" && mode !== "set") return { error: t("adm.massMode") };
+  if (!Number.isFinite(value)) return { fieldErrors: { value: t("adm.rateRange") } };
+  if (mode === "set" && value < 0) return { fieldErrors: { value: t("adm.rateRange") } };
+  if (mode === "percent" && value <= -100) return { fieldErrors: { value: t("adm.massPercentRange") } };
+
+  const services = await db.service.findMany({
+    where: { id: { in: serviceIds }, deletedAt: null },
+    select: { id: true, rate: true, autoPrice: true, publicId: true },
+  });
+  if (services.length === 0) return { error: t("adm.massPickServices") };
+
+  const targets = mode === "percent" ? services.filter((s) => !s.autoPrice) : services;
+  const skipped = services.length - targets.length;
+
+  // One statement per service rather than a single updateMany: the new rate
+  // depends on the old one, which SQL could express and Prisma cannot.
+  await db.$transaction(
+    targets.map((service) =>
+      db.service.update({
+        where: { id: service.id },
+        data: {
+          rate: mode === "set" ? value : Math.max(0, service.rate * (1 + value / 100)),
+          // A hand-moved price is a pinned price. Leaving autoPrice on would
+          // have the next sync undo the operator's whole afternoon.
+          ...(mode === "set" ? { autoPrice: false } : {}),
+        },
+      }),
+    ),
+  );
+
+  await logActivity(
+    admin.id,
+    "admin.service.massRate",
+    `${mode} ${value} on ${targets.length} service(s)${skipped ? `, ${skipped} skipped` : ""}`,
+  );
+  revalidateCatalogue();
+  return { ok: true, changed: targets.length, skipped };
 }
 
 export async function toggleServiceAction(id: string, enabled: boolean): Promise<ActionResult> {

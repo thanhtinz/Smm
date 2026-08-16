@@ -4,19 +4,49 @@ import { db } from "./db";
 /**
  * What a customer actually pays.
  *
- * Three layers, most specific first: a price set by hand for their tier, then
- * the tier's percentage off the list price, then the list price itself. Every
- * page and every order path resolves through here so a customer is never shown
- * one number and charged another.
+ * Four layers, most specific first: a price set by hand for this one customer,
+ * a price set by hand for their tier, the percentages off the list price, then
+ * the list price itself. Every page and every order path resolves through here
+ * so a customer is never shown one number and charged another.
  */
 
 export type PricedService = { id: string; rate: number };
 
-/** A customer with no tier of their own falls to the spend ladder. */
-export async function resolveTier(user: {
+/**
+ * Who is being priced.
+ *
+ * This used to be the tier alone, which was enough while a tier was the only
+ * thing that moved a price. It no longer is — a customer can carry their own
+ * rates and their own discount — and passing the tier around meant every
+ * caller would have had to learn about both. The whole answer is resolved
+ * once, here, and handed on as one value.
+ */
+export type Pricing = {
+  tier: UserTier | null;
+  /** Null for a guest, whose prices nobody has negotiated. */
+  userId: string | null;
+  /** The customer's own percentage off, on top of the tier's. */
+  discountPercent: number;
+};
+
+export type PricedUser = {
+  id: string;
   tierId: string | null;
   spent: number;
-} | null): Promise<UserTier | null> {
+  discountPercent: number;
+} | null;
+
+/** A customer with no tier of their own falls to the spend ladder. */
+export async function resolvePricing(user: PricedUser): Promise<Pricing> {
+  return {
+    tier: await resolveTier(user),
+    userId: user?.id ?? null,
+    discountPercent: user?.discountPercent ?? 0,
+  };
+}
+
+/** The tier alone, for the pages that name it rather than price with it. */
+export async function resolveTier(user: { tierId: string | null; spent: number } | null): Promise<UserTier | null> {
   if (!user) return defaultTier();
 
   if (user.tierId) {
@@ -37,44 +67,63 @@ async function defaultTier(): Promise<UserTier | null> {
 }
 
 /**
- * Prices a batch of services for one tier in two queries rather than one per
- * service — the services page lists the whole catalogue.
+ * Prices a batch of services for one customer in a fixed number of queries
+ * rather than one per service — the services page lists the whole catalogue.
  */
 export async function priceServices<T extends PricedService>(
-  tier: UserTier | null,
+  pricing: Pricing,
   services: T[],
 ): Promise<Map<string, number>> {
   const out = new Map<string, number>();
   if (services.length === 0) return out;
 
-  const manual = tier
-    ? await db.tierPrice.findMany({
-        where: { tierId: tier.id, serviceId: { in: services.map((s) => s.id) } },
-        select: { serviceId: true, rate: true },
-      })
-    : [];
-  const overrides = new Map(manual.map((row) => [row.serviceId, row.rate]));
+  const ids = services.map((s) => s.id);
+  const [tierRows, userRows] = await Promise.all([
+    pricing.tier
+      ? db.tierPrice.findMany({
+          where: { tierId: pricing.tier.id, serviceId: { in: ids } },
+          select: { serviceId: true, rate: true },
+        })
+      : [],
+    pricing.userId
+      ? db.userServiceRate.findMany({
+          where: { userId: pricing.userId, serviceId: { in: ids } },
+          select: { serviceId: true, rate: true },
+        })
+      : [],
+  ]);
+
+  const tierRates = new Map(tierRows.map((row) => [row.serviceId, row.rate]));
+  const userRates = new Map(userRows.map((row) => [row.serviceId, row.rate]));
 
   for (const service of services) {
-    out.set(service.id, applyTier(tier, service.rate, overrides.get(service.id)));
+    out.set(
+      service.id,
+      applyPricing(pricing, service.rate, userRates.get(service.id) ?? tierRates.get(service.id)),
+    );
   }
   return out;
 }
 
-/** The price of one service for one tier. */
-export async function priceService(tier: UserTier | null, service: PricedService): Promise<number> {
-  const rates = await priceServices(tier, [service]);
+/** The price of one service for one customer. */
+export async function priceService(pricing: Pricing, service: PricedService): Promise<number> {
+  const rates = await priceServices(pricing, [service]);
   return rates.get(service.id) ?? service.rate;
 }
 
 /**
  * A manual price wins outright — that is the point of setting one. Otherwise
- * the tier percentage comes off the list price. Discounts are clamped so a
- * mistyped 150% cannot produce a negative price.
+ * the tier percentage comes off the list price and the customer's own
+ * percentage comes off what is left. They compound rather than add: two 50%
+ * discounts are a quarter of the list price, not free, which is the reading
+ * that cannot be made to produce a negative number by stacking. Each is
+ * clamped as well, so a mistyped 150% cannot either.
  */
-export function applyTier(tier: UserTier | null, listRate: number, manualRate?: number): number {
+export function applyPricing(pricing: Pricing | null, listRate: number, manualRate?: number): number {
   if (manualRate !== undefined) return Math.max(0, manualRate);
-  if (!tier || tier.discountPercent <= 0) return listRate;
-  const off = Math.min(100, tier.discountPercent) / 100;
-  return Math.max(0, listRate * (1 - off));
+  if (!pricing) return listRate;
+
+  const tierOff = Math.min(100, Math.max(0, pricing.tier?.discountPercent ?? 0)) / 100;
+  const userOff = Math.min(100, Math.max(0, pricing.discountPercent)) / 100;
+  return Math.max(0, listRate * (1 - tierOff) * (1 - userOff));
 }

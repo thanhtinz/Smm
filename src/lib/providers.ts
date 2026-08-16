@@ -113,6 +113,24 @@ export async function requestProviderCancel(
   return { ok: true as const, data: String((row as { cancel?: unknown })?.cancel ?? "") };
 }
 
+/**
+ * The quantity actually ordered upstream.
+ *
+ * Followers and likes leak: a share of every delivery unfollows again within
+ * the week, and a customer who bought 1,000 counts 940 and opens a refill
+ * request. Buying a percentage more absorbs that out of the margin, which is
+ * cheaper than the refill and much cheaper than the ticket.
+ *
+ * The customer is charged for what they asked for — the buffer never touches
+ * `charge`, `quantity` or `remains` — so the order still completes against the
+ * number they bought. Rounded up, because a 5% buffer on 100 that rounds down
+ * to nothing is a setting that silently does not work on small orders.
+ */
+export function withOverflow(quantity: number, overflowPercent: number): number {
+  if (!overflowPercent || overflowPercent <= 0) return quantity;
+  return Math.ceil(quantity * (1 + overflowPercent / 100));
+}
+
 /** The dd/mm/yyyy an expiry is sent as. */
 function formatExpiry(date: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -129,25 +147,32 @@ export function placeProviderOrder(
     runs?: number | null;
     interval?: number | null;
     posts?: number | null;
+    oldPosts?: number | null;
     minPerPost?: number | null;
     maxPerPost?: number | null;
     delay?: number | null;
     expiry?: Date | null;
   }
 ) {
-  // A subscription is addressed by username and described by its per-post
-  // range, so it sends none of the link-and-quantity fields.
-  if (order.posts) {
+  // A subscription and a spread are both addressed by username and described
+  // by a per-post range, so neither sends the link-and-quantity fields. The
+  // standard tells them apart by which count is present: `posts` for the ones
+  // still to come, `old_posts` for the ones already there.
+  if (order.posts || order.oldPosts) {
     const params: Record<string, string | number> = {
       action: "add",
       service: order.service,
       username: order.link,
-      posts: order.posts,
       min: order.minPerPost ?? 0,
       max: order.maxPerPost ?? 0,
-      delay: order.delay ?? 0,
     };
-    if (order.expiry) params.expiry = formatExpiry(order.expiry);
+    if (order.posts) {
+      params.posts = order.posts;
+      params.delay = order.delay ?? 0;
+      if (order.expiry) params.expiry = formatExpiry(order.expiry);
+    } else {
+      params.old_posts = order.oldPosts ?? 0;
+    }
     return call<{ order: number | string }>(provider, params);
   }
 
@@ -240,11 +265,12 @@ export async function dispatchPendingOrders(limit = 25) {
       const result = await placeProviderOrder(provider, {
         service: route.providerServiceId,
         link: order.link,
-        quantity: order.quantity,
+        quantity: withOverflow(order.quantity, order.service.overflowPercent),
         comments: order.comments,
         runs: order.runs,
         interval: order.interval,
         posts: order.posts,
+        oldPosts: order.oldPosts,
         minPerPost: order.minPerPost,
         maxPerPost: order.maxPerPost,
         delay: order.delay,

@@ -89,7 +89,10 @@ export async function syncProviderCatalogue(
     return { ...report, fault: { key: "adm.providerEmptyList" } };
   }
 
-  const ours = await db.service.findMany({ where: { providerId: provider.id } });
+  // Deleted services are left out: repricing one changes nothing anybody can
+  // buy, and the "delisted" alerts it raises are a report about a service the
+  // operator has already taken off the panel.
+  const ours = await db.service.findMany({ where: { providerId: provider.id, deletedAt: null } });
 
   // Costs move at this provider for every service routed through it, not only
   // the ones that name it as their first choice.

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import {
   adjustBalanceAction,
@@ -8,6 +9,7 @@ import {
   type ActionResult,
 } from "@/app/actions/admin/operations";
 import { setUserTierAction } from "@/app/actions/admin/tiers";
+import { resetUserRatesAction } from "@/app/actions/admin/user-access";
 import { clearForUserAction } from "@/app/actions/two-factor";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
@@ -45,6 +47,7 @@ export default function UserManager({
 }) {
   const [adjusting, setAdjusting] = useState<AdminUserRow | null>(null);
   const [error, setError] = useState("");
+  const [picked, setPicked] = useState<string[]>([]);
   const [pending, start] = useTransition();
 
   const run = (fn: () => Promise<ActionResult>) => {
@@ -55,12 +58,46 @@ export default function UserManager({
     });
   };
 
+  const allPicked = rows.length > 0 && picked.length === rows.length;
+  const toggle = (id: string) =>
+    setPicked(picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id]);
+
   return (
     <>
       {error && (
         <div className="alert alert-danger" role="alert">
           <Icon name="alert" size={16} />
           <span>{error}</span>
+        </div>
+      )}
+
+      {/* A promotion ends for everyone at once, so the reset does too. Only
+          shown once something is selected — an always-present bar of bulk
+          actions is a row of buttons that do nothing most of the time. */}
+      {picked.length > 0 && (
+        <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
+          <span className="text-sm font-medium">{labels.picked.replace("{n}", String(picked.length))}</span>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => {
+                if (!confirm(labels.confirmResetRates)) return;
+                run(async () => {
+                  const result = await resetUserRatesAction(picked);
+                  if (!result.error) setPicked([]);
+                  return result;
+                });
+              }}
+              className="btn btn-ghost btn-sm"
+            >
+              <Icon name="refresh" size={14} />
+              {labels.resetRates}
+            </button>
+            <button type="button" onClick={() => setPicked([])} className="btn btn-ghost btn-sm">
+              {labels.cancel}
+            </button>
+          </div>
         </div>
       )}
 
@@ -72,6 +109,18 @@ export default function UserManager({
             <table className="table">
               <thead>
                 <tr>
+                  <th className="w-10">
+                    <label htmlFor="pick-all" className="sr-only">
+                      {labels.selectAll}
+                    </label>
+                    <input
+                      id="pick-all"
+                      type="checkbox"
+                      checked={allPicked}
+                      onChange={() => setPicked(allPicked ? [] : rows.map((r) => r.id))}
+                      className="h-4 w-4 accent-[var(--primary)]"
+                    />
+                  </th>
                   <th className="w-20">ID</th>
                   <th>{labels.user}</th>
                   <th className="w-32 text-end">{labels.balance}</th>
@@ -85,9 +134,25 @@ export default function UserManager({
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
+                    <td>
+                      <label htmlFor={`pick-${row.id}`} className="sr-only">
+                        {row.username}
+                      </label>
+                      <input
+                        id={`pick-${row.id}`}
+                        type="checkbox"
+                        checked={picked.includes(row.id)}
+                        onChange={() => toggle(row.id)}
+                        className="h-4 w-4 accent-[var(--primary)]"
+                      />
+                    </td>
                     <td className="muted font-mono text-xs">{row.publicId}</td>
                     <td>
-                      <span className="font-medium">{row.username}</span>
+                      {/* The name is the way in to everything the row cannot
+                          hold: the rate card, the access rules, the methods. */}
+                      <Link href={`/admin/users/${row.id}`} className="font-medium hover:underline">
+                        {row.username}
+                      </Link>
                       <span className="muted mt-0.5 block truncate text-xs">{row.email}</span>
                     </td>
                     <td className="text-end font-semibold tabular-nums">{row.balance}</td>

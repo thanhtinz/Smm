@@ -78,9 +78,12 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     ...(took ? [{ label: t("order.took"), value: took }] : []),
     ...(reported ? [{ label: t("order.startCount"), value: formatCount(order.startCount, locale) }] : []),
     ...(order.runs ? [{ label: t("order.runs"), value: `${order.runs} × ${order.interval} ${t("order.minutes")}` }] : []),
-    ...(order.posts
+    ...(order.posts || order.oldPosts
       ? [
-          { label: t("order.posts"), value: String(order.posts) },
+          {
+            label: order.posts ? t("order.posts") : t("order.oldPosts"),
+            value: String(order.posts ?? order.oldPosts),
+          },
           { label: t("order.perPost"), value: `${order.minPerPost}–${order.maxPerPost}` },
           ...(order.delay ? [{ label: t("order.delay"), value: `${order.delay} ${t("order.minutes")}` }] : []),
           ...(order.expiry ? [{ label: t("order.expiry"), value: dates.day(order.expiry) }] : []),

@@ -5,13 +5,16 @@ import { callerAddress } from "@/lib/auth-throttle";
 import { nextPublicId } from "@/lib/ids";
 import {
   calculateCharge,
+  checkIncrement,
   commentLines,
   orderCost,
+  isProfileOrder,
   parseSubscription,
   subscriptionFields,
   type Subscription,
 } from "@/lib/orders";
-import { priceService, priceServices, resolveTier } from "@/lib/pricing";
+import { priceService, priceServices, resolvePricing } from "@/lib/pricing";
+import { can, type AccessRule } from "@/lib/access";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream } from "@/lib/chain";
 import { guardOrder, duplicateWindow, findDuplicate } from "@/lib/order-guard";
 import { apiStatus } from "@/lib/api-status";
@@ -60,7 +63,18 @@ export async function POST(request: Request) {
 
   if (!(await withinRateLimit(user.id))) return fail("Rate limit exceeded");
 
+  // Turning the key off without suspending the account: a reseller whose
+  // integration is looping can be stopped here while they keep their panel.
+  if (!can(user, "api")) return fail("API access disabled");
+
   const action = String(params.action ?? "");
+
+  // The same rules the forms enforce, on the door the forms do not use.
+  // English, like every other message in this file — these are read by client
+  // code, not by a person with a language preference.
+  const RULE_FOR: Record<string, AccessRule> = { add: "order", refill: "refill", cancel: "cancel" };
+  const rule = RULE_FOR[String(params.action ?? "")];
+  if (rule && !can(user, rule)) return fail(englishMessage(`access.denied.${rule}`));
 
   // Reads stay open while the panel is closed for maintenance, so a reseller
   // can still track orders it has already paid for. Only new business stops.
@@ -99,10 +113,17 @@ const API_TYPE_NAMES: Record<string, string> = {
   default: "Default",
   custom_comments: "Custom Comments",
   subscription: "Subscriptions",
+  spread: "Likes spread",
 };
 
 /** Only what the priced actions need from the key's owner. */
-type ApiCaller = { id: string; username: string; tierId: string | null; spent: number };
+type ApiCaller = {
+  id: string;
+  username: string;
+  tierId: string | null;
+  spent: number;
+  discountPercent: number;
+};
 
 // ------------------------------------------------------------------ actions
 
@@ -114,7 +135,7 @@ async function services(user: ApiCaller) {
   });
 
   // Resellers see their own tier's prices, the ones `add` will charge them.
-  const rates = await priceServices(await resolveTier(user), rows);
+  const rates = await priceServices(await resolvePricing(user), rows);
 
   return NextResponse.json(
     rows.map((s) => ({
@@ -161,7 +182,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   let link: string;
   let comments: string[] = [];
 
-  if (service.type === "subscription") {
+  if (isProfileOrder(service.type)) {
     const parsed = parseSubscription(
       {
         username: extractUsername(String(params.username ?? "")),
@@ -204,6 +225,12 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     if (!Number.isInteger(quantity) || quantity <= 0) return fail("Incorrect quantity");
     if (service.type === "custom_comments" && comments.length === 0) return fail("Incorrect comments");
     if (quantity < service.min || quantity > service.max) return fail("Incorrect quantity");
+    // English and specific: a client library retrying a rounded-off quantity
+    // for ever is what a bare "Incorrect quantity" produces here.
+    if (comments.length === 0) {
+      const step = checkIncrement(quantity, service);
+      if (step) return fail(`Quantity must be a multiple of ${service.increment} (try ${step.suggestion})`);
+    }
   }
 
   const dripfeed = !subscription && (params.runs !== undefined || params.interval !== undefined);
@@ -247,7 +274,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   }
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
-  const rate = await priceService(await resolveTier(user), service);
+  const rate = await priceService(await resolvePricing(user), service);
   const money = (await getBaseCurrency()).decimals;
   const charge = calculateCharge(rate, totalQuantity, money);
 
@@ -298,7 +325,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
           interval: dripfeed ? interval : null,
           startAt,
           cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity, money),
-          ...subscriptionFields(subscription),
+          ...subscriptionFields(subscription, service.type === "spread"),
         },
       });
 

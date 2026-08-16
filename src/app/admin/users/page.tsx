@@ -107,6 +107,10 @@ export default async function AdminUsersPage({
           note: t("admin.note"),
           save: t("common.save"),
           cancel: t("common.cancel"),
+          selectAll: t("common.selectAll"),
+          picked: t("common.picked"),
+          resetRates: t("access.resetRates"),
+          confirmResetRates: t("access.confirmResetMany"),
         }}
       />
     </div>

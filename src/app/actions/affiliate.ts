@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
 import { getAppContext } from "@/lib/context";
+import { deny } from "@/lib/access";
 import { formatMoney } from "@/lib/currency";
 import { withdrawReferralEarnings } from "@/lib/affiliate";
 
@@ -14,6 +15,9 @@ export async function withdrawEarningsAction(): Promise<WithdrawState> {
 
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
+
+  const barred = deny(user, "affiliate");
+  if (barred) return { error: t(barred.key) };
 
   const result = await withdrawReferralEarnings(user.id);
   revalidatePath("/dashboard/affiliate");

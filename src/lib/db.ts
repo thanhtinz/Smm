@@ -45,6 +45,9 @@ const TENANT_MODELS = new Set([
   "InboxMessage",
   "UserTier",
   "TierPrice",
+  "UserServiceRate",
+  "SavedReply",
+  "BlogPost",
 ]);
 
 /**

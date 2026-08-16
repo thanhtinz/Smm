@@ -8,6 +8,7 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { notification } from "@/lib/notify";
 import { readerMessages } from "@/lib/context";
+import { deny } from "@/lib/access";
 import { OPEN_TICKET_STATUSES, TICKET_STATUSES, priorityKey, priorityValue } from "@/lib/tickets";
 import { STAFF_ROLES } from "@/lib/two-factor";
 
@@ -20,6 +21,9 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
   const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
+
+  const barred = deny(user, "ticket");
+  if (barred) return { error: t(barred.key) };
 
   if (!(await getSetting("support.enabled"))) {
     return { error: t("err.supportClosed") };
