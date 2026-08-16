@@ -48,12 +48,17 @@ export default async function AdminOverviewPage() {
           : (health.ageMinutes ?? 0) < 1
             ? t("sync.justNow")
             : t("sync.ok", { n: health.ageMinutes ?? 0 }),
+    // The counts are the deployment's, so only the root is given them — see
+    // syncHealth. A child still learns whether the scheduler is alive, which
+    // is the part that affects its own orders.
     detail:
       health.lastAt === null
         ? ""
-        : `${t("sync.counts", { dispatched: health.dispatched, synced: health.synced })}${
-            health.trigger && health.trigger !== "cron" ? ` · ${t("sync.byHand")}` : ""
-          }`,
+        : `${
+            health.dispatched === null || health.synced === null
+              ? ""
+              : t("sync.counts", { dispatched: health.dispatched, synced: health.synced })
+          }${health.trigger && health.trigger !== "cron" ? ` · ${t("sync.byHand")}` : ""}`.replace(/^ · /, ""),
     failures: health.failures,
     // One cycle covers every panel, so only the root panel's admin may start one.
     canRun: Boolean(root && root.id === panelId),

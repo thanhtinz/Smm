@@ -46,8 +46,21 @@ export async function evaluateCoupon(
     if (mine >= coupon.maxPerUser) return { ok: false, key: "err.couponUsed" };
   }
   if (coupon.firstDepositOnly) {
+    // Pending counts, not just completed.
+    //
+    // The bonus is baked into the transaction when it is created and credited
+    // later, so counting only completed deposits meant a customer could raise
+    // N deposits with the same first-deposit code *before paying any of them*
+    // — every one passing the check, every one carrying the bonus — and then
+    // pay them all. maxPerUser bounded it, but an operator who left that at
+    // "unlimited" alongside "first deposit only" had a combination the admin
+    // form presents as safe.
+    //
+    // A pending deposit the customer abandons does not block them for ever:
+    // cancelling one releases its redemption, which is what cancelDeposit now
+    // does.
     const previous = await db.transaction.count({
-      where: { userId, type: "deposit", status: "completed" },
+      where: { userId, type: "deposit", status: { in: ["completed", "pending"] } },
     });
     if (previous > 0) return { ok: false, key: "err.couponFirstOnly" };
   }

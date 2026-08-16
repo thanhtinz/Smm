@@ -9,6 +9,7 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import { findReferrerByCode } from "@/lib/affiliate";
 import { verifyCaptcha } from "@/lib/captcha";
+import { loginLocked, resendLocked } from "@/lib/auth-throttle";
 import { sendVerificationEmail, verificationRequired } from "@/lib/verification";
 import { startPendingLogin, twoFactorActive } from "@/lib/two-factor";
 import { notification } from "@/lib/notify";
@@ -50,6 +51,15 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
     return { error: t("err.captcha"), values: { identifier: raw.identifier } };
   }
 
+  // Before the lookup and before bcrypt, so a locked-out attempt costs the
+  // attacker a round trip and costs the server nothing. Counted per address
+  // and per identifier — see loginLocked — so one address grinding an account
+  // cannot lock its real owner out from somewhere else.
+  const locked = await loginLocked(raw.identifier);
+  if (locked) {
+    return { error: t("err.tooManyAttempts", { n: locked.minutes }), values: { identifier: raw.identifier } };
+  }
+
   const user = await db.user.findFirst({
     where: {
       OR: [{ username: parsed.data.identifier }, { email: parsed.data.identifier.toLowerCase() }],
@@ -59,6 +69,7 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   // One generic message for both branches so the form cannot be used to
   // enumerate which usernames exist.
   if (!user || !(await verifyPassword(parsed.data.password, user.password))) {
+    // The identifier as typed, so the counter in loginLocked can match on it.
     await logActivity(user?.id ?? null, "login.failed", raw.identifier);
     return { error: t("err.credentials"), values: { identifier: raw.identifier } };
   }
@@ -229,7 +240,13 @@ export async function resendVerificationAction(_prev: FormState, formData: FormD
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   if (!email) return { fieldErrors: { email: t("err.emailRequired") } };
 
+  // Answered the same way whether or not the address exists, so this stays
+  // unable to tell a stranger which addresses are registered — and refused
+  // before anything is sent, so it cannot be used to flood a mailbox.
+  if (await resendLocked(email)) return { pendingVerification: email };
+
   if (await verificationRequired()) {
+    await logActivity(null, "auth.resend", email);
     const user = await db.user.findFirst({ where: { email, emailVerified: false, banned: false } });
     if (user) await sendVerificationEmail(user);
   }

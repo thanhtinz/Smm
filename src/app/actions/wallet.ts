@@ -10,7 +10,7 @@ import { computeTotals, drivers, isConfigured, parseConfig, parseCurrencies } fr
 import { captureOrder } from "@/lib/payments/paypal";
 import { creditDeposit } from "@/lib/payments/credit";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
-import { panelBaseUrl, getCurrentPanel } from "@/lib/tenancy";
+import { getCurrentPanel, panelBaseUrl, panelSuspended } from "@/lib/tenancy";
 import { readerText } from "@/lib/context";
 import { formatCount } from "@/lib/numbers";
 import { roundMoney } from "@/lib/money";
@@ -24,6 +24,10 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
+
+  // A layout guards a page; this guards a form posted from a page that was
+  // already open when the panel was switched off.
+  if (await panelSuspended()) return { error: t("err.panelClosed") };
 
   const methodId = String(formData.get("methodId") ?? "");
   const amountRaw = String(formData.get("amount") ?? "").trim();
@@ -207,9 +211,17 @@ export async function prepareDeposit(transactionId: string) {
 export async function cancelDepositAction(transactionId: string) {
   const user = await getCurrentUser();
   if (!user) return;
-  await db.transaction.updateMany({
+  const cancelled = await db.transaction.updateMany({
     where: { id: transactionId, userId: user.id, status: "pending", type: "deposit" },
     data: { status: "canceled" },
   });
+
+  // A coupon consumed by a deposit nobody paid is a use nobody got. The
+  // redemption row is written the moment the deposit is created — that is what
+  // makes maxUses hold against a race — so an abandoned attempt was eating a
+  // use, and one of a limited run, for ever.
+  if (cancelled.count > 0) {
+    await db.couponRedemption.deleteMany({ where: { transactionId, userId: user.id } });
+  }
   redirect("/dashboard/transactions");
 }

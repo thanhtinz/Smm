@@ -1,3 +1,4 @@
+import { getSetting } from "@/lib/settings";
 import { NextResponse } from "next/server";
 import { basePrisma } from "@/lib/db-base";
 import { runAsPanel } from "@/lib/tenancy";
@@ -48,6 +49,10 @@ export async function POST(
     if (!driver.verify(config, request, config.secret)) {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
+  } else if (await getSetting("inbox.requireSignature")) {
+    // The operator has said every channel must prove itself. Refused rather
+    // than accepted, which is the whole point of the switch.
+    return NextResponse.json({ ok: false, message: "Channel has no signing secret" }, { status: 401 });
   }
 
   let payload: unknown;

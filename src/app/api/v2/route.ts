@@ -29,6 +29,14 @@ import { STAFF_ROLES } from "@/lib/two-factor";
  * `action`, and errors returned as {"error": "..."} with HTTP 200.
  */
 export async function POST(request: Request) {
+  // The panel first, before anything reads a setting. `getSetting` resolves
+  // the current panel to know whose settings to read, and throws "No panel in
+  // context" when the host is not one we serve — so asking whether the API is
+  // enabled *before* this made the deliberate 404 below unreachable and
+  // answered an unknown host with a 500 and a stack trace.
+  const panel = await getCurrentPanel();
+  if (!panel) return NextResponse.json({ error: "Unknown panel" }, { status: 404 });
+
   if (!(await getSetting("api.enabled"))) return fail("API is disabled");
 
   const params = await readParams(request);
@@ -37,8 +45,6 @@ export async function POST(request: Request) {
 
   // A panel that is not trading refuses its API too, or a reseller would keep
   // taking orders it can no longer fulfil.
-  const panel = await getCurrentPanel();
-  if (!panel) return NextResponse.json({ error: "Unknown panel" }, { status: 404 });
   if (panel.status !== "active") {
     return NextResponse.json({ error: "This panel is temporarily unavailable" }, { status: 503 });
   }

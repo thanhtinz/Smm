@@ -7,7 +7,6 @@ import { basePrisma } from "@/lib/db-base";
 import { requireAdmin, getCurrentUser, logActivity } from "@/lib/auth";
 import { readerMessages } from "@/lib/context";
 import { currentPanelId, panelBaseUrl } from "@/lib/tenancy";
-import { STAFF_ROLES } from "@/lib/two-factor";
 import { driverFor } from "@/lib/inbox/drivers";
 import { reply as sendReply } from "@/lib/inbox/store";
 import type { ActionResult } from "./catalogue";
@@ -119,7 +118,12 @@ export async function replyAction(_prev: ActionResult, form: FormData): Promise<
   const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
-  if (!STAFF_ROLES.has(user.role)) return { error: t("err.supportOnly") };
+  // Admin, matching src/app/admin/layout.tsx, which lets support into
+  // /admin/tickets and nowhere else. A server action is a POST endpoint, not a
+  // path, so the layout never ran here — a support account could not open the
+  // inbox but could still drive it, including sending messages out to
+  // customers under the business's name.
+  if (user.role !== "admin") return { error: t("err.supportOnly") };
 
   const conversationId = String(form.get("conversationId") ?? "");
   const body = String(form.get("body") ?? "").trim();
@@ -141,7 +145,12 @@ export async function markReadAction(conversationId: string): Promise<ActionResu
   const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
-  if (!STAFF_ROLES.has(user.role)) return { error: t("err.supportOnly") };
+  // Admin, matching src/app/admin/layout.tsx, which lets support into
+  // /admin/tickets and nowhere else. A server action is a POST endpoint, not a
+  // path, so the layout never ran here — a support account could not open the
+  // inbox but could still drive it, including sending messages out to
+  // customers under the business's name.
+  if (user.role !== "admin") return { error: t("err.supportOnly") };
 
   const conversation = await db.conversation.findFirst({ where: { id: conversationId } });
   if (!conversation) return { error: t("err.threadGone") };
@@ -155,7 +164,12 @@ export async function setThreadStatusAction(conversationId: string, status: stri
   const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
-  if (!STAFF_ROLES.has(user.role)) return { error: t("err.supportOnly") };
+  // Admin, matching src/app/admin/layout.tsx, which lets support into
+  // /admin/tickets and nowhere else. A server action is a POST endpoint, not a
+  // path, so the layout never ran here — a support account could not open the
+  // inbox but could still drive it, including sending messages out to
+  // customers under the business's name.
+  if (user.role !== "admin") return { error: t("err.supportOnly") };
   if (status !== "open" && status !== "closed") return { error: t("err.threadStatus") };
 
   const conversation = await db.conversation.findFirst({ where: { id: conversationId } });

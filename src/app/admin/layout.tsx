@@ -125,8 +125,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         { href: "/admin/settings", label: t("admin.settings"), icon: "settings" },
       ]
     : [
+        // Support gets the desk and the way back. The inbox was offered here
+        // and redirected the moment it was tapped — the gate above sends any
+        // non-admin to /admin/tickets — so it was an invitation to a door that
+        // does not open.
         { href: "/admin/tickets", label: t("dash.tickets"), icon: "ticket" },
-        { href: "/admin/inbox", label: t("inbox.title"), icon: "mail" },
         { href: "/dashboard", label: t("dash.title"), icon: "dashboard", exact: true },
       ];
 
