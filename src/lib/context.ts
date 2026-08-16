@@ -21,6 +21,8 @@ export type AppContext = {
   baseCurrency: CurrencyInfo;
   currencies: CurrencyInfo[];
   theme: string;
+  /** "rtl" for Arabic and Urdu, "ltr" for everything else. */
+  direction: "ltr" | "rtl";
   mode: "dark" | "light";
   /** IANA name every date on the page is rendered in. */
   timezone: string;
@@ -115,6 +117,13 @@ export async function getAppContext(): Promise<AppContext> {
   const locale =
     onLanding && languages.some((l) => l.code === landingLocale) ? landingLocale : resolvedLocale;
 
+  // Each language row carries which way it is read, and until now nothing
+  // used it — an operator could add Arabic, set it to rtl, and get a page
+  // that still ran left to right. The browser lays out the whole document
+  // from this one attribute, so it belongs on <html> or nowhere.
+  const direction: "ltr" | "rtl" =
+    languages.find((l) => l.code === locale)?.direction === "rtl" ? "rtl" : "ltr";
+
   const allowCurrency = settings["currency.allowUserCurrency"] !== false;
   const currencyCode = allowCurrency
     ? user?.currency || jar.get(CURRENCY_COOKIE)?.value || (settings["currency.display"] as string)
@@ -154,6 +163,7 @@ export async function getAppContext(): Promise<AppContext> {
     baseCurrency,
     currencies,
     theme,
+    direction,
     mode,
     timezone,
     themes: themeRows,

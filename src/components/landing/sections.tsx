@@ -44,9 +44,21 @@ export function rateLabel(
   // difference between two services. Per-unit always allows two, and trailing
   // zeros are dropped so a round price still reads as a round price.
   const each = (ratePerThousand / 1000) * (currency.rate || 1);
+  const digits = Math.max(currency.decimals, 2);
+
+  // Below the smallest amount the currency can write, per-unit stops being a
+  // price and becomes a zero: a dollar panel selling views at $0.02 per
+  // thousand is $0.00002 each, which rounds to "$0" and tells the reader the
+  // service is free. Quote it the way the catalogue stores it instead —
+  // per 1,000 is what this market publishes anyway, and a true number in the
+  // wrong unit beats a false one in the right one.
+  if (each > 0 && each < 1 / 10 ** digits) {
+    return { amount: displayMoney(ratePerThousand, currency, locale), unit: t("landing.board.per") };
+  }
+
   const value = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: Math.max(currency.decimals, 2),
+    maximumFractionDigits: digits,
   }).format(each);
   const amount = currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
   return { amount, unit: t("landing.board.perUnit") };

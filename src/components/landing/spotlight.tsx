@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import { displayMoney } from "@/lib/currency";
-import { ClosingCta, Faqs, PaymentStrip, Pills, PlatformStrip, Quotes, Steps } from "./sections";
+import { ClosingCta, Faqs, PaymentStrip, Pills, PlatformStrip, Quotes, Steps, rateLabel } from "./sections";
 import type { LayoutProps } from "./types";
 import type { RecentDelivery } from "@/lib/landing";
 
@@ -179,7 +178,7 @@ export default function Spotlight(props: LayoutProps) {
 
             {data.from > 0 && (
               <p className="muted mt-5 text-sm">
-                {t("landing.spot.from", { amount: displayMoney(data.from, currency, locale) })}
+                {t("landing.spot.from", rateLabel(data.from, currency, locale, settings, t))}
               </p>
             )}
 

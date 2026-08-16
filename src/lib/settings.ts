@@ -100,11 +100,21 @@ export const settingDefinitions = {
   "rank.tokenUrl": { group: "seo", type: "text", value: "" },
 
   // --- Localisation -------------------------------------------------------
-  "locale.default": { group: "locale", type: "text", value: "vi" },
+  // English and US dollars out of the box, with Vietnamese and the dong as
+  // two of the options beside every other language and currency. The panel
+  // was written for one market and defaulted to it; it is sold into many, and
+  // an operator in any of them should not have to change four settings before
+  // the first page reads.
+  //
+  // `currency.base` is the unit every stored amount is in — a balance, a
+  // price, a refund — so changing it does not convert anything, it changes
+  // what the numbers already in the database mean. A migration pins the old
+  // value on every panel that predates this change for exactly that reason.
+  "locale.default": { group: "locale", type: "text", value: "en" },
   "locale.allowUserLocale": { group: "locale", type: "boolean", value: true },
-  "locale.timezone": { group: "locale", type: "text", value: "Asia/Ho_Chi_Minh" },
+  "locale.timezone": { group: "locale", type: "text", value: "UTC" },
   "locale.allowUserTimezone": { group: "locale", type: "boolean", value: true },
-  "currency.base": { group: "locale", type: "text", value: "VND" },
+  "currency.base": { group: "locale", type: "text", value: "USD" },
   "currency.autoUpdate": { group: "locale", type: "boolean", value: false },
   "currency.rateApiUrl": {
     group: "locale",
@@ -114,7 +124,7 @@ export const settingDefinitions = {
   "currency.rateApiKey": { group: "locale", type: "password", value: "" },
   "currency.rateMargin": { group: "locale", type: "number", value: 0 },
   "currency.updateEveryHours": { group: "locale", type: "number", value: 12 },
-  "currency.display": { group: "locale", type: "text", value: "VND" },
+  "currency.display": { group: "locale", type: "text", value: "USD" },
   "currency.allowUserCurrency": { group: "locale", type: "boolean", value: true },
 
   // --- Orders -------------------------------------------------------------
@@ -166,25 +176,41 @@ export const settingDefinitions = {
   "sync.staleAfterMinutes": { group: "order", type: "number", value: 15 },
 
   // --- Wallet -------------------------------------------------------------
-  "wallet.minDeposit": { group: "wallet", type: "number", value: 20000 },
-  "wallet.maxDeposit": { group: "wallet", type: "number", value: 500000000 },
+  // Both in the base currency, so both moved when the base did.
+  "wallet.minDeposit": { group: "wallet", type: "number", value: 5 },
+  "wallet.maxDeposit": { group: "wallet", type: "number", value: 20000 },
   "wallet.autoApprove": { group: "wallet", type: "boolean", value: true },
+  // Keyed by the currency the reader is paying in, not by the base, because
+  // a button offering "$4.30" because someone rounded 100,000 dong is a
+  // button nobody presses. A currency with no row here gets no buttons,
+  // which is why every seeded one has a row.
   "wallet.quickAmounts": {
     group: "wallet",
     type: "json",
     value: {
-      VND: [50000, 100000, 200000, 500000, 1000000],
       USD: [5, 10, 25, 50, 100],
       EUR: [5, 10, 25, 50, 100],
-      TRY: [100, 250, 500, 1000],
+      GBP: [5, 10, 25, 50, 100],
+      VND: [50000, 100000, 200000, 500000, 1000000],
       INR: [500, 1000, 2500, 5000],
+      BRL: [25, 50, 100, 250],
+      TRY: [200, 500, 1000, 2500],
+      IDR: [50000, 100000, 250000, 500000],
+      PHP: [250, 500, 1000, 2500],
+      THB: [200, 500, 1000, 2000],
+      NGN: [5000, 10000, 25000, 50000],
+      PKR: [1000, 2500, 5000, 10000],
+      RUB: [500, 1000, 2500, 5000],
+      MXN: [100, 250, 500, 1000],
+      AED: [20, 50, 100, 250],
+      BDT: [500, 1000, 2500, 5000],
     } as Record<string, number[]>,
   },
 
   // --- Affiliate ----------------------------------------------------------
   "affiliate.enabled": { group: "affiliate", type: "boolean", value: true },
   "affiliate.commissionPercent": { group: "affiliate", type: "number", value: 5 },
-  "affiliate.minWithdraw": { group: "affiliate", type: "number", value: 50000 },
+  "affiliate.minWithdraw": { group: "affiliate", type: "number", value: 10 },
 
   // --- Registration -------------------------------------------------------
   "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
@@ -268,7 +294,18 @@ export const settingDefinitions = {
 } as const;
 
 export type SettingKey = keyof typeof settingDefinitions;
-type SettingValue<K extends SettingKey> = (typeof settingDefinitions)[K]["value"];
+
+/**
+ * A setting's type comes from its default, but not its *value* — the default
+ * is one of the values it can hold, not the only one. Left narrow, the
+ * registry claimed `locale.default` was the literal `"vi"`, so comparing it
+ * to any other language code was an error TypeScript reported as a mistake
+ * ("these have no overlap") when the mistake was in the type. It went unseen
+ * only because the one comparison in the codebase happened to test for the
+ * default.
+ */
+type Widen<T> = T extends string ? string : T extends number ? number : T extends boolean ? boolean : T;
+type SettingValue<K extends SettingKey> = Widen<(typeof settingDefinitions)[K]["value"]>;
 
 /**
  * Read once per request, per panel.
