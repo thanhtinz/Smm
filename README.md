@@ -32,9 +32,9 @@ is stored in the database and edited from the admin area.
 
 ```bash
 npm install
-cp .env.example .env      # set DATABASE_URL and AUTH_SECRET
+cp .env.example .env      # set AUTH_SECRET and APP_URL
 npx prisma migrate deploy
-npx tsx prisma/seed.ts
+npm run db:seed
 npm run dev
 ```
 
@@ -44,6 +44,44 @@ Seeded accounts:
 | ----- | -------- | --------- |
 | Admin | `admin`  | Admin@123 |
 | User  | `demo`   | Demo@123  |
+
+## Chạy trên máy (không cần VPS)
+
+Panel dùng SQLite — database là một file, không có Docker, Redis hay service ngoài
+nào phải dựng. Cần đúng ba thứ: **Node ≥ 20.6**, Git, và một trình soạn thảo.
+
+Chạy năm lệnh ở trên là xong, mở `http://localhost:3000`. Trước khi chạy, sửa hai
+dòng trong `.env`:
+
+| Biến          | Để gì khi chạy máy                                                    |
+| ------------- | --------------------------------------------------------------------- |
+| `AUTH_SECRET` | Một chuỗi ngẫu nhiên dài. Để nguyên mẫu thì phiên đăng nhập ký bằng chuỗi ai cũng biết. |
+| `APP_URL`     | `http://localhost:3000`. Mẫu để sẵn `https://your-panel.com`, giữ nguyên thì link quay về sau thanh toán và URL webhook trỏ sai chỗ. |
+
+`localhost` chạy được ngay mà không phải cấu hình DNS: seed luôn gắn `localhost` và
+`127.0.0.1` làm hostname cho panel gốc.
+
+**Chạy trên máy thì ba thứ này không hoạt động, và đó là do bản chất chứ không phải lỗi:**
+
+- **Webhook thanh toán.** Cổng thanh toán phải gọi ngược vào máy bạn, mà máy bạn
+  không có địa chỉ công khai. Muốn thử thì mở đường hầm bằng `ngrok` hoặc
+  `cloudflared` rồi đặt `APP_URL` thành URL đó. Không cần thử thì dùng **Chuyển
+  khoản thủ công** — operator tự duyệt, không đụng webhook.
+- **Cron đồng bộ đơn.** Không có scheduler chạy nền; bấm tay trong `/admin/cron`.
+- **Nhà cung cấp thật.** Cần API key thật của một panel nguồn.
+
+Mọi thứ còn lại chạy đủ: đặt đơn, ví, affiliate, ticket, blog, panel con, đổi giao
+diện, ngôn ngữ và tiền tệ.
+
+**Làm lại từ đầu:** xoá `prisma/dev.db` rồi chạy lại `npx prisma migrate deploy` và
+`npm run db:seed`.
+
+**Lệnh hay dùng:** `npm run dev` (chạy phát triển), `npm test` (test đơn vị),
+`npm run smoke` (mở mọi trang — cần app đang chạy sẵn).
+
+Một điểm khác nhau giữa `npm run dev` và `npm run start`: bản production phục vụ
+thư mục `public/` theo ảnh chụp lúc khởi động, nên **ảnh vừa upload chỉ hiện sau
+khi khởi động lại server**. Chạy `npm run dev` thì không dính.
 
 ## Payment methods
 
