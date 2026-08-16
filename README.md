@@ -126,6 +126,61 @@ Captured with `node scripts/shoot.mjs <name> <path>` and stored in `docs/screens
 | --------------- | -------------- |
 | ![](docs/screenshots/03-landing-midnight-dark.png) | ![](docs/screenshots/04-landing-citrus-light.png) |
 
+## Pricing and access, per customer
+
+Tiers price a class of customer. These price and permit one.
+
+| Control              | What it does                                                      |
+| -------------------- | ----------------------------------------------------------------- |
+| Custom rate          | One service, one customer, one price — outranks the tier          |
+| Personal discount    | A percentage off, compounded onto the tier's own                  |
+| Copy rates           | One customer's whole rate card onto others, by username           |
+| Reset rates          | Drops the overrides on any number of accounts at once             |
+| Access rules         | Ordering, refills, cancels, deposits, tickets, API, affiliate, panels |
+| Payment methods      | Which ways this one account may add funds                         |
+
+Access rules are stored as refusals, so absence is permission: a rule added in
+a later build bars nobody retroactively. They are enforced on the forms and on
+`/api/v2` alike.
+
+| Rate card and access rules | Bulk repricing |
+| -------------------------- | -------------- |
+| ![](docs/screenshots/60-admin-user-pricing.png) | ![](docs/screenshots/64-admin-services-mass.png) |
+
+## Catalogue operations
+
+- **Mass edit rates** by percentage or to a figure. Services following a
+  provider's price are skipped and reported rather than overwritten by the
+  next sync an hour later
+- **Quantity step**, so a provider that only takes round hundreds refuses at
+  the order form instead of after the charge
+- **Overflow**, a percentage ordered upstream on top of what the customer
+  bought to cover drops. They are never charged for it
+- **Restore**, because a delete marks the row rather than destroying it —
+  orders point at services, and the wrong service does get deleted
+- **Likes spread**, delivering across the posts already on a profile, sharing
+  the subscription plumbing and differing only in which count is sent
+
+## Blog
+
+Posts get their own address, their own meta tags and their own publish time —
+set one in the future and the post appears on its own, with nothing having to
+run. Published posts join the sitemap and are submitted to IndexNow; scheduled
+ones are not, because a crawler sent to a 404 remembers the address as broken.
+
+| Index | Post | Admin |
+| ----- | ---- | ----- |
+| ![](docs/screenshots/63-blog.png) | ![](docs/screenshots/65-blog-post.png) | ![](docs/screenshots/62-admin-blog.png) |
+
+## Support desk
+
+Saved replies are written once by an admin and inserted by anyone on the desk.
+Inserting appends rather than replaces: the canned text is the bones of an
+answer and the half-sentence already typed about this customer is what makes it
+one. The list orders itself by use.
+
+![](docs/screenshots/61-admin-saved-replies.png)
+
 ## Reseller API
 
 One endpoint, `POST /api/v2`, shaped to the de-facto SMM panel standard so
@@ -154,6 +209,9 @@ provider can be any compatible panel — including another instance of this one.
 - An upstream cancellation refunds the customer; a partial delivery refunds
   only the undelivered share
 - `POST /api/cron/sync` runs both passes for a scheduler, gated by `CRON_SECRET`
+- A provider can carry an alias, shown in place of its name everywhere but the
+  providers page itself — the route list, an order's note, the sync alerts —
+  so a screenshot does not carry the supplier list
 
 ![](docs/screenshots/50-admin-providers.png)
 
@@ -171,3 +229,6 @@ Features land one at a time, each verified with a screenshot before the next beg
 - [x] 8 — Public API v2
 - [x] 9 — Provider integration
 - [x] 10 — Refill and cancellation requests
+- [x] 11 — Per-customer pricing and access rules
+- [x] 12 — Catalogue operations: bulk repricing, quantity steps, overflow, restore
+- [x] 13 — Saved replies, provider aliases and the blog

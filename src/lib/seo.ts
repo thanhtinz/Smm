@@ -46,16 +46,29 @@ export async function publicUrls(): Promise<SitemapEntry[]> {
   // The catalogue is not public any more, so the map is the landing page, the
   // API documentation and whatever pages the operator wrote. Short on purpose:
   // listing an address a visitor cannot open is worse than not listing it.
-  const pages = await db.page.findMany({
-    where: { published: true },
-    orderBy: { position: "asc" },
-    select: { slug: true, updatedAt: true },
-  });
+  const [pages, posts] = await Promise.all([
+    db.page.findMany({
+      where: { published: true },
+      orderBy: { position: "asc" },
+      select: { slug: true, updatedAt: true },
+    }),
+    // Published and already due. A post dated for next week 404s, and a
+    // sitemap that lists one is telling a crawler an address is broken.
+    db.blogPost.findMany({
+      where: { publishedAt: { not: null, lte: new Date() } },
+      orderBy: { publishedAt: "desc" },
+      select: { slug: true, updatedAt: true },
+    }),
+  ]);
 
   return [
     { url: at("/"), priority: 1 },
     { url: at("/api-docs"), priority: 0.4 },
     ...pages.map((p) => ({ url: at(`/p/${p.slug}`), lastModified: p.updatedAt, priority: 0.5 })),
+    // The index only once there is something under it: an empty page in a
+    // sitemap is a page a crawler learns to stop fetching.
+    ...(posts.length > 0 ? [{ url: at("/blog"), priority: 0.6 }] : []),
+    ...posts.map((p) => ({ url: at(`/blog/${p.slug}`), lastModified: p.updatedAt, priority: 0.6 })),
   ];
 }
 

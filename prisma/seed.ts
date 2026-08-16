@@ -668,6 +668,67 @@ async function main() {
     });
   }
 
+  // --- Blog ---------------------------------------------------------------
+  // One post, so the blog is not a dead link on a fresh install and so the
+  // index has something to show while the operator writes their own. Written
+  // in the panel's default language, like the pages and the FAQ.
+  const firstPost = landingVi
+    ? {
+        slug: "bat-dau-voi-panel",
+        title: "Bắt đầu với panel: đặt đơn đầu tiên",
+        excerpt: "Từ nạp tiền đến đơn đầu tiên, trong ba bước.",
+        body: "<p>Sửa hoặc xoá bài này trong Quản trị → Blog.</p>",
+        tags: "hướng dẫn",
+      }
+    : {
+        slug: "getting-started",
+        title: "Getting started: your first order",
+        excerpt: "From adding funds to your first order, in three steps.",
+        body: "<p>Edit or delete this post from Admin → Blog.</p>",
+        tags: "guides",
+      };
+  await db.blogPost.upsert({
+    where: { panelId_slug: { panelId: PANEL, slug: firstPost.slug } },
+    create: { ...firstPost, panelId: PANEL, publishedAt: new Date() },
+    update: {},
+  });
+
+  // --- Saved replies ------------------------------------------------------
+  // The two questions every panel's desk answers in its first week.
+  const replies = landingVi
+    ? [
+        {
+          title: "Đơn chưa chạy",
+          body: "Chào bạn, đơn đã sang nhà cung cấp và đang trong hàng đợi. Phần lớn dịch vụ bắt đầu trong vài phút, chậm nhất là vài giờ vào giờ cao điểm. Mình sẽ theo dõi giúp bạn.",
+          category: "",
+          position: 0,
+        },
+        {
+          title: "Cách yêu cầu bảo hành",
+          body: "Bạn mở đơn trong mục Đơn hàng rồi bấm nút bảo hành. Phần hụt sẽ được bù lại, thường trong vòng 24 giờ.",
+          category: "",
+          position: 1,
+        },
+      ]
+    : [
+        {
+          title: "Order has not started",
+          body: "Thanks for getting in touch. The order is with the provider and in its queue. Most services start within minutes, and within a few hours at the busiest times. We are watching it for you.",
+          category: "",
+          position: 0,
+        },
+        {
+          title: "How to request a refill",
+          body: "Open the order under Orders and use the refill button. The shortfall is topped back up, usually within 24 hours.",
+          category: "",
+          position: 1,
+        },
+      ];
+  for (const reply of replies) {
+    const exists = await db.savedReply.findFirst({ where: { panelId: PANEL, title: reply.title } });
+    if (!exists) await db.savedReply.create({ data: { ...reply, panelId: PANEL } });
+  }
+
   // --- Landing FAQ --------------------------------------------------------
   // Starter questions, because these four are asked of every panel in this
   // market. They are meant to be edited from Admin → Home page, not kept, and

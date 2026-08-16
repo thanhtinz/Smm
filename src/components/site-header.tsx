@@ -5,8 +5,9 @@ import SiteLinks from "@/components/site-links";
 import SiteMenu from "@/components/site-nav";
 import { Icon } from "@/components/icons";
 import type { AppContext } from "@/lib/context";
+import { db } from "@/lib/db";
 
-export default function SiteHeader({
+export default async function SiteHeader({
   ctx,
   preferences = true,
 }: {
@@ -23,9 +24,14 @@ export default function SiteHeader({
 }) {
   const { t, user, settings } = ctx;
 
+  // The blog is offered only once there is something in it: a header link to
+  // an empty page is worse than no header link.
+  const posts = await db.blogPost.count({ where: { publishedAt: { not: null, lte: new Date() } } });
+
   const links = [
     { href: "/", label: t("nav.home") },
     { href: "/api-docs", label: t("nav.api") },
+    ...(posts > 0 ? [{ href: "/blog", label: t("blog.title") }] : []),
     { href: "/p/terms", label: t("nav.terms") },
   ];
 

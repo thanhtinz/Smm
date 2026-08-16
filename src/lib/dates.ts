@@ -133,6 +133,31 @@ export function formatLocalDay(value: Date, timeZone: string): string {
 }
 
 /**
+ * The other direction: an instant back into "2026-08-20T14:30" in a zone.
+ *
+ * What a `datetime-local` field has to be handed to show the operator the same
+ * wall clock they typed. Built from parts rather than from toISOString, for
+ * the same reason formatLocalDay is: slicing an ISO string reads the time in
+ * UTC, which is the wrong hour — and, for part of every day, the wrong date —
+ * for anyone not on it.
+ */
+export function formatLocalInput(value: Date, timeZone: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(value);
+  const at = (type: string) => parts.find((p) => p.type === type)?.value ?? "";
+  // Intl writes midnight as "24" in the hourCycle this combination picks.
+  const hour = at("hour") === "24" ? "00" : at("hour");
+  return `${at("year")}-${at("month")}-${at("day")}T${hour}:${at("minute")}`;
+}
+
+/**
  * "2026-08-20T14:30" in a named zone, as the instant it names.
  *
  * A `datetime-local` field sends a wall clock with no zone attached, and the

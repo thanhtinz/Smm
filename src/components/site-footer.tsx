@@ -6,11 +6,13 @@ import type { AppContext } from "@/lib/context";
 
 export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
   const { t, settings } = ctx;
-  const pages = await db.page.findMany({
-    where: { published: true, showInFooter: true },
-    orderBy: { position: "asc" },
-    select: { slug: true, title: true },
-  });
+  const [pages] = await Promise.all([
+    db.page.findMany({
+      where: { published: true, showInFooter: true },
+      orderBy: { position: "asc" },
+      select: { slug: true, title: true },
+    }),
+  ]);
 
   const socials = (
     [

@@ -14,7 +14,7 @@ import { PrismaClient } from "@prisma/client";
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
 const db = new PrismaClient();
 
-const GUEST = ["/", "/api-docs", "/login", "/register", "/forgot-password", "/resend-verification"];
+const GUEST = ["/", "/api-docs", "/blog", "/login", "/register", "/forgot-password", "/resend-verification"];
 const CUSTOMER = [
   "/dashboard",
   "/dashboard/new-order",
@@ -44,6 +44,8 @@ const ADMIN = [
   "/admin/currencies",
   "/admin/languages",
   "/admin/pages",
+  "/admin/blog",
+  "/admin/saved-replies",
   "/admin/announcements",
   "/admin/landing",
   "/admin/appearance",
@@ -131,6 +133,8 @@ const order = await db.order.findFirst({ where: { panelId: root.id }, orderBy: {
 const ticket = await db.ticket.findFirst({ where: { panelId: root.id } });
 const txn = await db.transaction.findFirst({ where: { panelId: root.id, type: "deposit" } });
 const page1 = await db.page.findFirst({ where: { panelId: root.id } });
+const post = await db.blogPost.findFirst({ where: { panelId: root.id, publishedAt: { not: null } } });
+const customer = await db.user.findFirst({ where: { panelId: root.id, role: "user" } });
 const platform = await db.platform.findFirst({
   where: { panelId: root.id, visible: true, categories: { some: { services: { some: { enabled: true } } } } },
   include: { categories: { where: { services: { some: { enabled: true } } }, take: 1 } },
@@ -139,6 +143,7 @@ const platform = await db.platform.findFirst({
 await walk("Signed out", [
   ...GUEST,
   ...(page1 ? [`/p/${page1.slug}`] : []),
+  ...(post ? [`/blog/${post.slug}`] : []),
 ]);
 
 await walk(
@@ -157,7 +162,11 @@ await walk(
   ["demo", "Demo@123"],
 );
 
-await walk("As an admin", ADMIN, ["admin", "Admin@123"]);
+await walk(
+  "As an admin",
+  [...ADMIN, ...(customer ? [`/admin/users/${customer.id}`] : [])],
+  ["admin", "Admin@123"],
+);
 
 // Settings is a section per page now, so the index is the list of them.
 await walk(

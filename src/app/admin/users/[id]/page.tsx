@@ -77,7 +77,11 @@ export default async function AdminUserPage({ params }: { params: Promise<{ id: 
           </div>
           <div>
             <dt className="muted">{t("tier.tier")}</dt>
-            <dd className="font-semibold">{pricing.tier?.name ?? t("common.none")}</dd>
+            {/* An em dash rather than "none": this panel may simply have no
+                tiers, which is not the same as this customer having none. */}
+            <dd className="font-semibold">
+              {pricing.tier?.name ?? <span className="muted">—</span>}
+            </dd>
           </div>
         </dl>
       </div>
