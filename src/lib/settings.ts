@@ -213,6 +213,22 @@ export const settingDefinitions = {
   "affiliate.minWithdraw": { group: "affiliate", type: "number", value: 10 },
 
   // --- Registration -------------------------------------------------------
+  // Sign-in was unbounded: an attacker could try passwords as fast as the
+  // server would answer. Counted per address and per username over the window
+  // below; zero switches it off for an operator whose proxy already does this.
+  // A channel connected before signing secrets existed has none stored, and
+  // its callbacks are accepted unverified — refusing would drop real customer
+  // messages silently, since these platforms do not retry a 401. The URL is an
+  // address rather than a credential, though, and it is printed on the
+  // channels page and pasted into a third party's dashboard: anyone who has
+  // seen it can post messages into the inbox as any customer. Once an operator
+  // has reconnected their channels, this closes that door.
+  "inbox.requireSignature": { group: "auth", type: "boolean", value: false },
+  "auth.maxFailedLogins": { group: "auth", type: "number", value: 10 },
+  "auth.lockoutMinutes": { group: "auth", type: "number", value: 15 },
+  // Verification emails an address may ask for in an hour. The action has to
+  // be public, so this is the only thing standing between it and a mailbox.
+  "auth.maxVerificationEmails": { group: "auth", type: "number", value: 5 },
   "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
   "auth.requireEmailVerification": { group: "auth", type: "boolean", value: false },
   "auth.requireAdminTwoFactor": { group: "auth", type: "boolean", value: false },

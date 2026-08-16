@@ -7,7 +7,6 @@ import { displayMoney } from "@/lib/currency";
 import { csvFilename, csvResponse } from "@/lib/csv";
 import { getSetting } from "@/lib/settings";
 import { priceServices, resolveTier } from "@/lib/pricing";
-import { STAFF_ROLES } from "@/lib/two-factor";
 
 /**
  * Downloads of what the screens already show.
@@ -16,9 +15,18 @@ import { STAFF_ROLES } from "@/lib/two-factor";
  * list, and support wants an order history it can filter without the panel.
  * All three were leaving with screenshots.
  *
- * A customer exports their own rows. Staff may pass ?all=1 to take the
+ * A customer exports their own rows. An admin may pass ?all=1 to take the
  * panel's, which is the only difference between the two — the filters, the
  * columns and the file are otherwise the same.
+ *
+ * Admin, not staff. src/app/admin/layout.tsx is the only gate on the admin
+ * area and it says so plainly: it lets the support role in and then confines
+ * it to /admin/tickets, keeping "settings, providers, payment credentials and
+ * the user list with the admin". A route handler is not a page, so that layout
+ * never runs here — and this authorised on STAFF_ROLES, which includes
+ * support. `GET /api/export/orders?all=1` handed a support account a CSV of
+ * every order and every transaction in the panel: the exact list the layout
+ * exists to withhold.
  */
 const BATCH = 500;
 
@@ -28,7 +36,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ kind
   if (!user) return new Response("Sign in first", { status: 401 });
 
   const url = new URL(request.url);
-  const everyone = url.searchParams.get("all") === "1" && STAFF_ROLES.has(user.role);
+  const everyone = url.searchParams.get("all") === "1" && user.role === "admin";
 
   const ctx = await getAppContext();
   const dates = dateFormats(ctx.locale, ctx.timezone);

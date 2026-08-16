@@ -142,3 +142,17 @@ export async function readSettingAcross(panelIds: string[], key: string): Promis
   });
   return new Map(rows.map((r) => [r.panelId, r.value]));
 }
+
+/**
+ * Whether the panel serving this request has been switched off.
+ *
+ * The dashboard and admin layouts check this and render a notice, but a layout
+ * only guards a page — a server action posted from a tab that was already open
+ * runs regardless. That was fine for most of them and not for the two that
+ * move money: a customer of a panel suspended for unpaid rent could still put
+ * money into it. The v2 API has always checked; the actions had not.
+ */
+export async function panelSuspended(): Promise<boolean> {
+  const panel = await getCurrentPanel();
+  return !panel || panel.status !== "active";
+}

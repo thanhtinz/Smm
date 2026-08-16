@@ -475,6 +475,7 @@ export const en = {
 
   // What a server action hands back when something is refused. These are read
   // by a person, so they are looked up rather than written into the code.
+  "err.panelClosed": "This panel is closed at the moment.",
   "err.session": "Your session expired. Please sign in again.",
   "err.identifierRequired": "Enter your username or email",
   "err.passwordRequired": "Enter your password",
@@ -485,6 +486,7 @@ export const en = {
 
   "err.sessionShort": "Your session expired.",
   "err.captcha": "Please complete the verification and try again.",
+  "err.tooManyAttempts": "Too many failed attempts. Try again in {n} minutes.",
   "err.credentials": "Those credentials do not match an account.",
   "err.suspended": "This account is suspended.",
   "err.suspendedReason": "This account is suspended: {reason}",
@@ -1986,6 +1988,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "notify.alert.lowBalance": "Số dư chỉ còn {amount} {currency}",
   "notify.alert.more": "…và {count} mục nữa",
 
+  "err.panelClosed": "Panel này hiện đang đóng.",
   "err.session": "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.",
   "err.identifierRequired": "Nhập tên đăng nhập hoặc email",
   "err.passwordRequired": "Nhập mật khẩu",
@@ -1996,6 +1999,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
 
   "err.sessionShort": "Phiên làm việc đã hết hạn.",
   "err.captcha": "Vui lòng hoàn tất xác minh rồi thử lại.",
+  "err.tooManyAttempts": "Sai quá nhiều lần. Thử lại sau {n} phút.",
   "err.credentials": "Thông tin đăng nhập không đúng.",
   "err.suspended": "Tài khoản này đang bị khoá.",
   "err.suspendedReason": "Tài khoản này đang bị khoá: {reason}",

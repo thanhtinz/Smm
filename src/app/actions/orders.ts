@@ -1,5 +1,6 @@
 "use server";
 
+import { panelSuspended } from "@/lib/tenancy";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
@@ -36,6 +37,10 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
+
+  // A layout guards a page; this guards a form posted from a page that was
+  // already open when the panel was switched off.
+  if (await panelSuspended()) return { error: t("err.panelClosed") };
 
   if (!(await getSetting("order.enabled"))) {
     return { error: t("err.orderDisabled") };
