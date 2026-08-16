@@ -102,11 +102,16 @@ export async function savePaymentMethodAction(_prev: ActionResult, form: FormDat
   // moves dong should not be configurable to accept dollars — see `currencies`
   // on the Driver type.
   const allowed = driver?.currencies;
-  const currencies = form
+  const chosen = form
     .getAll("currencies")
     .map(String)
     .filter(Boolean)
     .filter((code) => !allowed || allowed.includes(code));
+  // Unticking every box does not make a dong-only rail take dollars: an empty
+  // list reads as "any currency" everywhere else, so a restricted driver keeps
+  // its own list instead. Stored rather than only enforced on the way out, so
+  // the boxes an operator sees are the ones that apply.
+  const currencies = allowed && chosen.length === 0 ? [...allowed] : chosen;
 
   await db.paymentMethod.update({
     where: { id },

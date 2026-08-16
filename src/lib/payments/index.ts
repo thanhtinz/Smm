@@ -372,6 +372,26 @@ export function parseCurrencies(raw: string): string[] {
 }
 
 /**
+ * What a method may actually be paid in.
+ *
+ * An empty stored list means "whatever the panel offers", which is the right
+ * default for a card gateway and the wrong one for a domestic rail. Unticking
+ * every box on MoMo, ZaloPay or SePay turned "dong only" into "anything" — and
+ * those three drivers round the amount to whole units, because the dong has
+ * none. A $25.50 deposit would have been handed to the gateway as 26.
+ *
+ * So a driver that declares its currencies is never unrestricted: an empty
+ * choice falls back to what it can take rather than to everything, and a
+ * stored list from before that restriction existed is narrowed on the way out.
+ */
+export function methodCurrencies(driverKey: string, stored: string): string[] {
+  const chosen = parseCurrencies(stored);
+  const allowed = drivers[driverKey]?.currencies;
+  if (!allowed) return chosen;
+  return chosen.length === 0 ? [...allowed] : chosen.filter((code) => allowed.includes(code));
+}
+
+/**
  * An amount in the currency's smallest unit, which is what card gateways
  * charge in and what their callbacks report.
  *
@@ -420,7 +440,7 @@ export async function getAvailableMethods() {
       driver: row.driver,
       icon: row.icon,
       description: row.description,
-      currencies: parseCurrencies(row.currencies),
+      currencies: methodCurrencies(row.driver, row.currencies),
       minAmount: row.minAmount,
       maxAmount: row.maxAmount,
       feePercent: row.feePercent,

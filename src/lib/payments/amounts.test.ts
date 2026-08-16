@@ -8,7 +8,7 @@ vi.mock("@/lib/currency", () => ({
   resolveCurrency: async (code: string) => ({ code, decimals: DECIMALS[code] ?? 2 }),
 }));
 
-const { minorUnits, underpaid } = await import("./index");
+const { methodCurrencies, minorUnits, underpaid } = await import("./index");
 
 describe("minorUnits", () => {
   // The bug: every gateway was handed `amount * 100`. Right for the dollar,
@@ -52,5 +52,31 @@ describe("underpaid", () => {
     expect(await underpaid(249_999, 250_000, "VND")).toBe(true);
     // One dong short of a 200,000 ₫ transfer is not slack.
     expect(await underpaid(199_999, 200_000, "VND")).toBe(true);
+  });
+});
+
+describe("methodCurrencies", () => {
+  // The hole: an empty list means "any currency the panel offers", so
+  // unticking every box on a dong-only rail offered dollars — and its driver
+  // rounds to whole units because the dong has none, so $25.50 would have gone
+  // to the gateway as 26.
+  it("falls back to what the rail can take, not to everything", () => {
+    expect(methodCurrencies("momo", "[]")).toEqual(["VND"]);
+    expect(methodCurrencies("zalopay", "[]")).toEqual(["VND"]);
+    expect(methodCurrencies("seapay", "[]")).toEqual(["VND"]);
+  });
+
+  it("narrows a stored list that predates the restriction", () => {
+    expect(methodCurrencies("momo", JSON.stringify(["VND", "USD"]))).toEqual(["VND"]);
+  });
+
+  it("leaves an unrestricted driver alone, empty list included", () => {
+    expect(methodCurrencies("manual", "[]")).toEqual([]);
+    expect(methodCurrencies("paypal", JSON.stringify(["USD", "EUR"]))).toEqual(["USD", "EUR"]);
+  });
+
+  it("treats an unreadable list as an empty one", () => {
+    expect(methodCurrencies("momo", "not json")).toEqual(["VND"]);
+    expect(methodCurrencies("manual", "not json")).toEqual([]);
   });
 });
