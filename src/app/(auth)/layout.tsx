@@ -57,7 +57,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* ------------------------------------------------------ brand side */}
-      <aside className="relative hidden overflow-hidden border-l border-[var(--border)] lg:flex lg:flex-col lg:justify-center">
+      <aside className="relative hidden overflow-hidden border-s border-[var(--border)] lg:flex lg:flex-col lg:justify-center">
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0"

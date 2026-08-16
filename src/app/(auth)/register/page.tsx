@@ -22,7 +22,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
     return (
       <div className="alert alert-info" role="status">
         <Icon name="info" size={16} />
-        <span>Registration is closed at the moment. Please check back later.</span>
+        <span>{t("auth.registrationClosed")}</span>
       </div>
     );
   }
@@ -36,10 +36,13 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
         title: t("auth.signup.title"),
         sub: t("auth.signup.sub"),
         username: t("auth.username"),
+        usernameHint: t("auth.usernameHint"),
+        passwordHint: t("auth.passwordHint"),
         email: t("auth.email"),
         password: t("auth.password"),
         confirm: t("auth.confirm"),
         terms: t("auth.terms"),
+        termsLink: t("auth.termsLink"),
         submit: t("nav.signup"),
         hasaccount: t("auth.hasaccount"),
         signin: t("nav.signin"),

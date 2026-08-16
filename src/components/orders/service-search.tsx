@@ -76,6 +76,11 @@ export default function ServiceSearch({
         <Icon name="search" size={16} />
       </span>
       <input
+        // The id the wrapping <Field name="quickFind"> emits htmlFor for.
+        // Without it the label was inert — clicking it did nothing, and the
+        // input's only accessible name was its placeholder, on the control a
+        // returning customer uses first.
+        id="quickFind"
         type="search"
         value={query}
         onChange={(e) => {

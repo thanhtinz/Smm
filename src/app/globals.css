@@ -125,7 +125,10 @@ body {
   }
   .prose-page ul,
   .prose-page ol {
-    padding-left: 1.4rem;
+    /* Logical, so the markers and the indent stay on the same side as the
+       text — under rtl the bullets sat against the right edge with the space
+       reserved on the left. */
+    padding-inline-start: 1.4rem;
   }
   .prose-page ul {
     list-style: disc;

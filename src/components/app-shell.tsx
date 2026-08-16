@@ -58,7 +58,7 @@ export default async function AppShell({
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[264px_1fr]">
       {/* ------------------------------------------------------- sidebar */}
-      <aside className="sticky top-0 hidden h-dvh flex-col border-r border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_55%,transparent)] lg:flex">
+      <aside className="sticky top-0 hidden h-dvh flex-col border-e border-[var(--border)] bg-[color-mix(in_srgb,var(--surface)_55%,transparent)] lg:flex">
         <div className="flex h-16 shrink-0 items-center px-5">
           <Link href="/" className="ring-focus rounded-lg">
             <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} size={30} />

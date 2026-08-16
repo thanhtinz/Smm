@@ -91,7 +91,12 @@ export default function ServicePicker({
       el.removeEventListener("scroll", read);
       observer.disconnect();
     };
-  }, [services]);
+    // The count, not the array. The caller maps a fresh array on every render,
+    // so depending on the array itself tore down the scroll listener and the
+    // ResizeObserver on every keystroke in the quantity field. What this
+    // effect actually cares about is the list getting longer or shorter, and
+    // the observer catches any resize that is not a length change.
+  }, [services.length]);
 
   if (disabled || services.length === 0) {
     return (
@@ -135,7 +140,16 @@ export default function ServicePicker({
     // A bordered box, so a card cut off at the edge reads as the list
     // continuing rather than as a card that failed to draw.
     <div className="relative rounded-xl border border-[var(--border)] p-2">
-      <div ref={box} className="max-h-[26rem] space-y-2 overflow-y-auto pr-1" role="radiogroup">
+      {/* Named here rather than by the wrapping <Field>: the input this group
+          submits through is hidden, and a hidden input cannot carry a label.
+          Without this a screen reader met an unnamed set of radios on the page
+          the panel exists to close orders on. */}
+      <div
+        ref={box}
+        className="max-h-[26rem] space-y-2 overflow-y-auto pr-1"
+        role="radiogroup"
+        aria-label={placeholder}
+      >
       <input type="hidden" name={name} value={value} />
       {services.map((service) => {
         const chosen = service.id === value;
