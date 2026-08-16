@@ -1,5 +1,6 @@
 "use client";
 
+import { roundMoney } from "@/lib/money";
 import { useActionState, useMemo, useState } from "react";
 import { massOrderAction, type MassOrderState } from "@/app/actions/orders";
 import SubmitButton from "@/components/ui/submit-button";
@@ -20,11 +21,14 @@ export default function MassOrderForm({
   services,
   balance,
   currency,
+  baseDecimals,
   labels,
 }: {
   services: ServiceOption[];
   balance: number;
   currency: Currency;
+  /** Base-currency precision, so the estimate matches what the server charges. */
+  baseDecimals: number;
   labels: MassLabels;
 }) {
   const [state, action] = useActionState<MassOrderState, FormData>(massOrderAction, {});
@@ -43,10 +47,10 @@ export default function MassOrderForm({
       const quantity = Number(parts[2]);
       if (!service || !Number.isInteger(quantity) || quantity < service.min || quantity > service.max) continue;
       valid += 1;
-      charge += Math.round((service.rate * quantity) / 1000);
+      charge += roundMoney((service.rate * quantity) / 1000, baseDecimals);
     }
     return { count: lines.length, valid, charge };
-  }, [bulk, byPublicId]);
+  }, [bulk, byPublicId, baseDecimals]);
 
   const fmt = (base: number) => formatCurrency(base, currency);
 

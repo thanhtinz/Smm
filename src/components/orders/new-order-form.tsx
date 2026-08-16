@@ -1,5 +1,6 @@
 "use client";
 
+import { roundMoney } from "@/lib/money";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 import { placeOrderAction, type OrderState } from "@/app/actions/orders";
@@ -84,6 +85,7 @@ export type OrderLabels = Record<
   | "addFunds"
   | "selectCategory"
   | "selectService"
+  | "selectService"
   | "id"
   | "limits"
   | "selectPlatform"
@@ -159,6 +161,7 @@ export default function NewOrderForm({
   services,
   balance,
   currency,
+  baseDecimals,
   accountCard,
   prefill,
   scheduleMaxDays = 0,
@@ -170,6 +173,12 @@ export default function NewOrderForm({
   services: ServiceOption[];
   balance: number;
   currency: Currency;
+  /**
+   * Precision of the *base* currency, not the displayed one. The charge is
+   * computed in base units, so rounding it by what the reader happens to be
+   * viewing in would show a price the server does not agree with.
+   */
+  baseDecimals: number;
   /** Rendered on the server: it formats money and reads the customer tier. */
   accountCard?: React.ReactNode;
   /** Starting values from a "order this again" link. */
@@ -246,7 +255,10 @@ export default function NewOrderForm({
       : Number(quantity);
   const runsNum = Number(runs);
   const units = dripfeed && runsNum > 1 ? qty * runsNum : qty;
-  const charge = service && Number.isFinite(units) && units > 0 ? Math.round((service.rate * units) / 1000) : 0;
+  // The same rounding the server will do — see roundMoney. A preview that
+  // rounds differently quotes one price and takes another.
+  const charge =
+    service && Number.isFinite(units) && units > 0 ? roundMoney((service.rate * units) / 1000, baseDecimals) : 0;
   const affordable = charge <= balance;
   const outOfRange =
     service && !subscription && qty > 0 && (qty < service.min || qty > service.max);
@@ -445,13 +457,18 @@ export default function NewOrderForm({
         </Field>
         )}
 
-        {/* Cards rather than a dropdown: the cascade has already narrowed
-            this to one category, and which service inside it — the cheap one,
-            the fast one, the one that does not drop — is the whole decision.
-            A closed control hides exactly the thing being weighed. */}
+        {/* A dropdown here, cards on a category's own page — `locked` is the
+            difference, and it is the right difference: it is set exactly when
+            the platform and category steps are hidden because the page itself
+            is the category. There the choice between the cheap service, the
+            fast one and the one that does not drop is what the reader came
+            for. Here it is step three of three, and it should look like the
+            two steps above it. */}
         <Field name="serviceId" label={labels.service} error={state.fieldErrors?.serviceId}>
           <ServicePicker
             name="serviceId"
+            shape={locked ? "cards" : "dropdown"}
+            placeholder={labels.selectService}
             value={serviceId}
             onChange={setServiceId}
             disabled={!categoryId}

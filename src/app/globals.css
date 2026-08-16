@@ -458,3 +458,10 @@ body {
     background: var(--muted);
   }
 }
+
+/* An arrow points the way the reader is going, and that is the other way in a
+   right-to-left language. Only the glyphs marked directional in icons.tsx —
+   see DIRECTIONAL there for why it is not every asymmetric shape. */
+[dir="rtl"] svg[data-dir] {
+  transform: scaleX(-1);
+}

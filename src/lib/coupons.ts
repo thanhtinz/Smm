@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { roundMoney } from "@/lib/money";
+import { getBaseCurrency } from "@/lib/currency";
 import { formatCount } from "@/lib/numbers";
 
 export type CouponCheck =
@@ -46,8 +48,9 @@ export async function evaluateCoupon(
     if (previous > 0) return { ok: false, key: "err.couponFirstOnly" };
   }
 
+  const money = (await getBaseCurrency()).decimals;
   const bonus =
-    coupon.type === "fixed" ? Math.round(coupon.value) : Math.round((amountInBase * coupon.value) / 100);
+    coupon.type === "fixed" ? roundMoney(coupon.value, money) : roundMoney((amountInBase * coupon.value) / 100, money);
   if (bonus <= 0) return { ok: false, key: "err.couponNoBonus" };
 
   return { ok: true, couponId: coupon.id, code: coupon.code, bonus };

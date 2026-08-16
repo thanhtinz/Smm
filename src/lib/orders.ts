@@ -1,11 +1,18 @@
 import { queueCallback, type QueueClient } from "./callbacks/queue";
 import { formatLocalDay, parseLocalTime } from "./dates";
 import type { Fault } from "./fault";
+import { roundMoney } from "./money";
 import { formatCount } from "./numbers";
 
-/** Charge for a service, in the panel's base currency. */
-export function calculateCharge(ratePer1000: number, quantity: number): number {
-  return Math.round((ratePer1000 * quantity) / 1000);
+/**
+ * Charge for a service, in the panel's base currency.
+ *
+ * `decimals` is that currency's precision and has no default on purpose — see
+ * roundMoney. Passing the display currency's instead would price an order in
+ * one unit and round it in another.
+ */
+export function calculateCharge(ratePer1000: number, quantity: number, decimals: number): number {
+  return roundMoney((ratePer1000 * quantity) / 1000, decimals);
 }
 
 /**
@@ -16,8 +23,8 @@ export function calculateCharge(ratePer1000: number, quantity: number): number {
  * margin. Stored rather than derived because provider rates move, and the
  * scheduled sync now moves them without anyone typing.
  */
-export function orderCost(providerRate: number, quantity: number): number | null {
-  return providerRate > 0 ? Math.round((providerRate * quantity) / 1000) : null;
+export function orderCost(providerRate: number, quantity: number, decimals: number): number | null {
+  return providerRate > 0 ? roundMoney((providerRate * quantity) / 1000, decimals) : null;
 }
 
 /**

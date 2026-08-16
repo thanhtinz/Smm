@@ -131,6 +131,7 @@ export default async function PanelCategoryOrderPage({
         services={serviceOptions}
         balance={user.balance}
         currency={currency}
+      baseDecimals={ctx.baseCurrency.decimals}
         locked
         scheduleMaxDays={scheduleMaxDays}
         labels={orderFormLabels(t)}

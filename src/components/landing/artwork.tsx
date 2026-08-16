@@ -2,96 +2,94 @@ import PlatformMark from "@/components/platform-mark";
 import type { PlatformLine } from "@/lib/landing";
 
 /**
- * The hero illustration.
+ * The hero illustration: the platforms, arranged as a climb.
  *
- * Drawn here rather than uploaded, so a fresh panel is not an empty rectangle
- * and an operator who never opens a design tool still gets a home page with
- * something on it. Everything is SVG and CSS in the theme's own tokens, which
- * is the only way one drawing survives five skins in light and dark.
+ * What stood here was a drawn phone with a squiggle running up it and six
+ * logos orbiting on a dotted ring, each in a white rounded tile. It was made
+ * before there were real brand marks to place, and once there were it read as
+ * a doodle with logos stuck on — a badge drawn around a badge, eight times,
+ * beside a phone nobody was looking at.
  *
- * The subject is the thing being sold: a post gaining engagement. A phone
- * frame, a counter climbing, and the platforms this panel actually carries
- * orbiting it — so the drawing changes when the catalogue does instead of
- * being a stock picture of somebody else's shop.
+ * The marks are the drawing now, and the arrangement carries the same idea
+ * the squiggle was gesturing at. Platforms are ordered by how many services
+ * this panel actually carries and climb left to right, growing as they go, so
+ * the shape is the catalogue rather than a decoration next to it: the
+ * platform at the top right is the one the operator sells most on, and it
+ * changes when they add services instead of staying a picture of nothing.
+ *
+ * No tiles under them. Every one of these marks arrives with its own ground —
+ * YouTube's red rectangle, Instagram's gradient square, the black square
+ * behind Threads and X — so a card behind it adds a second frame and takes
+ * the size the mark should have had.
  */
 export default function Artwork({ platforms }: { platforms: PlatformLine[] }) {
-  // Six is what fits the ring without the marks colliding; the catalogue is
-  // already ordered by the operator, so this takes their first six.
-  const ring = platforms.slice(0, 6);
-  const radius = 132;
+  // Eight is where the marks stop having room to grow between steps; beyond
+  // that the climb flattens into a row.
+  const climb = [...platforms]
+    .sort((a, b) => a.services - b.services || a.name.localeCompare(b.name))
+    .slice(-8);
+
+  if (climb.length === 0) return null;
+
+  // Position and size from the step alone, so the server and the browser draw
+  // the same picture. A single platform sits in the middle at full size
+  // rather than at the start of a climb it cannot make.
+  const last = Math.max(1, climb.length - 1);
+  const at = (i: number) => {
+    const step = climb.length === 1 ? 0.5 : i / last;
+    return {
+      x: 8 + step * 82,
+      // Eased rather than linear: a straight diagonal of logos reads as a
+      // list set on a slant, a curve reads as a climb.
+      y: 86 - Math.pow(step, 1.5) * 74,
+      size: Math.round(38 + step * 38),
+    };
+  };
 
   return (
     <div className="relative mx-auto aspect-square w-full max-w-[26rem]">
-      {/* Glow behind everything, in the theme's primary. */}
+      {/* Warmth behind the top of the climb, where the eye ends up. */}
       <div
         aria-hidden
-        className="absolute inset-[12%] rounded-full blur-3xl"
-        style={{ background: "color-mix(in srgb, var(--primary) 30%, transparent)" }}
+        className="absolute inset-[14%] rounded-full blur-3xl"
+        style={{ background: "color-mix(in srgb, var(--primary) 26%, transparent)" }}
       />
 
-      <svg viewBox="0 0 360 360" className="absolute inset-0 h-full w-full" aria-hidden>
-        <defs>
-          <linearGradient id="art-screen" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--surface2)" />
-            <stop offset="100%" stopColor="var(--surface)" />
-          </linearGradient>
-          <linearGradient id="art-line" x1="0" y1="1" x2="1" y2="0">
-            <stop offset="0%" stopColor="var(--primary)" />
-            <stop offset="100%" stopColor="var(--accent)" />
-          </linearGradient>
-        </defs>
+      {climb.length > 1 && (
+        <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden>
+          <defs>
+            <linearGradient id="art-climb" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.25" />
+              <stop offset="100%" stopColor="var(--accent)" />
+            </linearGradient>
+          </defs>
+          {/* Drawn through the centres, so the line is the arrangement rather
+              than a second shape laid over it. vectorEffect keeps it one
+              hairline after the viewBox is stretched to the box. */}
+          <polyline
+            points={climb.map((_, i) => `${at(i).x},${at(i).y}`).join(" ")}
+            fill="none"
+            stroke="url(#art-climb)"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            vectorEffect="non-scaling-stroke"
+          />
+        </svg>
+      )}
 
-        {/* Orbit the platform marks sit on. */}
-        <circle
-          cx="180"
-          cy="180"
-          r={radius}
-          fill="none"
-          stroke="var(--border)"
-          strokeWidth="1"
-          strokeDasharray="3 7"
-        />
-
-        {/* Phone. */}
-        <rect x="122" y="66" width="116" height="228" rx="26" fill="url(#art-screen)" stroke="var(--border)" />
-        <rect x="132" y="76" width="96" height="208" rx="18" fill="var(--bg)" />
-
-        {/* The climb. Not a real series — it is the drawing's subject, the
-            same way a phone outline is, and it carries no number. */}
-        <path
-          d="M144 246 L164 224 L184 232 L204 196 L216 174"
-          fill="none"
-          stroke="url(#art-line)"
-          strokeWidth="3.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <circle cx="216" cy="174" r="5" fill="var(--accent)" />
-
-        {/* Post placeholder above it. */}
-        <rect x="144" y="94" width="72" height="52" rx="8" fill="var(--surface2)" />
-        <rect x="144" y="156" width="72" height="7" rx="3.5" fill="var(--border)" />
-        <rect x="144" y="171" width="48" height="7" rx="3.5" fill="var(--border)" />
-      </svg>
-
-      {/* The marks are components, not paths, so an operator who uploaded
-          real brand artwork for a platform sees it here too. */}
-      {ring.map((p, i) => {
-        const angle = (i / ring.length) * Math.PI * 2 - Math.PI / 2;
+      {climb.map((platform, i) => {
+        const { x, y, size } = at(i);
         return (
           <span
-            key={p.id}
-            className="absolute top-1/2 left-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-2xl border border-[var(--border)] bg-[var(--surface)] shadow-lg"
-            style={{
-              marginLeft: `${Math.cos(angle) * radius}px`,
-              marginTop: `${Math.sin(angle) * radius}px`,
-            }}
+            key={platform.id}
+            className="absolute -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${x}%`, top: `${y}%` }}
           >
-            <PlatformMark platform={p} size={22} />
+            <PlatformMark platform={platform} size={size} />
           </span>
         );
       })}
-
     </div>
   );
 }

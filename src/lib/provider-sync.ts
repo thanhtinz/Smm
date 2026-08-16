@@ -1,3 +1,4 @@
+import { roundMoney } from "./money";
 import type { Provider } from "@prisma/client";
 import { db } from "./db";
 import { basePrisma } from "./db-base";
@@ -34,9 +35,16 @@ export type SyncReport = {
   fault?: Fault;
 };
 
-/** Sell price from cost, for services following their provider. */
+/**
+ * Sell price from cost, for services following their provider.
+ *
+ * To four places rather than to the base currency's own, because a price is
+ * per thousand: a service costing $0.85 per 1,000 is worth less than a cent
+ * each, and rounding the per-thousand figure to cents would flatten a whole
+ * catalogue onto the same few prices.
+ */
 function sellPrice(providerRate: number, markupPercent: number): number {
-  return Math.round(providerRate * (1 + markupPercent / 100));
+  return roundMoney(providerRate * (1 + markupPercent / 100), 4);
 }
 
 function movedTooFar(before: number, after: number, alertPercent: number): boolean {

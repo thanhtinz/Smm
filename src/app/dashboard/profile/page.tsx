@@ -100,6 +100,8 @@ export default async function ProfilePage() {
         currency={ctx.currency.code}
         theme={ctx.theme}
         timezone={ctx.timezone}
+        direction={ctx.directionChoice}
+        languageDirection={ctx.languages.find((l) => l.code === ctx.locale)?.direction === "rtl" ? "rtl" : "ltr"}
         zones={zoneOptions}
         allowLocale={Boolean(await getSetting("locale.allowUserLocale"))}
         allowCurrency={Boolean(await getSetting("currency.allowUserCurrency"))}
@@ -112,6 +114,11 @@ export default async function ProfilePage() {
           theme: t("common.theme"),
           timezone: t("profile.timezone"),
           timezoneHint: t("profile.timezoneHint"),
+          direction: t("profile.direction"),
+          directionHint: t("profile.directionHint"),
+          directionAuto: t("profile.directionAuto"),
+          directionLtr: t("profile.directionLtr"),
+          directionRtl: t("profile.directionRtl"),
           fixed: t("profile.preferencesFixed"),
         }}
       />
