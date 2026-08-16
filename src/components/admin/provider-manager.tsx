@@ -21,6 +21,8 @@ import { formatCount } from "@/lib/numbers";
 export type ProviderRow = {
   id: string;
   name: string;
+  /** What staff see instead of the name, everywhere but this page. */
+  alias: string;
   apiUrl: string;
   currency: string;
   balance: number;
@@ -232,6 +234,12 @@ function ProviderForm({
 
       <Field name="name" label={labels.name} error={state.fieldErrors?.name} required>
         <TextInput name="name" defaultValue={row?.name} error={state.fieldErrors?.name} placeholder={labels.egName} />
+      </Field>
+
+      {/* The one place the real name and the host are shown. Everywhere else
+          reads providerLabel, which prefers this. */}
+      <Field name="alias" label={labels.alias} hint={labels.aliasHint}>
+        <TextInput name="alias" defaultValue={row?.alias} hint={labels.aliasHint} placeholder={labels.egAlias} />
       </Field>
 
       <Field name="apiUrl" label={labels.apiUrl} error={state.fieldErrors?.apiUrl} required>

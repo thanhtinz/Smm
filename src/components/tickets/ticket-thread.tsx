@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
+import { useActionState, useEffect, useState, useTransition } from "react";
 import { replyTicketAction, setTicketStatusAction, type TicketState } from "@/app/actions/tickets";
+import { recordSavedReplyUseAction } from "@/app/actions/admin/saved-replies";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
 
@@ -13,23 +14,48 @@ export type ThreadMessage = {
   createdAt: string;
 };
 
+export type SavedReply = { id: string; title: string; body: string };
+
 export default function TicketThread({
   ticketId,
   messages,
   status,
   isStaff,
+  savedReplies = [],
   labels,
 }: {
   ticketId: string;
   messages: ThreadMessage[];
   status: string;
   isStaff: boolean;
+  /** Empty for a customer: these are the desk's words, not theirs. */
+  savedReplies?: SavedReply[];
   labels: Record<string, string>;
 }) {
   const [state, action] = useActionState<TicketState, FormData>(replyTicketAction, {});
   const [error, setError] = useState("");
+  const [body, setBody] = useState("");
   const [pending, start] = useTransition();
   const closed = status === "closed";
+
+  // The box is controlled now, so that a saved reply can be dropped into it.
+  // That means emptying it after a successful post is this component's job:
+  // React resets an uncontrolled form after an action and leaves a controlled
+  // one exactly as it was, which would show the reply still sitting there
+  // unsent next to its own copy in the thread above.
+  useEffect(() => {
+    if (state.ok) setBody("");
+  }, [state]);
+
+  // Inserted rather than substituted: a saved reply is the bones of an answer,
+  // and the half-sentence already typed about this particular customer is the
+  // part that makes it one. Appending keeps both.
+  const insert = (reply: SavedReply) => {
+    setBody((current) => (current.trim() ? `${current.replace(/\s+$/, "")}\n\n${reply.body}` : reply.body));
+    start(async () => {
+      await recordSavedReplyUseAction(reply.id);
+    });
+  };
 
   const setStatus = (next: string) => {
     setError("");
@@ -100,14 +126,44 @@ export default function TicketThread({
           <input type="hidden" name="ticketId" value={ticketId} />
 
           <div>
-            <label htmlFor="body" className="label">
-              {labels.reply}
-            </label>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <label htmlFor="body" className="label">
+                {labels.reply}
+              </label>
+              {isStaff && savedReplies.length > 0 && (
+                <div>
+                  <label htmlFor="savedReply" className="sr-only">
+                    {labels.savedReply}
+                  </label>
+                  <select
+                    id="savedReply"
+                    // Reset to the placeholder after each pick, so choosing the
+                    // same reply twice — for two questions in one ticket —
+                    // still fires a change event.
+                    value=""
+                    onChange={(e) => {
+                      const reply = savedReplies.find((r) => r.id === e.target.value);
+                      if (reply) insert(reply);
+                    }}
+                    className="field w-auto py-1.5 text-xs"
+                  >
+                    <option value="">{labels.savedReply}</option>
+                    {savedReplies.map((r) => (
+                      <option key={r.id} value={r.id}>
+                        {r.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
             <textarea
               id="body"
               name="body"
               rows={4}
               required
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
               className="field"
               aria-invalid={state.fieldErrors?.body ? true : undefined}
             />

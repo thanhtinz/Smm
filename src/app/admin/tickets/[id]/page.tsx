@@ -38,6 +38,15 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
   });
   if (!ticket) notFound();
 
+  // The desk's canned answers: the ones written for this ticket's category,
+  // plus the ones written for every category. Most-used first, so the list
+  // sorts itself once it has been used for a week.
+  const savedReplies = await db.savedReply.findMany({
+    where: { OR: [{ category: "" }, { category: ticket.category }] },
+    orderBy: [{ position: "asc" }, { uses: "desc" }, { title: "asc" }],
+    select: { id: true, title: true, body: true },
+  });
+
   // Only this customer's other live tickets can be merged into, which is what
   // the server enforces too — the list just avoids offering the impossible.
   const mergeCandidates = ticket.mergedIntoId
@@ -135,6 +144,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
         ticketId={ticket.id}
         status={ticket.status}
         isStaff
+        savedReplies={savedReplies}
         messages={ticket.messages.map((m) => ({
           id: m.id,
           body: m.body,
@@ -143,6 +153,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
           createdAt: fmtDate.format(m.createdAt),
         }))}
         labels={{
+          savedReply: t("reply.insert"),
           staff: t("support.staff"),
           reply: t("support.reply"),
           send: t("support.send"),

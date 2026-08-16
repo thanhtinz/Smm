@@ -4,7 +4,7 @@ import { db } from "./db";
 import { basePrisma } from "./db-base";
 import { nextPublicId } from "./ids";
 import { currentPanelId, runAsPanel } from "./tenancy";
-import { fetchProviderBalance, fetchProviderServices } from "./providers";
+import { fetchProviderBalance, fetchProviderServices, providerLabel } from "./providers";
 import { notifications, type Alert } from "./notify";
 import type { Fault } from "./fault";
 
@@ -64,7 +64,7 @@ export async function syncProviderCatalogue(
   { importNew = false }: { importNew?: boolean } = {},
 ): Promise<SyncReport> {
   const report: SyncReport = {
-    provider: provider.name,
+    provider: providerLabel(provider),
     created: 0,
     updated: 0,
     repriced: 0,
@@ -179,7 +179,7 @@ export async function syncProviderCatalogue(
     const platformSlug = `provider-${provider.id.slice(0, 8)}`;
     const platform = await db.platform.upsert({
       where: { panelId_slug: { panelId: await currentPanelId(), slug: platformSlug } },
-      create: { slug: platformSlug, name: provider.name, icon: "server", visible: false, position: 99 },
+      create: { slug: platformSlug, name: providerLabel(provider), icon: "server", visible: false, position: 99 },
       update: {},
     });
 
@@ -237,7 +237,7 @@ export async function syncProviderCatalogue(
     }
   }
 
-  if (report.alerts.length) await notifyAdmins(provider.name, report.alerts);
+  if (report.alerts.length) await notifyAdmins(providerLabel(provider), report.alerts);
   return report;
 }
 
