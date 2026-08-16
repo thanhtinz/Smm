@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Icon, type IconName } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
-import { displayMoney, type CurrencyInfo } from "@/lib/currency";
+import { formatDigits, displayMoney, type CurrencyInfo } from "@/lib/currency";
 import type { Quote, Question, PlatformLine } from "@/lib/landing";
 import type { LandingProps } from "./types";
 
@@ -56,11 +56,12 @@ export function rateLabel(
     return { amount: displayMoney(ratePerThousand, currency, locale), unit: t("landing.board.per") };
   }
 
-  const value = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: digits,
-  }).format(each);
-  const amount = currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+  // Punctuated by the currency, like every other price — with its own decimal
+  // count rather than the currency's, since a per-unit price needs more places
+  // than the currency has. Trailing zeros are dropped so a round price still
+  // reads as a round one.
+  const written = formatDigits(each, { ...currency, decimals: digits }).replace(/([.,]\d*?)0+$/, "$1").replace(/[.,]$/, "");
+  const amount = currency.symbolBefore ? `${currency.symbol}${written}` : `${written}${currency.symbol}`;
   return { amount, unit: t("landing.board.perUnit") };
 }
 

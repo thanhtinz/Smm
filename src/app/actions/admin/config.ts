@@ -5,7 +5,7 @@ import { db } from "@/lib/db";
 import { requireAdmin, requireRootAdmin, logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
 import { setSetting, settingDefinitions } from "@/lib/settings";
-import { invalidateCurrencies } from "@/lib/currency";
+import { invalidateCurrencies, NUMBER_FORMATS } from "@/lib/currency";
 import { updateExchangeRates } from "@/lib/exchange";
 import { invalidateDictionaries } from "@/lib/i18n";
 import { drivers, parseConfig } from "@/lib/payments";
@@ -148,6 +148,12 @@ export async function saveCurrencyAction(_prev: ActionResult, form: FormData): P
     symbol: String(form.get("symbol") ?? "").trim() || code,
     symbolBefore: bool(form, "symbolBefore"),
     decimals: Math.max(0, Math.min(8, num(form, "decimals"))),
+    // An unknown value would leave the currency punctuated by whatever the
+    // formatter falls back to, so it is checked against the list rather than
+    // stored on trust.
+    numberFormat: (NUMBER_FORMATS as readonly string[]).includes(String(form.get("numberFormat") ?? ""))
+      ? String(form.get("numberFormat"))
+      : "comma-dot",
     rate,
     enabled: bool(form, "enabled"),
     position: num(form, "position"),

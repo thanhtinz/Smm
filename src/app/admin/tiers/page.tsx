@@ -40,6 +40,7 @@ export default async function AdminTiersPage() {
           symbol: currency.symbol,
           symbolBefore: currency.symbolBefore,
           decimals: currency.decimals,
+          numberFormat: currency.numberFormat,
           rate: currency.rate,
           locale,
         }}

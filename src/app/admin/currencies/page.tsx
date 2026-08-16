@@ -38,6 +38,8 @@ export default async function AdminCurrenciesPage() {
           symbol: t("admin.symbol"),
           symbolBefore: t("admin.symbolBefore"),
           decimals: t("admin.decimals"),
+          numberFormat: t("admin.numberFormat"),
+          numberFormatHint: t("admin.numberFormatHint"),
           rate: t("currency.rate"),
           autoRate: t("currency.autoRate"),
           autoOn: t("currency.autoOn"),

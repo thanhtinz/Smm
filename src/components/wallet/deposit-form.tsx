@@ -1,5 +1,6 @@
 "use client";
 
+import { formatAmount } from "@/lib/money";
 import { useActionState, useMemo, useState } from "react";
 import { createDepositAction, type DepositState } from "@/app/actions/wallet";
 import { Field, TextInput } from "@/components/ui/field";
@@ -22,7 +23,13 @@ export type MethodOption = {
   configured: boolean;
 };
 
-export type CurrencyOption = { code: string; symbol: string; symbolBefore: boolean; decimals: number };
+export type CurrencyOption = {
+  code: string;
+  symbol: string;
+  symbolBefore: boolean;
+  decimals: number;
+  numberFormat: string;
+};
 
 export type WalletLabels = Record<
   | "method"
@@ -78,14 +85,7 @@ export default function DepositForm({
   const fee = method && valid ? Math.max(0, (value * method.feePercent) / 100 + method.feeFixed) : 0;
   const bonus = method && valid ? Math.max(0, (value * method.bonusPercent) / 100) : 0;
 
-  const fmt = (n: number) => {
-    if (!currencyInfo) return String(n);
-    const text = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale, {
-      minimumFractionDigits: currencyInfo.decimals,
-      maximumFractionDigits: currencyInfo.decimals,
-    }).format(n);
-    return currencyInfo.symbolBefore ? `${currencyInfo.symbol}${text}` : `${text}${currencyInfo.symbol}`;
-  };
+  const fmt = (n: number) => (currencyInfo ? formatAmount(n, currencyInfo) : String(n));
 
   if (usable.length === 0) {
     return (

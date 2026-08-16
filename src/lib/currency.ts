@@ -1,6 +1,9 @@
 import { db } from "./db";
 import { getSetting, settingDefinitions } from "./settings";
 import { getRootPanel, runAsPanel } from "./tenancy";
+import { formatDigits } from "./money";
+
+export { NUMBER_FORMATS, formatDigits, type NumberFormat } from "./money";
 
 export type CurrencyInfo = {
   code: string;
@@ -8,6 +11,7 @@ export type CurrencyInfo = {
   symbol: string;
   symbolBefore: boolean;
   decimals: number;
+  numberFormat: string;
   rate: number;
   isBase: boolean;
 };
@@ -28,6 +32,7 @@ async function currencyRows(): Promise<CurrencyInfo[]> {
     symbol: r.symbol,
     symbolBefore: r.symbolBefore,
     decimals: r.decimals,
+    numberFormat: r.numberFormat,
     rate: r.rate,
     isBase: r.isBase,
   }));
@@ -92,6 +97,7 @@ const fallback: CurrencyInfo = {
   symbol: "₫",
   symbolBefore: false,
   decimals: 0,
+  numberFormat: "dot-comma",
   rate: 1,
   isBase: true,
 };
@@ -100,12 +106,16 @@ export function convert(amountInBase: number, to: CurrencyInfo): number {
   return amountInBase * (to.rate || 1);
 }
 
-export function formatMoney(amount: number, currency: CurrencyInfo, locale = "en"): string {
-  const value = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale, {
-    minimumFractionDigits: currency.decimals,
-    maximumFractionDigits: currency.decimals,
-  }).format(amount);
-  return currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+/**
+ * `locale` is accepted and deliberately unused: every callsite passes it, and
+ * removing it would read as "the reader stopped mattering here" rather than
+ * "the reader never decided this". Money is punctuated by its own currency.
+ */
+export function formatMoney(amount: number, currency: CurrencyInfo, _locale = "en"): string {
+  const value = formatDigits(amount, currency);
+  const body = currency.symbolBefore ? `${currency.symbol}${value}` : `${value}${currency.symbol}`;
+  // Outside the symbol: a refund reads -$5.00, not $-5.00.
+  return amount < 0 ? `-${body}` : body;
 }
 
 /** Convert from base and format in one call. */

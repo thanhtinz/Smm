@@ -21,6 +21,7 @@ export type CurrencyRow = {
   symbol: string;
   symbolBefore: boolean;
   decimals: number;
+  numberFormat: string;
   rate: number;
   enabled: boolean;
   isBase: boolean;
@@ -255,6 +256,25 @@ function CurrencyForm({
           <TextInput name="position" type="number" defaultValue={String(row?.position ?? 0)} />
         </Field>
       </div>
+
+      {/* Named by its own sample rather than by "dot-comma": nobody picks a
+          punctuation scheme from a slug, and the sample is the thing being
+          chosen. It belongs to the currency and not to the reader — the dong
+          is written 2.500₫ to everybody. */}
+      <Field name="numberFormat" label={labels.numberFormat} hint={labels.numberFormatHint}>
+        <select
+          id="numberFormat"
+          name="numberFormat"
+          className="field"
+          defaultValue={row?.numberFormat ?? "comma-dot"}
+        >
+          <option value="comma-dot">1,234,567.89</option>
+          <option value="dot-comma">1.234.567,89</option>
+          <option value="space-comma">1&#8239;234&#8239;567,89</option>
+          <option value="indian">12,34,567.89</option>
+          <option value="plain">1234567.89</option>
+        </select>
+      </Field>
 
       <label className="flex cursor-pointer items-center gap-2.5 text-sm">
         <input

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import QRCode from "qrcode";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
+import { resolveCurrency, formatDigits } from "@/lib/currency";
 import { prepareDeposit, cancelDepositAction, capturePaypalReturn } from "@/app/actions/wallet";
 import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
@@ -42,8 +43,11 @@ export default async function DepositPage({
   });
   if (!txn) notFound();
 
-  const money = (n: number) =>
-    new Intl.NumberFormat(ctx.locale === "vi" ? "vi-VN" : ctx.locale, { maximumFractionDigits: 2 }).format(n);
+  // In the transaction's own payment currency, not the reader's — this is the
+  // page the customer copies the amount from, so "103.2" where the gateway
+  // expects 103.20 is a transfer that comes back short.
+  const paidIn = await resolveCurrency(txn.currency);
+  const money = (n: number) => formatDigits(n, paidIn);
 
   if (txn.status === "completed") {
     return (
