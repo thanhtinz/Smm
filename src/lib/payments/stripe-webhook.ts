@@ -51,6 +51,29 @@ function signatureMatches(secret: string, timestamp: number, raw: string, provid
   });
 }
 
+/**
+ * The whole of the decision to trust a body, as one pure function.
+ *
+ * Split out of the handler so it can be exercised without a database or a
+ * request: a bad secret, a body altered after signing, a signature captured
+ * and replayed an hour later, and a header with nothing in it are the four
+ * ways this is attacked, and each is one call.
+ *
+ * Returns null when the body may be trusted, or the reason it may not.
+ */
+export function stripeSignatureFault(
+  header: string,
+  raw: string,
+  secret: string,
+  nowMs = Date.now(),
+): "missing" | "stale" | "mismatch" | null {
+  const { timestamp, signatures } = parseSignature(header);
+  if (!timestamp || signatures.length === 0) return "missing";
+  if (Math.abs(nowMs / 1000 - timestamp) > TOLERANCE_SECONDS) return "stale";
+  if (!signatureMatches(secret, timestamp, raw, signatures)) return "mismatch";
+  return null;
+}
+
 type Session = {
   id?: string;
   client_reference_id?: string;
