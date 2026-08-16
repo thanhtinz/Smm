@@ -158,6 +158,31 @@ export async function propagateRequestDecisions(limit = 200) {
  *
  * Cron has no host to resolve a panel from, so each step names its panel.
  */
+/**
+ * Runs one step and lets the cycle survive it.
+ *
+ * Every step below was a bare `await` in a row of twelve, with no try/catch
+ * anywhere in the function. Provider calls are already guarded — they return a
+ * result rather than throwing — so the ordinary failure was handled. Anything
+ * else was not: one Prisma constraint, one UPSTREAM_FUNDS thrown out of a
+ * chain write, one bad row, and the whole cycle died for *every* panel. No
+ * orders dispatched, no statuses pulled, no refunds settled, no rent billed,
+ * no mail sent, and no finishedAt written — the deployment's entire order
+ * pipeline stopped until somebody noticed.
+ *
+ * A step that throws is now recorded like any other failure and the next one
+ * runs. `fallback` is what the cycle reports for a step that did not finish,
+ * so the return shape does not change.
+ */
+export async function step<T>(label: string, fallback: T, failures: string[], run: () => Promise<T>): Promise<T> {
+  try {
+    return await run();
+  } catch (error) {
+    failures.push(`${label}: ${error instanceof Error ? error.message : String(error)}`);
+    return fallback;
+  }
+}
+
 export async function runSyncCycle(trigger = "cron") {
   // Opened before any work and closed after it, so a cycle that dies halfway
   // leaves a row with no finishedAt — which is the difference between "the
@@ -173,49 +198,65 @@ export async function runSyncCycle(trigger = "cron") {
   let synced = 0;
   const failures: string[] = [];
 
+  // One panel throwing must not cost the others their turn, so each panel's
+  // two steps are wrapped separately.
   for (const panel of panels) {
     // A panel can hold its queue for an operator to send by hand; the button
     // in the admin area sends regardless, which is what makes that workable.
-    const auto = await runAsPanel(panel.id, () => getSetting("order.autoSendToProvider"));
+    const auto = await step(`${panel.slug}: settings`, false, failures, () =>
+      runAsPanel(panel.id, () => getSetting("order.autoSendToProvider")),
+    );
     if (auto) {
-      const dispatched = await runAsPanel(panel.id, () => dispatchPendingOrders());
+      const dispatched = await step(`${panel.slug}: dispatch`, { sent: 0, failures: [] as string[] }, failures, () =>
+        runAsPanel(panel.id, () => dispatchPendingOrders()),
+      );
       sent += dispatched.sent;
       failures.push(...dispatched.failures.map((f) => `${panel.slug}: ${f}`));
     }
 
-    const pulled = await runAsPanel(panel.id, () => syncOrderStatuses());
+    const pulled = await step(`${panel.slug}: sync`, { updated: 0, failures: [] as string[] }, failures, () =>
+      runAsPanel(panel.id, () => syncOrderStatuses()),
+    );
     synced += pulled.updated;
     failures.push(...pulled.failures.map((f) => `${panel.slug}: ${f}`));
   }
 
   // Before the chain pass, so a request approved here travels the same cycle
   // rather than waiting for the next one.
-  const auto = await runAutoDecisions();
+  const auto = await step("auto decisions", { refills: 0, cancels: 0, stuck: 0, failures: [] as string[] }, failures, () =>
+    runAutoDecisions(),
+  );
   failures.push(...auto.failures);
 
-  const chain = await propagateChainStatuses();
-  const requests = await propagateRequestDecisions();
+  const chain = await step("chain statuses", { updated: 0, refunded: 0 }, failures, () => propagateChainStatuses());
+  const requests = await step("chain requests", { updated: 0 }, failures, () => propagateRequestDecisions());
 
   // After the chain pass, so a status that walked down three panels tells
   // every reseller on the way in the same cycle it arrived.
-  const callbacks = await deliverCallbacks();
-  const rent = await billPanelRent();
+  const callbacks = await step("callbacks", { sent: 0, failed: 0, retrying: 0 }, failures, () => deliverCallbacks());
+  const rent = await step("rent", [] as Awaited<ReturnType<typeof billPanelRent>>, failures, () => billPanelRent());
 
   // Last: everything above may have written notifications, and each of them
   // is a candidate for an email on this same pass rather than the next one.
-  const mailed = await sendPendingNotificationMails();
+  const mailed = await step("mail", { sent: 0, failures: [] as string[] }, failures, () =>
+    sendPendingNotificationMails(),
+  );
   failures.push(...mailed.failures);
-  const rates = await updateExchangeRates();
+  const rates = await step("rates", { skipped: "step failed" } as Awaited<ReturnType<typeof updateExchangeRates>>, failures, () =>
+    updateExchangeRates(),
+  );
 
   // Rankings move slowly and cost money to ask about, so this rides the same
   // cycle rather than a schedule of its own; the interval setting is what
   // decides whether a given tick actually reads anything.
-  const ranks = await checkDueRanks();
+  const ranks = await step("ranks", { panels: 0, checked: 0, failures: [] as string[] }, failures, () => checkDueRanks());
   failures.push(...ranks.failures);
 
   // Last: a repriced catalogue should not change what the orders dispatched a
   // moment ago were charged at.
-  const catalogue = await syncDueProviders();
+  const catalogue = await step("catalogue", [] as Awaited<ReturnType<typeof syncDueProviders>>, failures, () =>
+    syncDueProviders(),
+  );
   failures.push(
     ...catalogue
       .filter((r) => r.fault)

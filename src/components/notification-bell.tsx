@@ -77,7 +77,7 @@ export default function NotificationBell({
       </button>
 
       {open && (
-        <div role="menu" className="popover absolute right-0 z-50 mt-2 w-80 overflow-hidden p-0 shadow-2xl">
+        <div role="menu" className="popover absolute end-0 z-50 mt-2 w-80 overflow-hidden p-0 shadow-2xl">
           <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-3.5 py-3">
             <p className="text-sm font-semibold">{labels.title}</p>
             {unread > 0 && (
