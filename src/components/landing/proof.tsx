@@ -1,3 +1,4 @@
+import { localeTag } from "@/lib/numbers";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
 import Hero from "./hero";
@@ -17,7 +18,7 @@ import type { LayoutProps } from "./types";
  */
 export default function Proof(props: LayoutProps) {
   const { data, t, locale } = props;
-  const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const count = new Intl.NumberFormat(localeTag(locale));
 
   const elapsed = (seconds: number) => {
     if (seconds < 90) return t("time.seconds", { n: seconds });

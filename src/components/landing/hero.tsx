@@ -1,3 +1,4 @@
+import { localeTag } from "@/lib/numbers";
 import { Icon } from "@/components/icons";
 import Artwork from "./artwork";
 import HeroLogin from "./hero-login";
@@ -19,7 +20,7 @@ import type { LayoutProps } from "./types";
 export default function Hero({ data, t, currency, locale, settings, captcha, loginLabels, signedIn }: LayoutProps) {
   const heroImage = String(settings["landing.heroImage"] ?? "");
   const showLogin = settings["landing.heroLogin"] !== false && !signedIn;
-  const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const count = new Intl.NumberFormat(localeTag(locale));
   const cheapest = rateLabel(data.from, currency, locale, settings, t);
 
   return (

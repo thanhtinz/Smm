@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { creditDeposit } from "./credit";
-import { parseConfig } from "./index";
+import { parseConfig, underpaid } from "./index";
 import { macMatches, publicIdFrom, signCallback } from "./zalopay";
 
 /**
@@ -55,7 +55,7 @@ export async function handleZaloPayWebhook(request: Request) {
   if (!txn) return NextResponse.json({ return_code: 1, return_message: "Unknown reference" });
 
   const received = Number(data.amount ?? 0);
-  if (received + 1 < txn.paidAmount) {
+  if (await underpaid(received, txn.paidAmount, txn.currency)) {
     await db.transaction.update({
       where: { id: txn.id },
       data: { note: `Underpaid: received ${received}, expected ${txn.paidAmount}` },

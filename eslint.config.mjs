@@ -38,6 +38,26 @@ export default [
           selector: "NewExpression[callee.object.name='Intl'][arguments.length=0]",
           message: "Pass the reader's locale — see localeTag() in @/lib/numbers.",
         },
+        {
+          // `Intl.NumberFormat(...)` is legal without `new` and returns the
+          // same formatter, so the rule above walked straight past it.
+          selector: "CallExpression[callee.object.name='Intl'][arguments.length=0]",
+          message: "Pass the reader's locale — see localeTag() in @/lib/numbers.",
+        },
+        {
+          // And `new Intl.NumberFormat(undefined, {...})` has an argument, so
+          // it passed the length check while doing exactly what the check is
+          // there to stop.
+          selector: "NewExpression[callee.object.name='Intl'] > Identifier.arguments:first-child[name='undefined']",
+          message: "Pass the reader's locale — see localeTag() in @/lib/numbers.",
+        },
+        {
+          // The locale tag itself, written out by hand in a dozen places
+          // before localeTag() existed. One list of language-to-tag mappings
+          // is enough, and it is the one the messages above point at.
+          selector: "ConditionalExpression[consequent.value='vi-VN']",
+          message: "Use localeTag(locale) from @/lib/numbers instead of spelling out the vi-VN mapping.",
+        },
       ],
     },
   },

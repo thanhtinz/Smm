@@ -129,3 +129,30 @@ export function formatAmount(amount: number, currency: MoneyShape): string {
   // Outside the symbol: a refund reads -$5.00, not $-5.00.
   return amount < 0 ? `-${body}` : body;
 }
+
+/**
+ * A price per thousand, which needs more decimal places than the currency has.
+ *
+ * `sellPrice` stores rates to four places on purpose — a service costing $0.85
+ * per 1,000 is worth less than a cent each, and cents cannot tell two of them
+ * apart. Every display path then formatted with the currency's own two, so a
+ * catalogue priced at $0.0040 and $0.0020 rendered both as "$0.00" and told
+ * the customer the service was free.
+ *
+ * Up to four places, with trailing zeros dropped so a round price still reads
+ * as a round one: $0.85 stays "$0.85" and does not become "$0.8500".
+ */
+export function formatRate(amount: number, currency: MoneyShape): string {
+  const most = Math.max(currency.decimals, 4);
+
+  // Trailing zeros are dropped, but never past the places the currency itself
+  // has: $13.40 is a price and "$13.4" is a typo. So the extra precision only
+  // shows up on the rates that need it.
+  const fraction = Math.abs(amount).toFixed(most).split(".")[1] ?? "";
+  let places = most;
+  while (places > currency.decimals && fraction[places - 1] === "0") places -= 1;
+
+  const written = formatDigits(amount, { ...currency, decimals: places });
+  const body = currency.symbolBefore ? `${currency.symbol}${written}` : `${written}${currency.symbol}`;
+  return amount < 0 ? `-${body}` : body;
+}

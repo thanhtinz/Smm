@@ -1,3 +1,4 @@
+import { localeTag } from "@/lib/numbers";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
@@ -21,7 +22,7 @@ import type { LayoutProps } from "./types";
 export default function PriceBoard(props: LayoutProps) {
   const { data, t, currency, locale } = props;
   const cheapest = [...data.platforms].sort((a, b) => a.from - b.from);
-  const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const count = new Intl.NumberFormat(localeTag(locale));
   const rate = (n: number) => rateLabel(n, currency, locale, props.settings, t);
 
   return (

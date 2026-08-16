@@ -32,6 +32,15 @@ export type Driver = {
    * Drives what the admin page tells an operator to configure at the gateway.
    */
   webhook?: string;
+  /**
+   * The only currencies this gateway can actually take, when it is limited to
+   * some. SePay, MoMo and ZaloPay are domestic Vietnamese rails: their APIs
+   * take a whole number of dong, and the drivers round to one. An operator
+   * could tick USD onto them in admin, at which point a $10.50 deposit was
+   * asking the gateway for 11 of something. Left undefined the operator
+   * chooses freely, which is right for the card and crypto gateways.
+   */
+  currencies?: string[];
   /** Which config fields must be non-empty for the method to be usable. */
   required: string[];
   /** Fields shown in the admin editor, in order. */
@@ -43,6 +52,7 @@ export const drivers: Record<string, Driver> = {
   seapay: {
     key: "seapay",
     webhook: "seapay",
+    currencies: ["VND"],
     required: ["accountNumber", "bankCode", "accountName"],
     fields: [
       { name: "accountNumber", label: "Account number" },
@@ -173,6 +183,7 @@ export const drivers: Record<string, Driver> = {
   momo: {
     key: "momo",
     webhook: "momo",
+    currencies: ["VND"],
     required: ["partnerCode", "accessKey", "secretKey"],
     fields: [
       { name: "partnerCode", label: "Partner code" },
@@ -232,6 +243,7 @@ export const drivers: Record<string, Driver> = {
   zalopay: {
     key: "zalopay",
     webhook: "zalopay",
+    currencies: ["VND"],
     required: ["appId", "key1", "key2"],
     fields: [
       { name: "appId", label: "App ID" },
@@ -372,6 +384,22 @@ export async function minorUnits(amount: number, currencyCode: string): Promise<
   const { resolveCurrency } = await import("@/lib/currency");
   const currency = await resolveCurrency(currencyCode);
   return Math.round(amount * 10 ** currency.decimals);
+}
+
+/**
+ * Whether a gateway reported less money than the deposit asked for.
+ *
+ * The slack is half of the currency's smallest unit — enough to absorb a
+ * float, and nothing more. It used to be a flat `+ 1`, which cost nothing
+ * while every one of these methods was dong-only: one dong of slack on a
+ * 200,000 ₫ transfer is not slack at all. But an admin can tick USD onto
+ * SePay, MoMo or ZaloPay, and one *dollar* of slack meant a $10.00 deposit
+ * was credited in full when the gateway reported $9.01.
+ */
+export async function underpaid(received: number, owed: number, currencyCode: string): Promise<boolean> {
+  const { resolveCurrency } = await import("@/lib/currency");
+  const currency = await resolveCurrency(currencyCode);
+  return received + 0.5 / 10 ** currency.decimals < owed;
 }
 
 /** A method is only offered once every credential its driver needs is filled. */

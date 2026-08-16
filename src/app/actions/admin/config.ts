@@ -98,10 +98,15 @@ export async function savePaymentMethodAction(_prev: ActionResult, form: FormDat
     }
   }
 
+  // Narrowed to what the gateway can actually take. A domestic rail that only
+  // moves dong should not be configurable to accept dollars — see `currencies`
+  // on the Driver type.
+  const allowed = driver?.currencies;
   const currencies = form
     .getAll("currencies")
     .map(String)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter((code) => !allowed || allowed.includes(code));
 
   await db.paymentMethod.update({
     where: { id },

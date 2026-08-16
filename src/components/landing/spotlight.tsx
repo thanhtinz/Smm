@@ -1,3 +1,4 @@
+import { localeTag } from "@/lib/numbers";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
@@ -60,7 +61,7 @@ function FloatColumn({
  */
 export default function Spotlight(props: LayoutProps) {
   const { data, t, currency, locale, settings, signedIn } = props;
-  const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const count = new Intl.NumberFormat(localeTag(locale));
 
   // Finished first: a card that says how long delivery took is worth more
   // than one still counting down. Then one card per service — four cards all

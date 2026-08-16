@@ -20,6 +20,17 @@ export type CallbackBody = {
   start_count: number;
   remains: number;
   charge: number;
+  /**
+   * Which currency `charge` is counted in. The `status` action has always said
+   * so and this had not, leaving a reseller to guess — and to guess wrong the
+   * day an operator changes the panel's base.
+   *
+   * `charge` itself stays a JSON number rather than becoming the fixed-point
+   * string the API returns. Resellers are already parsing this payload; 4.2
+   * and "4.20" are the same amount, and changing the type would break them for
+   * no gain.
+   */
+  currency: string;
 };
 
 /** Prisma checks create data against an exact shape, so it is spelled out. */
@@ -39,6 +50,12 @@ export type QueueClient = {
     }) => Promise<{ callbackUrl: string } | null>;
   };
   callback: { create: (args: { data: CallbackRow }) => Promise<unknown> };
+  // Read through the handed-in client, the same way the owner lookup above is
+  // — this module stays free of its own database import so the pure helpers
+  // beside it can be used by client components.
+  currency: {
+    findFirst: (args: { where: { isBase: true } }) => Promise<{ code: string } | null>;
+  };
 };
 
 /**
@@ -66,6 +83,7 @@ export async function queueCallback(
     start_count: next.startCount,
     remains: next.remains,
     charge: order.charge,
+    currency: (await client.currency.findFirst({ where: { isBase: true } }))?.code ?? "",
   };
 
   await client.callback.create({

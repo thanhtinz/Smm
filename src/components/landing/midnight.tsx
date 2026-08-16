@@ -1,3 +1,4 @@
+import { localeTag } from "@/lib/numbers";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import PlatformMark from "@/components/platform-mark";
@@ -14,7 +15,7 @@ import type { LayoutProps } from "./types";
  */
 export default function Midnight(props: LayoutProps) {
   const { data, t, currency, locale, settings, signedIn } = props;
-  const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const count = new Intl.NumberFormat(localeTag(locale));
 
   const figures = [
     { value: data.completedCount, label: t("landing.night.delivered") },

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
-import { getBaseCurrency } from "@/lib/currency";
+import { formatMoney, getBaseCurrency } from "@/lib/currency";
 import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import {
@@ -179,7 +179,10 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const charge = calculateCharge(rate, totalQuantity, money);
   const minCharge = Number(await getSetting("order.minCharge")) || 0;
   if (charge < minCharge) {
-    return { fieldErrors: { quantity: t("err.minCharge", { amount: formatCount(minCharge, locale) }) } };
+    // In the base currency, written and symboled — formatCount gave a bare
+    // "0.5" on a page where every other price carried a ₫ or a $.
+    const money = await getBaseCurrency();
+    return { fieldErrors: { quantity: t("err.minCharge", { amount: formatMoney(minCharge, money) }) } };
   }
 
   // After the shape of the order is known, so the message names the service
