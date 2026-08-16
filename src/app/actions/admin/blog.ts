@@ -7,6 +7,7 @@ import { readerMessages } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
 import { parseLocalTime } from "@/lib/dates";
 import { pingIndexNow } from "@/lib/seo";
+import { checkCallbackUrl } from "@/lib/callbacks";
 import type { ActionResult } from "./catalogue";
 
 export type { ActionResult };
@@ -59,13 +60,30 @@ export async function saveBlogPostAction(_prev: ActionResult, form: FormData): P
   const publish = form.get("published") === "on";
 
   let publishedAt: Date | null = null;
+  if (typed) {
+    publishedAt = parseLocalTime(typed, timezone);
+    if (!publishedAt) return { fieldErrors: { publishedAt: t("adm.dateInvalid") } };
+  }
+
   if (publish) {
-    if (typed) {
-      publishedAt = parseLocalTime(typed, timezone);
-      if (!publishedAt) return { fieldErrors: { publishedAt: t("adm.dateInvalid") } };
-    } else {
-      publishedAt = new Date();
-    }
+    // No date typed means "now".
+    publishedAt ??= new Date();
+  } else if (!publishedAt || publishedAt <= new Date()) {
+    // Unticking the box on a post that is live, or on one with no date, makes
+    // it a draft. A date still in the future is kept: every reader already
+    // filters on `publishedAt <= now`, so the post stays invisible either way,
+    // and throwing the date away meant an operator who unticked the box to
+    // carry on editing lost the Tuesday they had scheduled — then re-ticked it
+    // and published immediately without being told.
+    publishedAt = null;
+  }
+
+  // Written straight into an <img src>, so the schemes that are not images are
+  // refused here rather than rendered. A relative path is the common case —
+  // the upload control produces one — and is left alone.
+  const coverUrl = String(form.get("coverUrl") ?? "").trim();
+  if (coverUrl && !coverUrl.startsWith("/") && !checkCallbackUrl(coverUrl).ok) {
+    return { fieldErrors: { coverUrl: t("err.callback.scheme") } };
   }
 
   const data = {
@@ -75,7 +93,7 @@ export async function saveBlogPostAction(_prev: ActionResult, form: FormData): P
     // HTML written by the panel's own admin, the same author as every other
     // string on the site — there is no untrusted author here.
     body: String(form.get("body") ?? "").trim(),
-    coverUrl: String(form.get("coverUrl") ?? "").trim(),
+    coverUrl,
     tags: String(form.get("tags") ?? "").trim(),
     author: String(form.get("author") ?? "").trim(),
     metaTitle: String(form.get("metaTitle") ?? "").trim(),
@@ -116,8 +134,13 @@ export async function setBlogPostPublishedAction(id: string, published: boolean)
   const post = await db.blogPost.findUnique({ where: { id } });
   if (!post) return { error: t("blog.missing") };
 
-  await db.blogPost.update({ where: { id }, data: { publishedAt: published ? new Date() : null } });
-  if (published) await pingIndexNow([`/blog/${post.slug}`]);
+  // Publishing a post that is already scheduled honours the schedule rather
+  // than overwriting it with the moment the button was pressed.
+  const when = published ? (post.publishedAt && post.publishedAt > new Date() ? post.publishedAt : new Date()) : null;
+  await db.blogPost.update({ where: { id }, data: { publishedAt: when } });
+  // Same rule the save path follows: only ask a crawler for an address it can
+  // actually fetch.
+  if (when && when <= new Date()) await pingIndexNow([`/blog/${post.slug}`]);
 
   await logActivity(admin.id, "admin.blog.publish", `${post.title} -> ${published ? "live" : "draft"}`);
   revalidateBlog(post.slug);

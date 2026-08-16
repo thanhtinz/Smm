@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getAppContext } from "@/lib/context";
+import { getAppContext, readerMessages } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
 import { getCurrentPanel } from "@/lib/tenancy";
-import { getSetting } from "@/lib/settings";
 import { parseTagList } from "@/lib/blog";
 
 /**
@@ -17,8 +16,12 @@ import { parseTagList } from "@/lib/blog";
 
 export async function generateMetadata(): Promise<Metadata> {
   if (!(await getCurrentPanel())) return {};
-  const site = String(await getSetting("site.name"));
-  return { title: `Blog — ${site}`, alternates: { canonical: "/blog" } };
+  // Bare, and in the reader's language. The root layout already appends the
+  // site name through its title template, so spelling it out here rendered
+  // "Blog — Acme · Acme"; and "Blog" written into the code is the one part of
+  // the page that reaches a Vietnamese reader's tab and bookmarks.
+  const t = await readerMessages();
+  return { title: t("blog.title"), alternates: { canonical: "/blog" } };
 }
 
 export default async function BlogIndexPage({
@@ -32,14 +35,28 @@ export default async function BlogIndexPage({
 
   // Published *and* not dated in the future: a scheduled post appears the
   // moment its time passes, with nothing having to run to make that happen.
-  const posts = await db.blogPost.findMany({
-    where: { publishedAt: { not: null, lte: new Date() } },
-    orderBy: { publishedAt: "desc" },
-    take: 60,
-  });
+  const live = { publishedAt: { not: null, lte: new Date() } };
 
-  // Every tag actually in use, so the filter cannot offer an empty result.
-  const tags = [...new Set(posts.flatMap((p) => parseTagList(p.tags)))].sort();
+  const [tagRows, posts] = await Promise.all([
+    // Every tag in use, across the whole blog rather than across one page of
+    // it — otherwise a tag carried only by older posts disappears from the
+    // filter while its posts are still live.
+    db.blogPost.findMany({ where: live, select: { tags: true } }),
+    db.blogPost.findMany({
+      // The tag belongs in the query, not after it. Filtering the newest 60 in
+      // JavaScript meant a tag whose posts all sat outside that window
+      // answered "nothing here yet" — on a link this very blog hands out, from
+      // every post that carries the tag.
+      where: tag ? { ...live, tags: { contains: tag } } : live,
+      orderBy: { publishedAt: "desc" },
+      take: 60,
+    }),
+  ]);
+
+  const tags = [...new Set(tagRows.flatMap((p) => parseTagList(p.tags)))].sort();
+  // `contains` is a substring match, so "seo" would also fetch "seo-tips".
+  // The exact membership check still decides; it just no longer decides which
+  // rows were fetched.
   const shown = tag ? posts.filter((p) => parseTagList(p.tags).includes(tag)) : posts;
 
   return (

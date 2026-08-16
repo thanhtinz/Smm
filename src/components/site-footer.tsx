@@ -6,10 +6,20 @@ import type { AppContext } from "@/lib/context";
 
 export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
   const { t, settings } = ctx;
-  const [pages] = await Promise.all([
+  const [pages, posts] = await Promise.all([
     db.page.findMany({
       where: { published: true, showInFooter: true },
       orderBy: { position: "asc" },
+      select: { slug: true, title: true },
+    }),
+    // Only once there is something to read — the same condition the header
+    // uses. The blog shipped with the header link and this query half-written,
+    // so the column below never appeared. The three newest rather than a
+    // single "Blog" link under a heading that already says Blog.
+    db.blogPost.findMany({
+      where: { publishedAt: { not: null, lte: new Date() } },
+      orderBy: { publishedAt: "desc" },
+      take: 3,
       select: { slug: true, title: true },
     }),
   ]);
@@ -24,7 +34,13 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
 
   return (
     <footer className="mt-24 border-t border-[var(--border)]">
-      <div className="container-page grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      {/* Both class strings written out: Tailwind generates what it can see,
+          so a template built at run time would produce no columns at all. */}
+      <div
+        className={`container-page grid gap-10 py-14 ${
+          posts.length > 0 ? "md:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]" : "md:grid-cols-[1.4fr_1fr_1fr_1fr]"
+        }`}
+      >
         <div>
           <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} />
           <p className="muted mt-4 max-w-xs text-sm leading-relaxed">{settings["site.description"] as string}</p>
@@ -47,6 +63,16 @@ export default async function SiteFooter({ ctx }: { ctx: AppContext }) {
           <FooterLink href="/dashboard/tickets">{t("nav.support")}</FooterLink>
           <FooterLink href={`mailto:${settings["site.supportEmail"]}`}>{settings["site.supportEmail"] as string}</FooterLink>
         </FooterCol>
+
+        {posts.length > 0 && (
+          <FooterCol title={t("blog.title")}>
+            {posts.map((post) => (
+              <FooterLink key={post.slug} href={`/blog/${post.slug}`}>
+                {post.title}
+              </FooterLink>
+            ))}
+          </FooterCol>
+        )}
 
         <FooterCol title={t("nav.legal")}>
           {pages.map((p) => (
