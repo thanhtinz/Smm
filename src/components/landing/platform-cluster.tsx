@@ -14,6 +14,12 @@ import type { PlatformLine } from "@/lib/landing";
  * vary by column rather than at random: a column of one size and its
  * neighbour of another is a rhythm; eight different sizes is noise.
  *
+ * No tile under them. Each of these marks already carries its own ground —
+ * YouTube's red rectangle, Instagram's gradient square, the black square
+ * behind Threads and X — so a white card behind it was a badge drawn around a
+ * badge, and nine of them turned the hero into a grid of picture frames. The
+ * marks sit straight on the page and are drawn larger for it.
+ *
  * It is the fallback for an operator who has not uploaded a photograph, and
  * the better one — a panel's platforms are the thing worth showing, and this
  * one is current the moment the catalogue changes.
@@ -33,11 +39,8 @@ export default function PlatformCluster({ platforms }: { platforms: PlatformLine
           className={`flex flex-1 flex-col gap-4 sm:gap-5 ${c === 1 ? "" : "mt-8 sm:mt-10"}`}
         >
           {column.map((platform) => (
-            <div
-              key={platform.id}
-              className="flex aspect-square items-center justify-center rounded-3xl border border-[var(--border)] bg-[var(--surface)] shadow-lg"
-            >
-              <PlatformMark platform={platform} size={c === 1 ? 46 : 38} />
+            <div key={platform.id} className="flex aspect-square items-center justify-center">
+              <PlatformMark platform={platform} size={c === 1 ? 76 : 62} />
             </div>
           ))}
         </div>
