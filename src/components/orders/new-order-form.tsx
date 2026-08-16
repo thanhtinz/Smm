@@ -1,6 +1,6 @@
 "use client";
 
-import { formatAmount } from "@/lib/money";
+import { formatAmount, formatRate } from "@/lib/money";
 import { roundMoney } from "@/lib/money";
 import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
@@ -153,6 +153,11 @@ export function formatCurrency(base: number, currency: Currency) {
   return formatAmount(base * currency.rate, currency);
 }
 
+/** A per-1,000 price, which needs more places than the currency has. */
+export function formatRatePer1000(base: number, currency: Currency) {
+  return formatRate(base * currency.rate, currency);
+}
+
 export default function NewOrderForm({
   platforms,
   categories,
@@ -261,6 +266,8 @@ export default function NewOrderForm({
   const outOfRange =
     service && !subscription && qty > 0 && (qty < service.min || qty > service.max);
   const fmt = (base: number) => formatCurrency(base, currency);
+  // Rates are per 1,000 and need their own precision — see formatRate.
+  const rate = (base: number) => formatRatePer1000(base, currency);
   // Plain numbers follow the reader too: toLocaleString() with no locale uses
   // the browser's here and the server's on a page rendered there, so the same
   // quantity read "5,000" beside a price of "5.000 ₫".
@@ -394,7 +401,7 @@ export default function NewOrderForm({
               value: service.id,
               label: service.name,
               code: String(service.publicId),
-              meta: fmt(service.rate),
+              meta: rate(service.rate),
               keywords: service.description,
             }))}
             onPick={jumpTo}
@@ -476,8 +483,8 @@ export default function NewOrderForm({
               id: s.id,
               publicId: s.publicId,
               name: s.name,
-              price: fmt(s.rate),
-              wasPrice: s.listRate > s.rate ? fmt(s.listRate) : undefined,
+              price: rate(s.rate),
+              wasPrice: s.listRate > s.rate ? rate(s.listRate) : undefined,
               limits: `${labels.limits} ${num(s.min)} – ${num(s.max)}`,
               tags: s.tags,
             }))}
@@ -788,12 +795,12 @@ export default function NewOrderForm({
                   <div className="flex items-baseline justify-between gap-3">
                     <dt className="muted">{labels.rate}</dt>
                     <dd className="flex items-baseline gap-2">
-                      <span className="muted text-xs line-through">{fmt(service.listRate)}</span>
-                      <span className="font-semibold text-[var(--success)]">{fmt(service.rate)}</span>
+                      <span className="muted text-xs line-through">{rate(service.listRate)}</span>
+                      <span className="font-semibold text-[var(--success)]">{rate(service.rate)}</span>
                     </dd>
                   </div>
                 ) : (
-                  <Row label={labels.rate} value={fmt(service.rate)} />
+                  <Row label={labels.rate} value={rate(service.rate)} />
                 )}
                 {subscription ? (
                   <>

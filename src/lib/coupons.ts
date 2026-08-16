@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { roundMoney } from "@/lib/money";
-import { getBaseCurrency } from "@/lib/currency";
-import { formatCount } from "@/lib/numbers";
+import { formatMoney, getBaseCurrency } from "@/lib/currency";
 
 export type CouponCheck =
   | { ok: true; couponId: string; code: string; bonus: number }
@@ -18,7 +17,6 @@ export async function evaluateCoupon(
   userId: string,
   amountInBase: number,
   /** Whose digit grouping the minimum is quoted in. */
-  locale: string,
 ): Promise<CouponCheck> {
   const trimmed = code.trim().toUpperCase();
   if (!trimmed) return { ok: false, key: "err.couponRequired" };
@@ -30,7 +28,13 @@ export async function evaluateCoupon(
     return { ok: false, key: "err.couponExpired" };
   }
   if (coupon.minAmount > 0 && amountInBase < coupon.minAmount) {
-    return { ok: false, key: "err.couponMin", vars: { amount: formatCount(coupon.minAmount, locale) } };
+    // The threshold is in the base currency and the customer typed theirs in
+    // whatever they are paying with, so it has to say which.
+    return {
+      ok: false,
+      key: "err.couponMin",
+      vars: { amount: formatMoney(coupon.minAmount, await getBaseCurrency()) },
+    };
   }
 
   if (coupon.maxUses > 0) {

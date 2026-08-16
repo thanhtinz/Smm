@@ -2,10 +2,9 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
-import { displayMoney } from "@/lib/currency";
+import { displayMoney, formatDigits, getCurrencies } from "@/lib/currency";
 import TransactionManager from "@/components/admin/transaction-manager";
 import { Icon } from "@/components/icons";
-import { formatCount } from "@/lib/numbers";
 
 export const metadata: Metadata = { title: "Transactions" };
 
@@ -19,6 +18,9 @@ export default async function AdminTransactionsPage({
   const params = await searchParams;
   const ctx = await getAppContext();
   const { t, currency, locale, timezone } = ctx;
+  // Each row records the currency it was paid in, which is not always the one
+  // the reader is viewing — so the amount is written by that currency's rules.
+  const paidIn = new Map((await getCurrencies()).map((c) => [c.code, c]));
   const dates = dateFormats(locale, timezone);
 
   const status = ["pending", "completed", "failed", "canceled"].includes(params.status ?? "")
@@ -63,7 +65,9 @@ export default async function AdminTransactionsPage({
           publicId: r.publicId,
           username: r.user.username,
           method: r.method?.name ?? "—",
-          paid: `${formatCount(r.paidAmount, locale)} ${r.currency}`,
+          // The amount the customer actually paid, in the currency they paid
+          // it in — formatCount is for counts and rendered 103.20 as "103.2".
+          paid: `${formatDigits(r.paidAmount, paidIn.get(r.currency) ?? currency)} ${r.currency}`,
           credited: displayMoney(r.amount, currency, locale),
           status: r.status,
           reference: r.reference,

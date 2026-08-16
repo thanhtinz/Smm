@@ -2,7 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { creditDeposit } from "./credit";
-import { parseConfig } from "./index";
+import { parseConfig, underpaid } from "./index";
 
 /**
  * SePay posts one object per bank transaction. We match the deposit by the
@@ -72,7 +72,7 @@ export async function handleSePayWebhook(request: Request) {
   }
 
   const received = Number(payload.transferAmount ?? 0);
-  if (received + 1 < txn.paidAmount) {
+  if (await underpaid(received, txn.paidAmount, txn.currency)) {
     await db.transaction.update({
       where: { id: txn.id },
       data: { note: `Underpaid: received ${received}, expected ${txn.paidAmount}` },

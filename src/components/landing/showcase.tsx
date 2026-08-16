@@ -1,3 +1,4 @@
+import { localeTag } from "@/lib/numbers";
 import Link from "next/link";
 import Image from "next/image";
 import { Icon } from "@/components/icons";
@@ -23,7 +24,7 @@ import type { IconName } from "@/components/icons";
  */
 export default function Showcase(props: LayoutProps) {
   const { data, t, currency, locale, settings, signedIn } = props;
-  const count = new Intl.NumberFormat(locale === "vi" ? "vi-VN" : locale);
+  const count = new Intl.NumberFormat(localeTag(locale));
   const heroImage = String(settings["landing.heroImage"] ?? "");
 
   // From the ratings the operator's own testimonials carry. Five outlined

@@ -1,10 +1,11 @@
+import { formatRate } from "@/lib/money";
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import ServiceManager from "@/components/admin/service-manager";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
 import { priceServices, resolveTier } from "@/lib/pricing";
-import { displayMoney } from "@/lib/currency";
+import { convert, displayMoney } from "@/lib/currency";
 import { orderRoutes } from "@/lib/routing";
 
 export const metadata: Metadata = { title: "Services" };
@@ -48,7 +49,8 @@ export default async function AdminServicesPage() {
         return rows.map((s) => ({
           id: s.id,
           name: `#${s.publicId} ${s.category.name} · ${s.name}`,
-          cost: displayMoney(rates.get(s.id) ?? s.rate, ctx.currency, ctx.locale),
+          // A per-1,000 price, so it keeps the places the currency does not.
+          cost: formatRate(convert(rates.get(s.id) ?? s.rate, ctx.currency), ctx.currency),
         }));
       })
     : [];

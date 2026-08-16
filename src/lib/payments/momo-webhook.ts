@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { creditDeposit } from "./credit";
-import { parseConfig } from "./index";
+import { parseConfig, underpaid } from "./index";
 import { isPaid, signIpn, signatureMatches, type MomoIpn } from "./momo";
 
 /**
@@ -71,7 +71,7 @@ export async function handleMomoWebhook(request: Request) {
   // The signature proves MoMo sent it; it does not prove the amount is the one
   // that was asked for, and a customer who paid less has not paid.
   const received = Number(payload.amount ?? 0);
-  if (received + 1 < txn.paidAmount) {
+  if (await underpaid(received, txn.paidAmount, txn.currency)) {
     await db.transaction.update({
       where: { id: txn.id },
       data: { note: `Underpaid: received ${received}, expected ${txn.paidAmount}` },

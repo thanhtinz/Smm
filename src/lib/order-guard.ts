@@ -1,3 +1,4 @@
+import { formatMoney, getBaseCurrency } from "@/lib/currency";
 import { db } from "./db";
 import { getSetting } from "./settings";
 import { englishMessage, type Fault } from "./fault";
@@ -191,9 +192,14 @@ export async function newAccountCeiling(userId: string, charge: number): Promise
   const unfunded = deposits === 0;
 
   if (!young && !unfunded) return null;
+  // Both in the base currency, written the way it writes numbers. The charge
+  // used to be rounded to a whole unit while the ceiling beside it was not, so
+  // a $4.25 order stopped by a $4.00 ceiling was recorded as "ordering 4
+  // (ceiling 4)" — a note that contradicts the decision it explains.
+  const money = await getBaseCurrency();
   return englishMessage(young ? "hold.youngAccount" : "hold.unfundedAccount", {
-    charge: Math.round(charge).toLocaleString("en-US"),
-    ceiling: ceiling.toLocaleString("en-US"),
+    charge: formatMoney(charge, money),
+    ceiling: formatMoney(ceiling, money),
     minutes,
   });
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { localeTag } from "@/lib/numbers";
 import { formatAmount } from "@/lib/money";
 import { useMemo, useState } from "react";
 import Link from "next/link";
@@ -23,7 +24,7 @@ export function money(amountInBase: number, m: Money) {
 
 /** Plain counts, grouped the way the reader's language groups them. */
 function count(n: number, m: Money) {
-  return new Intl.NumberFormat(m.locale === "vi" ? "vi-VN" : m.locale).format(n);
+  return new Intl.NumberFormat(localeTag(m.locale)).format(n);
 }
 
 export type QuoteLabels = {

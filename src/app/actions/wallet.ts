@@ -13,6 +13,7 @@ import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
 import { panelBaseUrl, getCurrentPanel } from "@/lib/tenancy";
 import { readerText } from "@/lib/context";
 import { formatCount } from "@/lib/numbers";
+import { roundMoney } from "@/lib/money";
 
 export type DepositState = {
   error?: string;
@@ -73,13 +74,22 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   let couponBonusBase = 0;
   let couponId = "";
   if (couponCode) {
-    const check = await evaluateCoupon(couponCode, user.id, amountInBase, locale);
+    const check = await evaluateCoupon(couponCode, user.id, amountInBase);
     if (!check.ok) return { fieldErrors: { coupon: t(check.key, check.vars) } };
     couponBonusBase = check.bonus;
     couponId = check.couponId;
   }
 
-  const creditedBase = totals.credited / (currency.rate || 1) + couponBonusBase;
+  // Rounded to the precision of the currency each figure is counted in, and
+  // not left as raw float. `paidAmount` is the number the gateway is charged
+  // and the webhook is matched against — stored as 34.29657 it matched
+  // neither Stripe's 3430 minor units nor PayPal's "34.30". `creditedBase`
+  // goes straight into the balance, and a tail there is inherited by every
+  // balanceAfter that follows it and never reconciles against the API's own
+  // toFixed(2).
+  const paidAmount = roundMoney(totals.payable, currency.decimals);
+  const fee = roundMoney(totals.fee, currency.decimals);
+  const creditedBase = roundMoney(totals.credited / (currency.rate || 1) + couponBonusBase, base.decimals);
 
   const publicId = await nextPublicId("transaction");
   const transaction = await db.transaction.create({
@@ -89,9 +99,9 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
       methodId: method.id,
       type: "deposit",
       amount: creditedBase,
-      paidAmount: totals.payable,
+      paidAmount,
       currency: currency.code,
-      fee: totals.fee,
+      fee,
       status: "pending",
       note: method.name,
       meta: JSON.stringify({ requested: amount, bonus: totals.bonus, couponCode, couponBonusBase }),
@@ -100,7 +110,7 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
 
   if (couponId) await redeemCoupon(couponId, user.id, transaction.id, couponBonusBase);
 
-  await logActivity(user.id, "deposit.create", `#${publicId} ${totals.payable} ${currency.code} via ${method.code}`);
+  await logActivity(user.id, "deposit.create", `#${publicId} ${paidAmount} ${currency.code} via ${method.code}`);
   redirect(`/dashboard/wallet/${transaction.id}`);
 }
 

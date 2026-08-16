@@ -1,6 +1,6 @@
 "use client";
 
-import { formatAmount } from "@/lib/money";
+import { formatRate, roundMoney } from "@/lib/money";
 import { useActionState, useMemo, useState, useTransition } from "react";
 import { deleteServiceAction, saveServiceAction, toggleServiceAction, type ActionResult } from "@/app/actions/admin/catalogue";
 import { Field, TextInput } from "@/components/ui/field";
@@ -97,7 +97,8 @@ export default function ServiceManager({
     setCreating(false);
   };
 
-  const fmt = (base: number) => formatAmount(base * currency.rate, currency);
+  // Per-1,000 prices need more places than the currency has — see formatRate.
+  const rate = (base: number) => formatRate(base * currency.rate, currency);
 
   const categoryById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const platformById = useMemo(() => new Map(platforms.map((p) => [p.id, p])), [platforms]);
@@ -232,7 +233,7 @@ export default function ServiceManager({
                         </span>
                         <span className="muted mt-0.5 block text-xs">{category?.name}</span>
                       </td>
-                      <td className="text-right font-semibold tabular-nums">{fmt(row.rate)}</td>
+                      <td className="text-right font-semibold tabular-nums">{rate(row.rate)}</td>
                       <td className="text-right tabular-nums">
                         {margin === null ? <span className="muted">—</span> : `${margin.toFixed(0)}%`}
                       </td>
@@ -627,7 +628,10 @@ function TierPrices({
                 step="any"
                 min="0"
                 defaultValue={manual[tier.id] ?? ""}
-                placeholder={Number.isFinite(discounted) ? String(Math.round(discounted)) : ""}
+                // A per-1,000 rate: rounding it to whole units turned a $0.85
+                // service with a 10% discount into a suggested "1" — a 17.6%
+                // increase, offered as the discounted price.
+                placeholder={Number.isFinite(discounted) ? String(roundMoney(discounted, 4)) : ""}
                 className={`field w-40 tabular-nums ${errors?.[field] ? "field-error" : ""}`}
               />
             </div>

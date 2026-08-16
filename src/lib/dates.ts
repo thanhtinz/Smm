@@ -9,6 +9,8 @@
  * server's clock, and so a panel-wide change is a change in one file.
  */
 
+import { localeTag } from "./numbers";
+
 export type DateFormats = {
   /** 13 thg 8, 2026 — a day, where the hour would be noise. */
   day: (value: Date) => string;
@@ -22,7 +24,7 @@ export type DateFormats = {
 
 export function dateFormats(locale: string, timeZone: string): DateFormats {
   // Intl wants a BCP 47 tag; the panel stores bare language codes.
-  const tag = locale === "vi" ? "vi-VN" : locale;
+  const tag = localeTag(locale);
   const make = (options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(tag, { ...options, timeZone });
 
   const day = make({ dateStyle: "medium" });
@@ -99,7 +101,7 @@ export const TIMEZONES = [
 /** `Asia/Ho_Chi_Minh · GMT+7`, so a reader can pick without knowing the name. */
 export function describeZone(name: string, locale: string): string {
   try {
-    const parts = new Intl.DateTimeFormat(locale === "vi" ? "vi-VN" : locale, {
+    const parts = new Intl.DateTimeFormat(localeTag(locale), {
       timeZone: name,
       timeZoneName: "shortOffset",
     }).formatToParts(new Date());
