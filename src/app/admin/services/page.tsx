@@ -23,7 +23,7 @@ export default async function AdminServicesPage() {
       include: {
         tierPrices: { select: { tierId: true, rate: true } },
         routes: {
-          include: { provider: { select: { id: true, name: true, enabled: true, balance: true, lastSyncAt: true } } },
+          include: { provider: { select: { id: true, name: true, alias: true, enabled: true, balance: true, lastSyncAt: true } } },
         },
       },
     }),

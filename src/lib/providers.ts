@@ -114,6 +114,21 @@ export async function requestProviderCancel(
 }
 
 /**
+ * What a provider is called on every screen but its own.
+ *
+ * The providers page shows the real name and the API host, because that is
+ * where an operator goes to see the truth. Everywhere else — the route list, a
+ * note written onto an order, a sync alert emailed to staff — carries the
+ * alias when one is set. Those are the places a supplier list leaves the
+ * building: a screenshot in a group chat, an export, a shared screen during a
+ * support call. A blank alias shows the real name, which is where every
+ * provider starts.
+ */
+export function providerLabel(provider: { name: string; alias: string }): string {
+  return provider.alias.trim() || provider.name;
+}
+
+/**
  * The quantity actually ordered upstream.
  *
  * Followers and likes leak: a share of every delivery unfollows again within

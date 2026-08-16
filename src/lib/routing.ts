@@ -13,6 +13,7 @@
  */
 
 import { db } from "./db";
+import { providerLabel } from "./providers";
 
 export type Route = {
   providerId: string;
@@ -28,7 +29,7 @@ type RouteRow = {
   providerServiceId: string;
   cost: number;
   enabled: boolean;
-  provider: { id: string; name: string; enabled: boolean; balance: number; lastSyncAt: Date | null };
+  provider: { id: string; name: string; alias: string; enabled: boolean; balance: number; lastSyncAt: Date | null };
 };
 
 /**
@@ -46,7 +47,7 @@ export function orderRoutes(rows: RouteRow[]): Route[] {
     .filter((r) => r.enabled && r.providerServiceId)
     .map((r) => ({
       providerId: r.providerId,
-      providerName: r.provider.name,
+      providerName: providerLabel(r.provider),
       providerServiceId: r.providerServiceId,
       cost: r.cost,
       skipped: !r.provider.enabled ? ("disabled" as const) : outOfFunds(r.provider) ? ("empty" as const) : undefined,
@@ -75,13 +76,13 @@ export async function routesFor(service: {
   providerRate: number;
   backupProviderId: string | null;
   backupProviderServiceId: string;
-  provider?: { id: string; name: string; enabled: boolean; balance: number; lastSyncAt: Date | null } | null;
-  backupProvider?: { id: string; name: string; enabled: boolean; balance: number; lastSyncAt: Date | null } | null;
+  provider?: { id: string; name: string; alias: string; enabled: boolean; balance: number; lastSyncAt: Date | null } | null;
+  backupProvider?: { id: string; name: string; alias: string; enabled: boolean; balance: number; lastSyncAt: Date | null } | null;
 }): Promise<Route[]> {
   const rows = await db.serviceRoute.findMany({
     where: { serviceId: service.id },
     include: {
-      provider: { select: { id: true, name: true, enabled: true, balance: true, lastSyncAt: true } },
+      provider: { select: { id: true, name: true, alias: true, enabled: true, balance: true, lastSyncAt: true } },
     },
   });
 

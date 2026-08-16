@@ -39,6 +39,7 @@ export async function saveProviderAction(_prev: ActionResult, form: FormData): P
 
   const data = {
     name,
+    alias: String(form.get("alias") ?? "").trim(),
     apiUrl,
     currency: String(form.get("currency") ?? "USD").trim().toUpperCase() || "USD",
     enabled: form.get("enabled") === "on",

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { requireAdmin, logActivity } from "@/lib/auth";
 import { readerMessages } from "@/lib/context";
+import { providerLabel } from "@/lib/providers";
 import type { ActionResult } from "./catalogue";
 
 export type { ActionResult };
@@ -29,7 +30,7 @@ export async function saveRouteAction(_prev: ActionResult, form: FormData): Prom
   if (!service) return { error: t("adm.serviceMissing") };
   if (!providerId) return { fieldErrors: { providerId: t("adm.chooseProvider") } };
 
-  const provider = await db.provider.findFirst({ where: { id: providerId }, select: { id: true, name: true } });
+  const provider = await db.provider.findFirst({ where: { id: providerId }, select: { id: true, name: true, alias: true } });
   if (!provider) return { error: t("adm.providerMissing") };
   if (!providerServiceId) return { fieldErrors: { providerServiceId: t("adm.providerServiceRequired") } };
 
@@ -48,7 +49,7 @@ export async function saveRouteAction(_prev: ActionResult, form: FormData): Prom
     });
   }
 
-  await logActivity(admin.id, "admin.route.save", `${service.name} -> ${provider.name}`);
+  await logActivity(admin.id, "admin.route.save", `${service.name} -> ${providerLabel(provider)}`);
   revalidateRoutes();
   return { ok: true };
 }
@@ -58,12 +59,12 @@ export async function deleteRouteAction(id: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   const row = await db.serviceRoute.findFirst({
     where: { id },
-    include: { service: { select: { name: true } }, provider: { select: { name: true } } },
+    include: { service: { select: { name: true } }, provider: { select: { name: true, alias: true } } },
   });
   if (!row) return { error: t("adm.routeMissing") };
 
   await db.serviceRoute.delete({ where: { id } });
-  await logActivity(admin.id, "admin.route.delete", `${row.service.name} -> ${row.provider.name}`);
+  await logActivity(admin.id, "admin.route.delete", `${row.service.name} -> ${providerLabel(row.provider)}`);
   revalidateRoutes();
   return { ok: true };
 }
@@ -71,11 +72,11 @@ export async function deleteRouteAction(id: string): Promise<ActionResult> {
 export async function setRouteEnabledAction(id: string, enabled: boolean): Promise<ActionResult> {
   const t = await readerMessages();
   const admin = await requireAdmin();
-  const row = await db.serviceRoute.findFirst({ where: { id }, include: { provider: { select: { name: true } } } });
+  const row = await db.serviceRoute.findFirst({ where: { id }, include: { provider: { select: { name: true, alias: true } } } });
   if (!row) return { error: t("adm.routeMissing") };
 
   await db.serviceRoute.update({ where: { id }, data: { enabled } });
-  await logActivity(admin.id, "admin.route.toggle", `${row.provider.name} ${enabled ? "on" : "off"}`);
+  await logActivity(admin.id, "admin.route.toggle", `${providerLabel(row.provider)} ${enabled ? "on" : "off"}`);
   revalidateRoutes();
   return { ok: true };
 }

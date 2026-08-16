@@ -50,6 +50,7 @@ export default async function AdminProvidersPage() {
         rows={providers.map((p) => ({
           id: p.id,
           name: p.name,
+          alias: p.alias,
           apiUrl: p.apiUrl,
           currency: p.currency,
           balance: p.balance,
@@ -83,6 +84,9 @@ export default async function AdminProvidersPage() {
           healthSpend: t("health.spend"),
           healthWorst: t("health.worst"),
           egName: t("eg.providerName"),
+          alias: t("provider.alias"),
+          aliasHint: t("provider.aliasHint"),
+          egAlias: t("eg.providerAlias"),
           title: t("admin.providers"),
           new: t("admin.new"),
           edit: t("admin.edit"),

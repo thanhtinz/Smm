@@ -15,6 +15,8 @@ import { STAFF_ROLES } from "@/lib/two-factor";
 export type TicketState = {
   error?: string;
   fieldErrors?: Record<string, string>;
+  /** Set when a reply was actually posted, so the box can empty itself. */
+  ok?: true;
 };
 
 export async function createTicketAction(_prev: TicketState, form: FormData): Promise<TicketState> {
@@ -113,7 +115,7 @@ export async function replyTicketAction(_prev: TicketState, form: FormData): Pro
   revalidatePath("/dashboard/tickets");
   revalidatePath("/admin/tickets");
   revalidatePath(`/admin/tickets/${ticket.id}`);
-  return {};
+  return { ok: true };
 }
 
 export async function setTicketStatusAction(ticketId: string, status: string): Promise<TicketState> {
