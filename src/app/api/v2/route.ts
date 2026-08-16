@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
+import { callerAddress } from "@/lib/auth-throttle";
 import { nextPublicId } from "@/lib/ids";
 import {
   calculateCharge,
@@ -48,6 +49,10 @@ export async function POST(request: Request) {
   if (panel.status !== "active") {
     return NextResponse.json({ error: "This panel is temporarily unavailable" }, { status: 503 });
   }
+
+  // Before the lookup, so an invalid-key flood costs a map read rather than a
+  // database query each.
+  if (!(await withinUnauthenticatedLimit(await callerAddress()))) return fail("Rate limit exceeded");
 
   const user = await db.user.findUnique({ where: { apiKey: key } });
   if (!user) return fail("Invalid API key");
@@ -488,20 +493,70 @@ async function readParams(request: Request): Promise<Record<string, unknown>> {
   }
 }
 
-// A fixed window per key is enough to stop a runaway loop without adding
-// infrastructure; it resets every minute.
+/**
+ * A fixed window per bucket, resetting every minute.
+ *
+ * In this process and no other, which is the right shape for this panel: the
+ * database is a SQLite file with one writer, so a deployment is one instance.
+ * Run several behind a load balancer and each keeps its own count, and the
+ * effective ceiling is the limit times the instances — front it with a proxy
+ * limit if you ever do that. Said plainly here rather than implied, because a
+ * counter that quietly means something different at scale is worse than one
+ * that says what it is.
+ *
+ * Two things it does have to get right on its own: it must not grow without
+ * bound, and it must be reachable before the database is.
+ */
 const hits = new Map<string, { count: number; resetAt: number }>();
 
-async function withinRateLimit(userId: string): Promise<boolean> {
-  const limit = Number(await getSetting("api.rateLimitPerMinute")) || 0;
+/**
+ * Expired buckets, dropped.
+ *
+ * Entries were only ever overwritten by a later request from the same caller,
+ * so a key that called once and never again stayed for the life of the
+ * process — one entry per distinct API key that ever touched the panel, for
+ * ever. Swept on a size threshold rather than on every call, since the sweep
+ * is O(n) and the common case is a map with a handful of live entries.
+ */
+function sweep(now: number) {
+  if (hits.size < 512) return;
+  for (const [bucket, entry] of hits) if (now > entry.resetAt) hits.delete(bucket);
+}
+
+function withinWindow(bucket: string, limit: number): boolean {
   if (limit <= 0) return true;
 
   const now = Date.now();
-  const entry = hits.get(userId);
+  sweep(now);
+
+  const entry = hits.get(bucket);
   if (!entry || now > entry.resetAt) {
-    hits.set(userId, { count: 1, resetAt: now + 60_000 });
+    hits.set(bucket, { count: 1, resetAt: now + 60_000 });
     return true;
   }
   entry.count += 1;
   return entry.count <= limit;
+}
+
+async function withinRateLimit(userId: string): Promise<boolean> {
+  return withinWindow(`user:${userId}`, Number(await getSetting("api.rateLimitPerMinute")) || 0);
+}
+
+/**
+ * The same ceiling, applied to the caller's address before the key is looked
+ * up.
+ *
+ * The limit above only bound callers who had already been authenticated, so a
+ * flood of invalid keys ran a database query each and was throttled by
+ * nothing at all. Bucketed by address rather than by key, because the key is
+ * attacker-chosen and bucketing on it would let one machine mint a fresh
+ * bucket per request.
+ */
+async function withinUnauthenticatedLimit(address: string): Promise<boolean> {
+  if (!address) return true;
+  const limit = Number(await getSetting("api.rateLimitPerMinute")) || 0;
+  // Ten times the per-key allowance: one address may legitimately carry
+  // several resellers behind a shared proxy, and this is only meant to stop a
+  // machine gun.
+  return withinWindow(`ip:${address}`, limit > 0 ? limit * 10 : 0);
 }

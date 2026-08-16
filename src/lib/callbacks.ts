@@ -84,7 +84,7 @@ export function isPrivateAddress(ip: string): boolean {
   return false;
 }
 
-export type UrlCheck = { ok: true; url: URL } | { ok: false; reason: string };
+export type UrlCheck = { ok: true; url: URL; addresses?: string[] } | { ok: false; reason: string };
 
 /**
  * Shape only: is this a URL this panel could POST to at all?
@@ -134,10 +134,70 @@ export async function resolveCallbackUrl(raw: string): Promise<UrlCheck> {
     // Every answer has to be public: one private record among them is enough
     // to reach the private address.
     if (addresses.some((a) => isPrivateAddress(a.address))) return { ok: false, reason: "private" };
+    // Handed back so the request can be made to the address that was judged.
+    // Resolving twice — once to check, once to connect — leaves a window where
+    // a reseller who runs their own DNS answers publicly for the check and
+    // 169.254.169.254 for the connection.
+    return { ok: true, url: shape.url, addresses: addresses.map((a) => a.address) };
   } catch {
     return { ok: false, reason: "unresolved" };
   }
-  return shape;
+}
+
+/**
+ * POST the signed body, connecting only to an address the check approved.
+ *
+ * `fetch` resolves the name itself and gives no way to say which address it
+ * may use, so this drops to the request underneath it, where `lookup` is a
+ * parameter. The hostname still travels in the Host header and in the TLS
+ * handshake, so a certificate is verified against the name the reseller gave,
+ * not against the address it landed on.
+ *
+ * Redirects are not followed here either — nothing in `http.request` follows
+ * them — which keeps the second address a redirect would introduce out of it.
+ */
+async function postToCheckedAddress(
+  url: URL,
+  addresses: string[] | undefined,
+  headers: Record<string, string>,
+  body: string,
+): Promise<number> {
+  const { request } = url.protocol === "https:" ? await import("node:https") : await import("node:http");
+  const pinned = addresses?.[0];
+
+  return new Promise<number>((resolve, reject) => {
+    const req = request(
+      url,
+      {
+        method: "POST",
+        headers: { ...headers, "Content-Length": String(Buffer.byteLength(body)) },
+        ...(pinned
+          ? {
+              lookup: (
+                _host: string,
+                _options: unknown,
+                cb: (err: NodeJS.ErrnoException | null, address: string | { address: string; family: number }[], family?: number) => void,
+              ) => {
+                const family = isIP(pinned);
+                const all = (_options as { all?: boolean } | undefined)?.all;
+                if (all) cb(null, [{ address: pinned, family }]);
+                else cb(null, pinned, family);
+              },
+            }
+          : {}),
+      },
+      (res) => {
+        // Nothing here reads the body, and an unread response holds the
+        // socket open until the timeout.
+        res.resume();
+        resolve(res.statusCode ?? 0);
+      },
+    );
+
+    req.setTimeout(TIMEOUT_MS, () => req.destroy(Object.assign(new Error("Timed out"), { name: "AbortError" })));
+    req.on("error", reject);
+    req.end(body);
+  });
 }
 
 /** Doubling, from one minute: 1, 2, 4, 8, 16, 32… */
@@ -186,30 +246,23 @@ export async function deliverCallbacks(limit = 50): Promise<DeliveryReport> {
       if (!checked.ok) {
         error = `Refused to call ${target}: ${checked.reason}`;
       } else {
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
         try {
-          const res = await fetch(checked.url, {
-            method: "POST",
-            headers: {
+          code = await postToCheckedAddress(
+            checked.url,
+            checked.addresses,
+            {
               "Content-Type": "application/json",
               "X-Signature": signCallback(row.payload, row.user.apiKey),
               "X-Order-Id": String(row.publicId),
             },
-            body: row.payload,
-            redirect: "manual",
-            signal: controller.signal,
-            cache: "no-store",
-          });
-          code = res.status;
+            row.payload,
+          );
           // A redirect is not followed: the address that passed the private
           // check is the only one this request is allowed to reach.
-          if (res.status >= 300 && res.status < 400) error = "Redirect not followed";
-          else if (!res.ok) error = `HTTP ${res.status}`;
+          if (code >= 300 && code < 400) error = "Redirect not followed";
+          else if (code < 200 || code >= 300) error = `HTTP ${code}`;
         } catch (e) {
           error = e instanceof Error && e.name === "AbortError" ? "Timed out" : "Could not be reached";
-        } finally {
-          clearTimeout(timer);
         }
       }
     }
