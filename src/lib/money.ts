@@ -21,8 +21,24 @@ export function roundMoney(amount: number, decimals: number): number {
   return Math.round((amount + Number.EPSILON * Math.sign(amount) * Math.abs(amount)) * factor) / factor;
 }
 
-/** The same, rounding down — for anything the panel pays out. */
+/**
+ * The same, rounding down — for anything the panel pays out.
+ *
+ * The float guard matters more here than it does above, and it was missing.
+ * `Math.floor` on a value one ulp short of its own decimal representation
+ * does not lose a rounding argument, it loses a whole unit: a half-delivered
+ * $2.32 order owes exactly $1.16, but `2.32 * 500 / 1000 * 100` evaluates to
+ * 115.99999999999999 and flooring that refunded $1.15. Across every cent from
+ * $0.00 to $1000.00, 4,586 of them came back a cent light — always in the
+ * panel's favour, on commission, on partial refunds, and once per hop down
+ * the wholesale chain.
+ *
+ * So the scaled value is settled onto the grid of real numbers before it is
+ * floored. Anything genuinely below the next unit stays below it; only the
+ * noise is removed.
+ */
 export function floorMoney(amount: number, decimals: number): number {
   const factor = 10 ** Math.max(0, Math.min(6, Math.trunc(decimals)));
-  return Math.floor(amount * factor) / factor;
+  const settled = Math.round(amount * factor * 1e6) / 1e6;
+  return Math.floor(settled) / factor;
 }

@@ -196,6 +196,10 @@ export async function setBaseCurrencyAction(id: string): Promise<ActionResult> {
     )
   );
 
+  // requireRootAdmin has already established that the current panel is the
+  // root, and the base is read from the root for the whole deployment — see
+  // baseCode() in lib/currency.ts. So this one row is the setting for every
+  // panel, which is what the rebased global rate table above assumes.
   await setSetting("currency.base", target.code);
   await logActivity(admin.id, "admin.currency.base", target.code);
   invalidateCurrencies();
