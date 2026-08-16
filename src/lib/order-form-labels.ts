@@ -26,6 +26,8 @@ export function orderFormLabels(t: (key: string) => string): OrderLabels {
     usernameHint: t("order.usernameHint"),
     posts: t("order.posts"),
     postsHint: t("order.postsHint"),
+    oldPosts: t("order.oldPosts"),
+    oldPostsHint: t("order.oldPostsHint"),
     perPost: t("order.perPost"),
     delay: t("order.delay"),
     delayHint: t("order.delayHint"),

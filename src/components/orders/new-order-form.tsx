@@ -120,6 +120,8 @@ export type OrderLabels = Record<
   | "usernameHint"
   | "posts"
   | "postsHint"
+  | "oldPosts"
+  | "oldPostsHint"
   | "perPost"
   | "delay"
   | "delayHint"
@@ -241,9 +243,14 @@ export default function NewOrderForm({
   const [runs, setRuns] = useState(prefill?.runs ?? "");
   const [interval, setInterval] = useState(prefill?.interval ?? "");
 
-  // A subscription watches a profile and delivers on each new post, so what is
-  // charged is the ceiling it could reach: posts x the most per post.
-  const subscription = service?.type === "subscription";
+  // A subscription watches a profile and delivers on each new post; a spread
+  // does the same over the posts already there. Both are addressed by username
+  // and priced the same way — the ceiling they could reach, posts x the most
+  // per post — so they share this whole branch of the form. The one place they
+  // differ is that a spread has nothing in the future to wait for, so it takes
+  // neither a delay nor an end date.
+  const spread = service?.type === "spread";
+  const subscription = service?.type === "subscription" || spread;
   const [username, setUsername] = useState(prefill?.username ?? "");
   const [posts, setPosts] = useState(prefill?.posts ?? "");
   const [minPerPost, setMinPerPost] = useState(prefill?.minPerPost ?? "");
@@ -520,9 +527,9 @@ export default function NewOrderForm({
 
             <Field
               name="posts"
-              label={labels.posts}
+              label={spread ? labels.oldPosts : labels.posts}
               error={state.fieldErrors?.posts}
-              hint={labels.postsHint}
+              hint={spread ? labels.oldPostsHint : labels.postsHint}
               required
             >
               <TextInput
@@ -534,7 +541,7 @@ export default function NewOrderForm({
                 onChange={(e) => setPosts(e.target.value)}
                 placeholder="10"
                 error={state.fieldErrors?.posts}
-                hint={labels.postsHint}
+                hint={spread ? labels.oldPostsHint : labels.postsHint}
               />
             </Field>
 
@@ -573,6 +580,7 @@ export default function NewOrderForm({
               </Field>
             </div>
 
+            {!spread && (
             <div className="grid gap-3 sm:grid-cols-2">
               <Field name="delay" label={labels.delay} error={state.fieldErrors?.delay} hint={labels.delayHint}>
                 <select
@@ -600,6 +608,7 @@ export default function NewOrderForm({
                 />
               </Field>
             </div>
+            )}
           </>
         ) : (
           <Field name="link" label={labels.link} error={state.fieldErrors?.link} required>

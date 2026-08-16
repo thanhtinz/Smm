@@ -187,6 +187,27 @@ model User {
   tierId String?
   tier   UserTier? @relation(fields: [tierId], references: [id], onDelete: SetNull)
 
+  /// A personal percentage off, taken after the tier has had its say. It is
+  /// separate from the tier's own discount because the two answer different
+  /// questions — the tier is what this class of customer pays, this is what
+  /// was promised to one of them — and folding the second into the first
+  /// would move everybody else on that tier.
+  discountPercent Float @default(0)
+
+  /// JSON array of PaymentMethod ids this account may use. Empty is every
+  /// enabled method, which is what every account is until one is restricted:
+  /// an empty list has to mean "no restriction" rather than "no methods", or
+  /// adding the column would have locked every existing customer out of
+  /// topping up.
+  allowedPaymentMethods String @default("[]")
+
+  /// JSON object of rule -> false for the things this account may NOT do.
+  /// Absent means allowed, so the default `{}` grants everything and a rule
+  /// added to the code later does not retroactively bar anyone.
+  accessRules String @default("{}")
+
+  serviceRates UserServiceRate[]
+
   @@unique([panelId, publicId])
   @@unique([panelId, username])
   @@unique([panelId, email])
@@ -343,6 +364,11 @@ model Provider {
   panelId        String         @default("")
   panel          Panel          @relation("PanelProviders", fields: [panelId], references: [id], onDelete: Cascade)
   name           String
+  /// What staff below admin see instead of the name and the API host. Panels
+  /// resell each other, and a support agent reading a provider's domain off
+  /// an order page is how a supplier list walks out of the building. Blank
+  /// shows the real name, which is what an admin always sees.
+  alias          String         @default("")
   apiUrl         String
   apiKey         String
   enabled        Boolean        @default(true)
@@ -423,10 +449,23 @@ model Service {
   startMinutes            Int            @default(0)
   speedPerDay             Int            @default(0)
   enabled                 Boolean        @default(true)
+  /// Quantities must be a multiple of this. Zero is off, which is every
+  /// service until an operator says otherwise — a provider that only takes
+  /// hundreds is the exception, not the rule.
+  increment               Int            @default(0)
+  /// Percent sent upstream on top of what the customer bought, to cover the
+  /// share that unsubscribes again. The customer is charged for what they
+  /// asked for; the buffer comes out of the margin. Zero is off.
+  overflowPercent         Float          @default(0)
+  /// Set instead of deleting the row. Orders reference services, so a real
+  /// delete either fails or takes the order history with it — and an operator
+  /// who removes the wrong service wants it back, not a support ticket.
+  deletedAt               DateTime?
   position                Int            @default(0)
   orders                  Order[]
   routes                  ServiceRoute[]
   tierPrices              TierPrice[]
+  userRates               UserServiceRate[]
   createdAt               DateTime       @default(now())
 
   @@unique([panelId, publicId])
@@ -485,6 +524,11 @@ model Order {
   posts           Int?
   minPerPost      Int?
   maxPerPost      Int?
+  /// How many posts already on the profile to spread across. Set only by the
+  /// spread services, where the delivery is over what is there rather than
+  /// over what gets posted next; `posts` then stays null and nothing is
+  /// watched after the run finishes.
+  oldPosts        Int?
   /// Minutes to wait after a post appears before delivering.
   delay           Int?
   expiry          DateTime?
@@ -947,6 +991,85 @@ model TierPrice {
   @@index([serviceId])
 }
 
+/// One service priced for one customer, overriding everything else.
+///
+/// Tiers price a class of customer; this prices a person. Resellers negotiate
+/// one service at a time, and the alternative — a tier per reseller — leaves
+/// an operator with forty tiers, thirty-nine of which have one member.
+model UserServiceRate {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelUserServiceRates", fields: [panelId], references: [id], onDelete: Cascade)
+
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  rate      Float
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, serviceId])
+  @@index([panelId])
+  @@index([serviceId])
+}
+
+/// A reply support types often enough to stop typing.
+model SavedReply {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelSavedReplies", fields: [panelId], references: [id], onDelete: Cascade)
+
+  title String
+  body  String
+  /// Blank offers this reply on every ticket; a category name offers it only
+  /// on tickets filed under that category, so a queue of billing tickets does
+  /// not scroll past nine refill answers to find the one that fits.
+  category String @default("")
+  position Int    @default(0)
+  /// How many times it has been used, so the list can put the useful ones on
+  /// top without an operator ordering them by hand.
+  uses     Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([panelId])
+}
+
+/// A blog post. Marketing copy that earns its own URL, which is the whole
+/// point of it: the panel ranks for the questions its customers type.
+model BlogPost {
+  id      String @id @default(cuid())
+  panelId String @default("")
+  panel   Panel  @relation("PanelBlogPosts", fields: [panelId], references: [id], onDelete: Cascade)
+
+  slug    String
+  title   String
+  /// Shown on the index and used as the meta description when none is set.
+  excerpt String @default("")
+  /// Markdown-ish: the same restricted subset the Page model renders.
+  body    String @default("")
+  coverUrl String @default("")
+  /// Comma-separated, for the index filter and nothing more clever.
+  tags    String @default("")
+  author  String @default("")
+
+  metaTitle       String @default("")
+  metaDescription String @default("")
+
+  /// Null while the post is a draft. Set to a future time to schedule it: the
+  /// public index and the sitemap both compare against now, so a post appears
+  /// on its own without anything having to run.
+  publishedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([panelId, slug])
+  @@index([panelId, publishedAt])
+}
+
 // ---------------------------------------------------------------------------
 // Panels — the root panel plus every child panel resold beneath it.
 // ---------------------------------------------------------------------------
@@ -1158,6 +1281,9 @@ model Panel {
   keywordRanks   KeywordRank[]      @relation("PanelKeywordRanks")
   tiers          UserTier[]         @relation("PanelTiers")
   tierPrices     TierPrice[]        @relation("PanelTierPrices")
+  userRates      UserServiceRate[]  @relation("PanelUserServiceRates")
+  savedReplies   SavedReply[]       @relation("PanelSavedReplies")
+  blogPosts      BlogPost[]         @relation("PanelBlogPosts")
   panelRequests  PanelRequest[]     @relation("PanelPanelRequests")
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

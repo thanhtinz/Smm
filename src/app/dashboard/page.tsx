@@ -6,7 +6,7 @@ import { Icon, type IconName } from "@/components/icons";
 import StatCard from "@/components/ui/stat-card";
 import StatusBadge from "@/components/ui/status-badge";
 import { CUSTOMER_ACTIVE_STATUSES } from "@/lib/orders";
-import { priceServices, resolveTier } from "@/lib/pricing";
+import { priceServices, resolvePricing } from "@/lib/pricing";
 import { renderNotification } from "@/lib/notify";
 import { frequentServices } from "@/lib/reorder";
 import FrequentServices from "@/components/orders/frequent-services";
@@ -30,10 +30,11 @@ export default async function DashboardPage() {
     frequentServices(user.id),
   ]);
 
-  const tier = await resolveTier(user);
+  const pricing = await resolvePricing(user);
+  const tier = pricing.tier;
   // The card quotes what this customer pays, not the list price — a tier
   // discount that only appears at the last step persuades nobody.
-  const rates = await priceServices(tier, frequent);
+  const rates = await priceServices(pricing, frequent);
   const frequentPrices = Object.fromEntries(
     frequent.map((s) => [s.id, displayMoney(rates.get(s.id) ?? s.rate, currency, locale)]),
   );

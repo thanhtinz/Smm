@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser, requireAdmin, logActivity } from "@/lib/auth";
 import { readerMessages } from "@/lib/context";
+import { deny } from "@/lib/access";
 import { getCurrentPanel } from "@/lib/tenancy";
 import {
   openPanelRequest,
@@ -28,6 +29,9 @@ export async function requestPanelAction(
   const t = await readerMessages();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
+
+  const barred = deny(user, "childPanel");
+  if (barred) return { error: t(barred.key) };
 
   const parent = await getCurrentPanel();
   if (!parent) return { error: t("err.orderDisabled") };

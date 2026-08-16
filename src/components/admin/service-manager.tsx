@@ -2,7 +2,14 @@
 
 import { formatRate, roundMoney } from "@/lib/money";
 import { useActionState, useMemo, useState, useTransition } from "react";
-import { deleteServiceAction, saveServiceAction, toggleServiceAction, type ActionResult } from "@/app/actions/admin/catalogue";
+import {
+  deleteServiceAction,
+  massEditRatesAction,
+  restoreServiceAction,
+  saveServiceAction,
+  toggleServiceAction,
+  type ActionResult,
+} from "@/app/actions/admin/catalogue";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
@@ -47,6 +54,12 @@ export type ServiceRow = {
   speedPerDay: number;
   enabled: boolean;
   position: number;
+  /** Quantities must be a multiple of this. Zero is no step. */
+  increment: number;
+  /** Percent ordered upstream on top of what the customer bought. */
+  overflowPercent: number;
+  /** Set when the service has been deleted and is waiting to be restored. */
+  deleted: boolean;
 };
 
 export type CategoryOption = { id: string; name: string; platformId: string | null };
@@ -90,6 +103,11 @@ export default function ServiceManager({
   const [error, setError] = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
   const [query, setQuery] = useState("");
+  const [showDeleted, setShowDeleted] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [massMode, setMassMode] = useState("percent");
+  const [massValue, setMassValue] = useState("");
+  const [notice, setNotice] = useState("");
   const [pending, start] = useTransition();
 
   const close = () => {
@@ -106,6 +124,10 @@ export default function ServiceManager({
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
     return rows.filter((r) => {
+      // Deleted services are a separate view rather than a row style: they
+      // are not on sale, and mixing them into the list is how one gets edited
+      // for twenty minutes before anyone notices it is gone.
+      if (r.deleted !== showDeleted) return false;
       if (platformFilter) {
         const category = categoryById.get(r.categoryId);
         if (category?.platformId !== platformFilter) return false;
@@ -113,7 +135,37 @@ export default function ServiceManager({
       if (q && !`${r.publicId} ${r.name}`.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [rows, platformFilter, query, categoryById]);
+  }, [rows, platformFilter, query, categoryById, showDeleted]);
+
+  const deletedCount = useMemo(() => rows.filter((r) => r.deleted).length, [rows]);
+  const allPicked = visible.length > 0 && visible.every((r) => picked.includes(r.id));
+
+  const massEdit = () => {
+    const value = Number(massValue);
+    if (!Number.isFinite(value) || massValue.trim() === "") return;
+    setError("");
+    setNotice("");
+    start(async () => {
+      const result = await massEditRatesAction(picked, massMode, value);
+      if (result.error) return setError(result.error);
+      if (result.fieldErrors) return setError(Object.values(result.fieldErrors)[0] ?? "");
+      setPicked([]);
+      setMassValue("");
+      setNotice(
+        labels.massDone
+          .replace("{changed}", String(result.changed ?? 0))
+          .replace("{skipped}", String(result.skipped ?? 0)),
+      );
+    });
+  };
+
+  const restore = (row: ServiceRow) => {
+    setError("");
+    start(async () => {
+      const result = await restoreServiceAction(row.id);
+      if (result.error) setError(result.error);
+    });
+  };
 
   const remove = (row: ServiceRow) => {
     if (!confirm(labels.confirmDelete)) return;
@@ -152,10 +204,61 @@ export default function ServiceManager({
         </div>
       )}
 
+      {notice && (
+        <div className="alert alert-success" role="status">
+          <Icon name="checkCircle" size={16} />
+          <span>{notice}</span>
+        </div>
+      )}
+
       {categories.length === 0 && (
         <div className="alert alert-info" role="status">
           <Icon name="info" size={16} />
           <span>{labels.needCategory}</span>
+        </div>
+      )}
+
+      {/* Prices move for a reason that applies to a whole shelf at once — a
+          provider raised its rates, a promotion started — so the editor takes
+          a selection rather than one service. */}
+      {picked.length > 0 && !showDeleted && (
+        <div className="card flex flex-wrap items-end gap-3 p-4">
+          <span className="mb-2 text-sm font-medium">{labels.picked.replace("{n}", String(picked.length))}</span>
+          <div>
+            <label htmlFor="mass-mode" className="label">
+              {labels.massMode}
+            </label>
+            <select
+              id="mass-mode"
+              value={massMode}
+              onChange={(e) => setMassMode(e.target.value)}
+              className="field w-auto"
+            >
+              <option value="percent">{labels.massPercent}</option>
+              <option value="set">{labels.massSet}</option>
+            </select>
+          </div>
+          <div className="min-w-32">
+            <label htmlFor="mass-value" className="label">
+              {massMode === "percent" ? labels.massPercentValue : labels.massSetValue}
+            </label>
+            <input
+              id="mass-value"
+              type="number"
+              step="any"
+              value={massValue}
+              onChange={(e) => setMassValue(e.target.value)}
+              placeholder={massMode === "percent" ? "10" : "0.85"}
+              className="field"
+            />
+          </div>
+          <button type="button" disabled={pending} onClick={massEdit} className="btn btn-primary">
+            <Icon name="check" size={15} />
+            {labels.apply}
+          </button>
+          <button type="button" onClick={() => setPicked([])} className="btn btn-ghost">
+            {labels.cancel}
+          </button>
         </div>
       )}
 
@@ -192,6 +295,19 @@ export default function ServiceManager({
             </option>
           ))}
         </select>
+        <button
+          type="button"
+          onClick={() => {
+            setShowDeleted(!showDeleted);
+            setPicked([]);
+          }}
+          className={showDeleted ? "btn btn-primary" : "btn btn-ghost"}
+          aria-pressed={showDeleted}
+        >
+          <Icon name="trash" size={15} />
+          {labels.deletedView}
+          {deletedCount > 0 && <span className="badge badge-muted">{deletedCount}</span>}
+        </button>
       </div>
 
       <p className="muted text-sm" aria-live="polite">
@@ -206,6 +322,18 @@ export default function ServiceManager({
             <table className="table">
               <thead>
                 <tr>
+                  <th className="w-10">
+                    <label htmlFor="pick-all-services" className="sr-only">
+                      {labels.selectAll}
+                    </label>
+                    <input
+                      id="pick-all-services"
+                      type="checkbox"
+                      checked={allPicked}
+                      onChange={() => setPicked(allPicked ? [] : visible.map((r) => r.id))}
+                      className="h-4 w-4 accent-[var(--primary)]"
+                    />
+                  </th>
                   <th className="w-16">ID</th>
                   <th>{labels.name}</th>
                   <th className="w-32 text-end">{labels.rate}</th>
@@ -225,6 +353,22 @@ export default function ServiceManager({
                   const margin = cost > 0 && row.rate > 0 ? ((row.rate - cost) / row.rate) * 100 : null;
                   return (
                     <tr key={row.id}>
+                      <td>
+                        <label htmlFor={`pick-${row.id}`} className="sr-only">
+                          {row.name}
+                        </label>
+                        <input
+                          id={`pick-${row.id}`}
+                          type="checkbox"
+                          checked={picked.includes(row.id)}
+                          onChange={() =>
+                            setPicked(
+                              picked.includes(row.id) ? picked.filter((x) => x !== row.id) : [...picked, row.id],
+                            )
+                          }
+                          className="h-4 w-4 accent-[var(--primary)]"
+                        />
+                      </td>
                       <td className="muted font-mono text-xs">{row.publicId}</td>
                       <td>
                         <span className="flex items-center gap-2 font-medium">
@@ -254,23 +398,38 @@ export default function ServiceManager({
                       </td>
                       <td>
                         <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => setEditing(row)}
-                            className="btn btn-ghost btn-sm"
-                            aria-label={`${labels.edit} ${row.name}`}
-                          >
-                            <Icon name="edit" size={14} />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => remove(row)}
-                            disabled={pending}
-                            className="btn btn-danger btn-sm"
-                            aria-label={`${labels.delete} ${row.name}`}
-                          >
-                            <Icon name="trash" size={14} />
-                          </button>
+                          {row.deleted ? (
+                            <button
+                              type="button"
+                              onClick={() => restore(row)}
+                              disabled={pending}
+                              className="btn btn-ghost btn-sm"
+                              aria-label={`${labels.restore} ${row.name}`}
+                            >
+                              <Icon name="repeat" size={14} />
+                              {labels.restore}
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => setEditing(row)}
+                                className="btn btn-ghost btn-sm"
+                                aria-label={`${labels.edit} ${row.name}`}
+                              >
+                                <Icon name="edit" size={14} />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => remove(row)}
+                                disabled={pending}
+                                className="btn btn-danger btn-sm"
+                                aria-label={`${labels.delete} ${row.name}`}
+                              >
+                                <Icon name="trash" size={14} />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -390,6 +549,7 @@ function ServiceForm({
           <option value="default">{labels.typeDefault}</option>
           <option value="custom_comments">{labels.typeCustomComments}</option>
           <option value="subscription">{labels.typeSubscription}</option>
+          <option value="spread">{labels.typeSpread}</option>
         </select>
       </Field>
 
@@ -421,6 +581,27 @@ function ServiceForm({
         </Field>
         <Field name="max" label={labels.max} error={state.fieldErrors?.max} required>
           <TextInput name="max" type="number" defaultValue={String(row?.max ?? 10000)} error={state.fieldErrors?.max} />
+        </Field>
+        <Field name="increment" label={labels.increment} error={state.fieldErrors?.increment} hint={labels.incrementHint}>
+          <TextInput
+            name="increment"
+            type="number"
+            min={0}
+            defaultValue={String(row?.increment ?? 0)}
+            error={state.fieldErrors?.increment}
+            hint={labels.incrementHint}
+          />
+        </Field>
+        {/* Ordered upstream, never charged for: see withOverflow. */}
+        <Field name="overflowPercent" label={labels.overflow} hint={labels.overflowHint}>
+          <TextInput
+            name="overflowPercent"
+            type="number"
+            min={0}
+            step="any"
+            defaultValue={String(row?.overflowPercent ?? 0)}
+            hint={labels.overflowHint}
+          />
         </Field>
         <Field name="averageTime" label={labels.averageTime}>
           <TextInput name="averageTime" defaultValue={row?.averageTime} placeholder={labels.egAverageTime} />

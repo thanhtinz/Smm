@@ -7,7 +7,7 @@
  */
 
 import { db } from "./db";
-import { priceServices, resolveTier } from "./pricing";
+import { priceServices, resolvePricing } from "./pricing";
 
 export const LANDING_LAYOUTS = ["priceBoard", "orderFirst", "proof", "editorial", "catalogue", "spotlight", "grid", "showcase", "midnight"] as const;
 export type LandingLayout = (typeof LANDING_LAYOUTS)[number];
@@ -109,7 +109,7 @@ export type LandingData = {
   payments: { id: string; name: string; icon: string }[];
 };
 
-export async function landingData(user: Parameters<typeof resolveTier>[0]): Promise<LandingData> {
+export async function landingData(user: Parameters<typeof resolvePricing>[0]): Promise<LandingData> {
   const [platforms, services, userCount, orderCount, completedCount, recentRows, quotes, questions, payments] =
     await Promise.all([
       db.platform.findMany({
@@ -163,7 +163,7 @@ export async function landingData(user: Parameters<typeof resolveTier>[0]): Prom
     ]);
 
   // Priced for the reader's tier, so the landing page and the catalogue agree.
-  const rates = await priceServices(await resolveTier(user), services);
+  const rates = await priceServices(await resolvePricing(user), services);
   const rateOf = (s: (typeof services)[number]) => rates.get(s.id) ?? s.rate;
 
   const lines: PlatformLine[] = platforms.map((p) => {

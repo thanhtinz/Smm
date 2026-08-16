@@ -8,7 +8,7 @@ import { Icon } from "@/components/icons";
 import AccountCard from "@/components/orders/account-card";
 import { displayMoney } from "@/lib/currency";
 import { getSetting } from "@/lib/settings";
-import { priceServices, resolveTier } from "@/lib/pricing";
+import { priceServices, resolvePricing } from "@/lib/pricing";
 import { LINK_RULES } from "@/lib/links";
 import { orderFormLabels } from "@/lib/order-form-labels";
 import { toServiceOption } from "@/lib/service-option";
@@ -48,8 +48,9 @@ export default async function NewOrderPage({
   ]);
 
   const scheduleMaxDays = Number(await getSetting("order.scheduleMaxDays")) || 0;
-  const tier = await resolveTier(user);
-  const rates = await priceServices(tier, services);
+  const pricing = await resolvePricing(user);
+  const tier = pricing.tier;
+  const rates = await priceServices(pricing, services);
 
   // What each service actually did, from its own orders — one query for the
   // whole catalogue, not one per row.

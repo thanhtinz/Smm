@@ -120,6 +120,14 @@ export type Subscription = {
   maxPerPost: number;
   delay: number;
   expiry: Date | null;
+  /**
+   * Set when the posts are the ones already on the profile rather than the
+   * ones still to come. Carried on the value so an order read back off a row
+   * — a held order being released, a hop written to the panel above — stays
+   * the kind of order it was without its re-sender having to look the service
+   * up again.
+   */
+  spread?: boolean;
 };
 
 /**
@@ -147,38 +155,87 @@ function parseExpiry(raw: string, timeZone: string): { at: Date; day: string } |
   return at ? { at, day } : null;
 }
 
-/** The columns a subscription order sets, or nulls when it is not one. */
-export function subscriptionFields(sub: Subscription | null) {
+/**
+ * Whether a quantity sits on the service's step, and what to suggest if not.
+ *
+ * Some providers only take round hundreds, and an order for 1,050 comes back
+ * refused after the customer has already been charged and has already been
+ * told the order was placed. Checking it at the door costs nothing and turns
+ * a refund into a corrected number.
+ *
+ * Answers with the nearest allowed quantity rather than only "no": the
+ * customer wants a number they can use, and rounding down when that would
+ * fall under the minimum is the one case where up is the only answer.
+ */
+export function checkIncrement(
+  quantity: number,
+  service: { min: number; max: number; increment: number },
+): { suggestion: number } | null {
+  const step = service.increment;
+  if (!step || step <= 1) return null;
+  if (quantity % step === 0) return null;
+
+  const down = Math.floor(quantity / step) * step;
+  const up = Math.ceil(quantity / step) * step;
+  const suggestion = down >= service.min ? down : up;
+  return { suggestion: Math.min(suggestion, Math.floor(service.max / step) * step) };
+}
+
+/**
+ * The two service types addressed by a username over a run of posts.
+ *
+ * A subscription waits for posts that do not exist yet; a spread works
+ * through the ones already on the profile. Everything between the order form
+ * and the provider call is the same for both, so the check is one function
+ * rather than two comparisons repeated in five files.
+ */
+export function isProfileOrder(type: string): boolean {
+  return type === "subscription" || type === "spread";
+}
+
+/** The columns a subscription or spread order sets, or nulls when it is neither. */
+export function subscriptionFields(sub: Subscription | null, spread = sub?.spread ?? false) {
   return {
-    posts: sub?.posts ?? null,
+    // The count lands in whichever column says what it counts. Keeping them
+    // apart is what lets a row be read back correctly: `posts` alone would
+    // leave a finished spread looking like a subscription still waiting for
+    // the next post.
+    posts: sub && !spread ? sub.posts : null,
+    oldPosts: sub && spread ? sub.posts : null,
     minPerPost: sub?.minPerPost ?? null,
     maxPerPost: sub?.maxPerPost ?? null,
-    delay: sub?.delay ?? null,
-    expiry: sub?.expiry ?? null,
+    // A spread has no future to wait for, so neither of these is offered on
+    // its form and neither is stored.
+    delay: sub && !spread ? sub.delay : null,
+    expiry: sub && !spread ? sub.expiry : null,
   };
 }
 
 /**
  * The same columns read back off a stored order.
  *
- * `posts` is what makes an order a subscription — the other columns are null
- * on ordinary orders too — so it is the one the check hangs on. Needed
+ * One of the two counts is what makes an order one of these — the other
+ * columns are null on ordinary orders too — so they are what the check hangs
+ * on, and which of them is set is what tells the two kinds apart. Needed
  * wherever an order is re-sent from the row rather than from a form, which is
  * how a held order reaches its provider after approval.
  */
 export function readSubscription(order: {
   link: string;
   posts: number | null;
+  oldPosts?: number | null;
   minPerPost: number | null;
   maxPerPost: number | null;
   delay: number | null;
   expiry: Date | null;
 }): Subscription | null {
-  if (order.posts === null) return null;
+  const count = order.posts ?? order.oldPosts ?? null;
+  if (count === null) return null;
   return {
-    // On a subscription order `link` holds the username being watched.
+    // On either kind `link` holds the username being watched.
     username: order.link,
-    posts: order.posts,
+    posts: count,
+    spread: order.posts === null,
     minPerPost: order.minPerPost ?? 0,
     maxPerPost: order.maxPerPost ?? 0,
     delay: order.delay ?? 0,

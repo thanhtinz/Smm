@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import ServiceManager from "@/components/admin/service-manager";
 import { requirePanel, runAsPanel } from "@/lib/tenancy";
-import { priceServices, resolveTier } from "@/lib/pricing";
+import { priceServices, resolvePricing } from "@/lib/pricing";
 import { convert, displayMoney } from "@/lib/currency";
 import { orderRoutes } from "@/lib/routing";
 
@@ -44,7 +44,7 @@ export default async function AdminServicesPage() {
           orderBy: [{ position: "asc" }, { publicId: "asc" }],
           include: { category: { select: { name: true } } },
         });
-        const rates = await priceServices(await resolveTier(owner), rows);
+        const rates = await priceServices(await resolvePricing(owner), rows);
         for (const s of rows) sourceCosts.set(s.id, rates.get(s.id) ?? s.rate);
         return rows.map((s) => ({
           id: s.id,
@@ -102,6 +102,9 @@ export default async function AdminServicesPage() {
           speedPerDay: s.speedPerDay,
           enabled: s.enabled,
           position: s.position,
+          increment: s.increment,
+          overflowPercent: s.overflowPercent,
+          deleted: s.deletedAt !== null,
         }))}
         categories={categories.map((c) => ({ id: c.id, name: c.name, platformId: c.platformId }))}
         platforms={platforms.map((p) => ({ id: p.id, name: p.name, icon: p.icon, image: p.image, color: p.color }))}
@@ -162,6 +165,22 @@ export default async function AdminServicesPage() {
           typeDefault: t("service.typeDefault"),
           typeCustomComments: t("service.typeCustomComments"),
           typeSubscription: t("service.typeSubscription"),
+          typeSpread: t("service.typeSpread"),
+          increment: t("service.increment"),
+          incrementHint: t("service.incrementHint"),
+          overflow: t("service.overflow"),
+          overflowHint: t("service.overflowHint"),
+          restore: t("service.restore"),
+          deletedView: t("service.deletedView"),
+          selectAll: t("common.selectAll"),
+          picked: t("common.picked"),
+          apply: t("common.apply"),
+          massMode: t("service.massMode"),
+          massPercent: t("service.massPercent"),
+          massSet: t("service.massSet"),
+          massPercentValue: t("service.massPercentValue"),
+          massSetValue: t("service.massSetValue"),
+          massDone: t("service.massDone"),
           autoPrice: t("service.autoPrice"),
           rate: t("admin.rate"),
           tierPrices: t("tier.prices"),

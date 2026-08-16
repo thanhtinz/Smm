@@ -9,13 +9,16 @@ import { getSetting } from "@/lib/settings";
 import { nextPublicId } from "@/lib/ids";
 import {
   calculateCharge,
+  checkIncrement,
   commentLines,
   orderCost,
+  isProfileOrder,
   parseSubscription,
   subscriptionFields,
   type Subscription,
 } from "@/lib/orders";
-import { priceService, priceServices, resolveTier } from "@/lib/pricing";
+import { priceService, priceServices, resolvePricing } from "@/lib/pricing";
+import { deny } from "@/lib/access";
 import { CHAIN_UNAVAILABLE, planUpstream, writeUpstream, type ChainHop } from "@/lib/chain";
 import { duplicateOrder, duplicateWindow, findDuplicate, guardOrder, orderRateLimit } from "@/lib/order-guard";
 import { maintenanceState } from "@/lib/maintenance";
@@ -37,6 +40,11 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
+
+  // Before the setting, not after: "ordering is switched off" is the wrong
+  // thing to tell the one account it was switched off for.
+  const barred = deny(user, "order");
+  if (barred) return { error: t(barred.key) };
 
   // A layout guards a page; this guards a form posted from a page that was
   // already open when the panel was switched off.
@@ -73,7 +81,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
   let link: string;
   let comments: string[] = [];
 
-  if (service.type === "subscription") {
+  if (isProfileOrder(service.type)) {
     const parsed = parseSubscription(
       {
         // A customer given a username box pastes a profile link into it about
@@ -138,6 +146,23 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
         },
       };
     }
+
+    // A comment service counts lines, and a customer cannot be asked to write
+    // their comments in multiples of fifty, so the step only applies to a
+    // typed quantity.
+    if (comments.length === 0) {
+      const step = checkIncrement(quantity, service);
+      if (step) {
+        return {
+          fieldErrors: {
+            quantity: t("err.increment", {
+              step: formatCount(service.increment, locale),
+              nearest: formatCount(step.suggestion, locale),
+            }),
+          },
+        };
+      }
+    }
   }
 
   // Drip-feed splits one order into `runs` deliveries spaced `interval`
@@ -177,7 +202,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
 
   const totalQuantity = dripfeed ? quantity * runs : quantity;
   // The tier price, not the list price — the same number the order form showed.
-  const rate = await priceService(await resolveTier(user), service);
+  const rate = await priceService(await resolvePricing(user), service);
   // Rounded to the base currency's own precision — see roundMoney. On a
   // dollar panel a bare Math.round here charged whole dollars.
   const money = (await getBaseCurrency()).decimals;
@@ -244,7 +269,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
           // On a child panel the cost is what the panel above charges, which
           // the first hop already worked out.
           cost: plan.hops[0]?.charge ?? orderCost(service.providerRate, totalQuantity, money),
-          ...subscriptionFields(subscription),
+          ...subscriptionFields(subscription, service.type === "spread"),
         },
       });
 
@@ -330,6 +355,10 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   const { t, locale } = await readerText();
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
+
+  const barred = deny(user, "order");
+  if (barred) return { error: t(barred.key) };
+
   if (!(await getSetting("order.enabled"))) return { error: t("err.orderDisabled") };
 
   const closed = await maintenanceState();
@@ -349,7 +378,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   });
   const byPublicId = new Map(services.map((s) => [String(s.publicId), s]));
 
-  const rates = await priceServices(await resolveTier(user), services);
+  const rates = await priceServices(await resolvePricing(user), services);
   const rateOf = (id: string, fallback: number) => rates.get(id) ?? fallback;
   const money = (await getBaseCurrency()).decimals;
 
@@ -383,7 +412,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
       results.push({ line, raw, ok: false, message: t("err.massComments", { id: idPart }) });
       return;
     }
-    if (service.type === "subscription") {
+    if (isProfileOrder(service.type)) {
       results.push({ line, raw, ok: false, message: t("err.massSubscription", { id: idPart }) });
       return;
     }
@@ -394,6 +423,19 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
         raw,
         ok: false,
         message: t("err.quantityRange", { min: formatCount(service.min, locale), max: formatCount(service.max, locale) }),
+      });
+      return;
+    }
+    const step = checkIncrement(quantity, service);
+    if (step) {
+      results.push({
+        line,
+        raw,
+        ok: false,
+        message: t("err.increment", {
+          step: formatCount(service.increment, locale),
+          nearest: formatCount(step.suggestion, locale),
+        }),
       });
       return;
     }

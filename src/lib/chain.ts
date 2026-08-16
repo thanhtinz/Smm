@@ -4,7 +4,7 @@ import { basePrisma } from "./db-base";
 import { runAsPanel } from "./tenancy";
 import { nextPublicId } from "./ids";
 import { calculateCharge, orderCost, subscriptionFields, type Subscription } from "./orders";
-import { priceService, resolveTier } from "./pricing";
+import { priceService, resolvePricing } from "./pricing";
 import { getBaseCurrency } from "./currency";
 
 /**
@@ -85,7 +85,7 @@ export async function planUpstream(
 
       // The owner's own tier decides the wholesale price, so a panel can put
       // its resellers on better rates the same way it does customers.
-      const rate = await priceService(await resolveTier(owner), parentService);
+      const rate = await priceService(await resolvePricing(owner), parentService);
       const [orderPublicId, txPublicId] = await Promise.all([
         nextPublicId("order"),
         nextPublicId("transaction"),

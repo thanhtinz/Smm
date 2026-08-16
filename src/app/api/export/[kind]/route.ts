@@ -6,7 +6,7 @@ import { dateFormats } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
 import { csvFilename, csvResponse } from "@/lib/csv";
 import { getSetting } from "@/lib/settings";
-import { priceServices, resolveTier } from "@/lib/pricing";
+import { priceServices, resolvePricing } from "@/lib/pricing";
 
 /**
  * Downloads of what the screens already show.
@@ -152,7 +152,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ kind
       orderBy: [{ position: "asc" }, { publicId: "asc" }],
       include: { category: { select: { name: true, platform: { select: { name: true } } } } },
     });
-    const rates = await priceServices(await resolveTier(user), rows);
+    const rates = await priceServices(await resolvePricing(user), rows);
 
     return csvResponse(
       csvFilename("services", site),

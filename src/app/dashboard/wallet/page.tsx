@@ -1,6 +1,8 @@
 import { pageTitle } from "@/lib/page-title";
 import { getAppContext } from "@/lib/context";
 import { getAvailableMethods } from "@/lib/payments";
+import { getCurrentUser } from "@/lib/auth";
+import { allowedMethods } from "@/lib/access";
 import { getSetting } from "@/lib/settings";
 import DepositForm from "@/components/wallet/deposit-form";
 
@@ -9,12 +11,18 @@ export const generateMetadata = pageTitle("dash.addFunds");
 export default async function WalletPage() {
   const ctx = await getAppContext();
   const { t } = ctx;
-  const [methods, presets] = await Promise.all([
+  const [all, presets, user] = await Promise.all([
     getAvailableMethods(),
     // Quick-pick amounts are per-currency and live in settings, so an operator
     // can retune them without a deploy.
     getSetting("wallet.quickAmounts"),
+    getCurrentUser(),
   ]);
+
+  // An account restricted to one method is shown that one, not all of them
+  // with the others failing on submit. Restricting every method away leaves
+  // the form's own "no methods" notice, which is the honest thing to show.
+  const methods = allowedMethods(user, all);
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">

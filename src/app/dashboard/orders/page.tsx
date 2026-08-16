@@ -198,9 +198,10 @@ export default async function OrdersPage({
                         )}
                       </td>
                       <td className="max-w-[14rem] truncate">
-                        {o.posts ? (
+                        {o.posts || o.oldPosts ? (
                           <span className="muted">
-                            @{o.link} · {formatCount(o.posts, locale)} {t("order.posts").toLowerCase()}
+                            @{o.link} · {formatCount(o.posts ?? o.oldPosts ?? 0, locale)}{" "}
+                            {(o.posts ? t("order.posts") : t("order.oldPosts")).toLowerCase()}
                           </span>
                         ) : (
                           <a href={o.link} target="_blank" rel="noopener noreferrer" className="muted hover:text-[var(--text)]">
@@ -251,7 +252,9 @@ export default async function OrdersPage({
                     {o.service.name}
                   </Link>
                   <p className="muted mt-0.5 truncate text-xs">
-                    {o.posts ? `@${o.link} · ${formatCount(o.posts, locale)} ${t("order.posts").toLowerCase()}` : o.link}
+                    {o.posts || o.oldPosts
+                      ? `@${o.link} · ${formatCount(o.posts ?? o.oldPosts ?? 0, locale)} ${(o.posts ? t("order.posts") : t("order.oldPosts")).toLowerCase()}`
+                      : o.link}
                   </p>
                   {o.comments && (
                     <details className="mt-1.5">

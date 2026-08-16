@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { getCurrentUser, requireAdmin } from "@/lib/auth";
 import { openRequest, resolveRequest } from "@/lib/requests";
+import { deny } from "@/lib/access";
 import { readerMessages } from "@/lib/context";
 
 export type RequestState = {
@@ -17,6 +18,9 @@ export async function createOrderRequestAction(orderId: string, type: string): P
   const user = await getCurrentUser();
   if (!user) return { error: t("err.sessionShort") };
   if (type !== "refill" && type !== "cancel") return { error: t("err.requestType") };
+
+  const barred = deny(user, type);
+  if (barred) return { error: t(barred.key) };
 
   const outcome = await openRequest(user.id, orderId, type);
   if ("key" in outcome) return { error: t(outcome.key, outcome.vars) };

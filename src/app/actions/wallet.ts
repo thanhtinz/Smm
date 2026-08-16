@@ -12,6 +12,7 @@ import { creditDeposit } from "@/lib/payments/credit";
 import { evaluateCoupon, redeemCoupon } from "@/lib/coupons";
 import { getCurrentPanel, panelBaseUrl, panelSuspended } from "@/lib/tenancy";
 import { readerText } from "@/lib/context";
+import { deny, methodAllowed } from "@/lib/access";
 import { formatCount } from "@/lib/numbers";
 import { roundMoney } from "@/lib/money";
 
@@ -25,6 +26,9 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
   const user = await getCurrentUser();
   if (!user) return { error: t("err.session") };
 
+  const barred = deny(user, "deposit");
+  if (barred) return { error: t(barred.key) };
+
   // A layout guards a page; this guards a form posted from a page that was
   // already open when the panel was switched off.
   if (await panelSuspended()) return { error: t("err.panelClosed") };
@@ -35,6 +39,12 @@ export async function createDepositAction(_prev: DepositState, formData: FormDat
 
   const method = await db.paymentMethod.findFirst({ where: { id: methodId, enabled: true } });
   if (!method) return { fieldErrors: { methodId: t("err.chooseMethod") } };
+
+  // The page only offers the methods this account may use; this is what stops
+  // the id of one it may not from being posted anyway. Answered as "choose a
+  // method" rather than "you may not use that one" — the restriction is the
+  // operator's business with this customer, not something the form explains.
+  if (!methodAllowed(user, method.id)) return { fieldErrors: { methodId: t("err.chooseMethod") } };
 
   const config = parseConfig(method.config);
   if (!isConfigured(method.driver, config)) {
