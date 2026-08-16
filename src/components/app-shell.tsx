@@ -4,6 +4,7 @@ import PreferenceMenu from "@/components/preference-menu";
 import UserMenu from "@/components/user-menu";
 import MobileNav from "@/components/mobile-nav";
 import NavLink from "@/components/nav-link";
+import NavBranch, { type NavChild } from "@/components/nav-branch";
 import NavTree, { type TreePlatform } from "@/components/nav-tree";
 import NotificationBell, { type BellItem } from "@/components/notification-bell";
 import { Icon, type IconName } from "@/components/icons";
@@ -13,7 +14,15 @@ import { renderNotification } from "@/lib/notify";
 import { displayMoney } from "@/lib/currency";
 import type { AppContext } from "@/lib/context";
 
-export type NavItem = { href: string; label: string; icon: IconName; badge?: number; exact?: boolean };
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: IconName;
+  badge?: number;
+  exact?: boolean;
+  /** Pages that live under this one, shown while the reader is inside it. */
+  children?: NavChild[];
+};
 export type NavGroup = { title: string; items: NavItem[] };
 export type Catalogue = { title: string; platforms: TreePlatform[] };
 
@@ -164,11 +173,23 @@ function NavGroupBlock({ group }: { group: NavGroup }) {
     <div className="mb-5">
       <p className="muted px-3 pb-2 text-[0.67rem] font-semibold tracking-widest uppercase">{group.title}</p>
       <ul className="space-y-0.5">
-        {group.items.map((item) => (
-          <li key={item.href}>
-            <NavLink {...item} />
-          </li>
-        ))}
+        {group.items.map((item) =>
+          item.children && item.children.length > 0 ? (
+            <li key={item.href}>
+              <NavBranch
+                href={item.href}
+                label={item.label}
+                icon={item.icon}
+                exact={item.exact}
+                sections={item.children}
+              />
+            </li>
+          ) : (
+            <li key={item.href}>
+              <NavLink {...item} />
+            </li>
+          ),
+        )}
       </ul>
     </div>
   );
