@@ -74,11 +74,18 @@ export const drivers: Record<string, Driver> = {
 
   paypal: {
     key: "paypal",
+    webhook: "paypal",
     required: ["clientId", "clientSecret"],
     fields: [
       { name: "clientId", label: "Client ID" },
       { name: "clientSecret", label: "Client secret", type: "password" },
       { name: "mode", label: "Mode", type: "select", options: ["sandbox", "live"] },
+      { name: "apiUrl", label: "API base", hint: "Leave blank for PayPal. Set only to point at a stand-in." },
+      {
+        name: "webhookId",
+        label: "Webhook ID",
+        hint: "From the PayPal dashboard. Without it the callback cannot be verified and is refused — the return page still captures.",
+      },
     ],
     async prepare(ctx) {
       const base = ctx.config.mode === "live" ? "https://api-m.paypal.com" : "https://api-m.sandbox.paypal.com";
@@ -275,11 +282,12 @@ export const drivers: Record<string, Driver> = {
 
   link: {
     key: "link",
+    webhook: "stripe",
     required: ["secretKey"],
     fields: [
       { name: "publishableKey", label: "Publishable key" },
       { name: "secretKey", label: "Secret key", type: "password" },
-      { name: "webhookSecret", label: "Webhook signing secret", type: "password" },
+      { name: "webhookSecret", label: "Webhook signing secret", type: "password", hint: "Stripe signs every callback with this; without it the callback is refused." },
     ],
     async prepare(ctx) {
       // Link is Stripe's one-click wallet; a Checkout Session with `link`
@@ -291,7 +299,7 @@ export const drivers: Record<string, Driver> = {
         client_reference_id: ctx.transactionId,
         "line_items[0][quantity]": "1",
         "line_items[0][price_data][currency]": ctx.currency.toLowerCase(),
-        "line_items[0][price_data][unit_amount]": String(Math.round(ctx.amount * 100)),
+        "line_items[0][price_data][unit_amount]": String(await minorUnits(ctx.amount, ctx.currency)),
         "line_items[0][price_data][product_data][name]": `Balance top-up ${ctx.reference}`,
         "payment_method_types[0]": "card",
         "payment_method_types[1]": "link",
@@ -349,6 +357,21 @@ export function parseCurrencies(raw: string): string[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * An amount in the currency's smallest unit, which is what card gateways
+ * charge in and what their callbacks report.
+ *
+ * Not `amount * 100`. That is right for the dollar and wrong for every
+ * currency without a subunit — the dong, the rupiah, the naira — where the
+ * smallest unit *is* the unit. Charging `Math.round(amount * 100)` for a
+ * 250,000 ₫ deposit asks Stripe for 25,000,000 ₫.
+ */
+export async function minorUnits(amount: number, currencyCode: string): Promise<number> {
+  const { resolveCurrency } = await import("@/lib/currency");
+  const currency = await resolveCurrency(currencyCode);
+  return Math.round(amount * 10 ** currency.decimals);
 }
 
 /** A method is only offered once every credential its driver needs is filled. */
