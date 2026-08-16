@@ -24,7 +24,7 @@
     "@types/sanitize-html": "^2.16.1",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.6",
-    "next": "15.1.6",
+    "next": "^15.5.23",
     "nodemailer": "^9.0.5",
     "qrcode": "^1.5.4",
     "react": "19.0.0",
