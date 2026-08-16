@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { requireAdmin, logActivity } from "@/lib/auth";
+import { requireRootAdmin, logActivity } from "@/lib/auth";
 import { dispatchPendingOrders, fetchProviderBalance, syncOrderStatuses } from "@/lib/providers";
 import { syncProviderCatalogue, type SyncReport } from "@/lib/provider-sync";
 import type { ActionResult } from "./catalogue";
@@ -14,7 +14,7 @@ export type SyncResult = ActionResult & { message?: string };
 
 export async function saveProviderAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
   const t = await readerMessages();
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
 
   const id = String(form.get("id") ?? "");
   const name = String(form.get("name") ?? "").trim();
@@ -60,7 +60,7 @@ export async function saveProviderAction(_prev: ActionResult, form: FormData): P
 
 export async function deleteProviderAction(id: string): Promise<ActionResult> {
   const t = await readerMessages();
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const inUse = await db.service.count({ where: { providerId: id } });
   if (inUse > 0) {
     return { error: t("adm.providerInUse", { count: inUse }) };
@@ -74,7 +74,7 @@ export async function deleteProviderAction(id: string): Promise<ActionResult> {
 /** Reads the upstream balance so an operator can see funds before dispatching. */
 export async function refreshProviderBalanceAction(id: string): Promise<SyncResult> {
   const t = await readerMessages();
-  await requireAdmin();
+  await requireRootAdmin();
   const provider = await db.provider.findUnique({ where: { id } });
   if (!provider) return { error: t("adm.providerMissing") };
 
@@ -95,7 +95,7 @@ export async function refreshProviderBalanceAction(id: string): Promise<SyncResu
  */
 export async function importProviderServicesAction(id: string): Promise<SyncResult> {
   const t = await readerMessages();
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const provider = await db.provider.findUnique({ where: { id } });
   if (!provider) return { error: t("adm.providerMissing") };
 
@@ -115,7 +115,7 @@ export async function importProviderServicesAction(id: string): Promise<SyncResu
 /** Refreshes prices without taking on anything new. */
 export async function syncProviderPricesAction(id: string): Promise<SyncResult> {
   const t = await readerMessages();
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const provider = await db.provider.findUnique({ where: { id } });
   if (!provider) return { error: t("adm.providerMissing") };
 
@@ -142,7 +142,7 @@ function summarise(report: SyncReport): string {
 
 export async function dispatchOrdersAction(): Promise<SyncResult> {
   const t = await readerMessages();
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const { sent, failures } = await dispatchPendingOrders();
   await logActivity(admin.id, "admin.provider.dispatch", `${sent} sent`);
   revalidatePath("/admin/orders");
@@ -151,7 +151,7 @@ export async function dispatchOrdersAction(): Promise<SyncResult> {
 
 export async function syncStatusesAction(): Promise<SyncResult> {
   const t = await readerMessages();
-  const admin = await requireAdmin();
+  const admin = await requireRootAdmin();
   const { updated, failures } = await syncOrderStatuses();
   await logActivity(admin.id, "admin.provider.sync", `${updated} updated`);
   revalidatePath("/admin/orders");

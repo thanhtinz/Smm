@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { currentPanelId, getRootPanel } from "@/lib/tenancy";
 import { getAppContext } from "@/lib/context";
 import { dateFormats, formatDuration } from "@/lib/dates";
 import { displayMoney } from "@/lib/currency";
@@ -11,6 +13,16 @@ export const metadata: Metadata = { title: "Providers" };
 
 export default async function AdminProvidersPage() {
   const ctx = await getAppContext();
+
+  // A child panel buys from its parent and nowhere else, which is why the nav
+  // leaves this out for one. The nav hiding a link is not a rule, though: the
+  // actions behind this page now demand the root admin, so the page itself
+  // stops pretending a child has anything to configure here. After the context
+  // rather than before it — that is what tells the build this page is rendered
+  // per request and has a host to resolve a panel from.
+  const [root, panelId] = await Promise.all([getRootPanel(), currentPanelId()]);
+  if (!root || root.id !== panelId) notFound();
+
   const { t, locale, timezone } = ctx;
   const dates = dateFormats(locale, timezone);
 
