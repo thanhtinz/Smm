@@ -112,7 +112,7 @@ export default function KeywordManager({ rows, labels }: { rows: KeywordRow[]; l
                 <tr>
                   <th>{labels.phrase}</th>
                   <th className="w-20">{labels.country}</th>
-                  <th className="w-32 text-right">{labels.position}</th>
+                  <th className="w-32 text-end">{labels.position}</th>
                   <th className="w-40">{labels.checked}</th>
                   <th className="w-px" />
                 </tr>
@@ -135,7 +135,7 @@ export default function KeywordManager({ rows, labels }: { rows: KeywordRow[]; l
                       {row.lastError && <span className="mt-0.5 block text-xs text-[var(--danger)]">{row.lastError}</span>}
                     </td>
                     <td className="muted text-xs uppercase">{row.country}</td>
-                    <td className="text-right">
+                    <td className="text-end">
                       {row.position > 0 ? (
                         // The position leads, because it is the answer; the
                         // move follows it the way a delta follows a figure.

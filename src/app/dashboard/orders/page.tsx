@@ -109,7 +109,7 @@ export default async function OrdersPage({
       <form className="flex flex-wrap gap-2">
         {status && <input type="hidden" name="status" value={status} />}
         <div className="relative min-w-56 flex-1">
-          <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+          <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
             <Icon name="search" size={16} />
           </span>
           <label htmlFor="q" className="sr-only">
@@ -121,7 +121,7 @@ export default async function OrdersPage({
             type="search"
             defaultValue={q}
             placeholder={t("order.search")}
-            className="field pl-11"
+            className="field ps-11"
           />
         </div>
         <button type="submit" className="btn btn-ghost">
@@ -171,11 +171,11 @@ export default async function OrdersPage({
                     <th className="w-24">{t("order.id")}</th>
                     <th>{t("order.service")}</th>
                     <th className="w-56">{t("order.link")}</th>
-                    <th className="w-28 text-right">{t("order.quantity")}</th>
-                    <th className="w-28 text-right">{t("order.charge")}</th>
+                    <th className="w-28 text-end">{t("order.quantity")}</th>
+                    <th className="w-28 text-end">{t("order.charge")}</th>
                     <th className="w-32">{t("common.status")}</th>
                     <th className="w-32">{t("common.date")}</th>
-                    <th className="w-40 text-right">{t("common.actions")}</th>
+                    <th className="w-40 text-end">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -208,8 +208,8 @@ export default async function OrdersPage({
                           </a>
                         )}
                       </td>
-                      <td className="text-right tabular-nums">{formatCount(o.quantity, locale)}</td>
-                      <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
+                      <td className="text-end tabular-nums">{formatCount(o.quantity, locale)}</td>
+                      <td className="text-end tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                       <td>
                         <StatusBadge status={customerStatus(o.status)} label={t(`status.${customerStatus(o.status)}`)} />
                         {/* Otherwise a paid order sitting still looks stuck. */}

@@ -79,11 +79,11 @@ export default function TransactionManager({
                   <th className="w-24">{labels.id}</th>
                   <th className="w-32">{labels.user}</th>
                   <th>{labels.method}</th>
-                  <th className="w-32 text-right">{labels.paid}</th>
-                  <th className="w-32 text-right">{labels.credited}</th>
+                  <th className="w-32 text-end">{labels.paid}</th>
+                  <th className="w-32 text-end">{labels.credited}</th>
                   <th className="w-32">{labels.status}</th>
                   <th className="w-32">{labels.date}</th>
-                  <th className="w-32 text-right">{labels.actions}</th>
+                  <th className="w-32 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -96,8 +96,8 @@ export default function TransactionManager({
                       {row.reference && <span className="muted block truncate font-mono text-xs">{row.reference}</span>}
                       {row.note && <span className="muted block truncate text-xs">{row.note}</span>}
                     </td>
-                    <td className="text-right tabular-nums">{row.paid}</td>
-                    <td className="text-right font-semibold tabular-nums">{row.credited}</td>
+                    <td className="text-end tabular-nums">{row.paid}</td>
+                    <td className="text-end font-semibold tabular-nums">{row.credited}</td>
                     <td>
                       <StatusBadge status={row.status} label={labels[`status.${row.status}`] ?? row.status} />
                     </td>
@@ -130,7 +130,7 @@ export default function TransactionManager({
                           </button>
                         </div>
                       ) : (
-                        <span className="muted block text-right text-xs">—</span>
+                        <span className="muted block text-end text-xs">—</span>
                       )}
                     </td>
                   </tr>

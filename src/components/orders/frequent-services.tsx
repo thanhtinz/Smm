@@ -43,7 +43,7 @@ export default function FrequentServices({
             <p className="muted mt-auto flex items-center gap-1.5 text-xs">
               <span className="font-mono font-semibold tabular-nums text-[var(--text)]">{prices[service.id]}</span>
               {labels.per}
-              <Icon name="arrowRight" size={13} className="ml-auto" />
+              <Icon name="arrowRight" size={13} className="ms-auto" />
             </p>
           </Link>
         ))}

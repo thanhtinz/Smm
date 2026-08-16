@@ -24,7 +24,7 @@ export function Field({
       <label htmlFor={name} className="label">
         {label}
         {required && (
-          <span className="ml-1 text-[var(--danger)]" aria-hidden>
+          <span className="ms-1 text-[var(--danger)]" aria-hidden>
             *
           </span>
         )}

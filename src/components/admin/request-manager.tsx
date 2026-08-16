@@ -54,9 +54,9 @@ export default function RequestManager({ rows, labels }: { rows: RequestRow[]; l
                   <th className="w-28">{labels.type}</th>
                   <th className="w-32">{labels.user}</th>
                   <th>{labels.order}</th>
-                  <th className="w-28 text-right">{labels.charge}</th>
+                  <th className="w-28 text-end">{labels.charge}</th>
                   <th className="w-32">{labels.status}</th>
-                  <th className="w-32 text-right">{labels.actions}</th>
+                  <th className="w-32 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -77,7 +77,7 @@ export default function RequestManager({ rows, labels }: { rows: RequestRow[]; l
                       <span className="muted block max-w-[18rem] truncate text-xs">{row.link}</span>
                       {row.note && <span className="muted block truncate text-xs">{row.note}</span>}
                     </td>
-                    <td className="text-right tabular-nums">{row.charge}</td>
+                    <td className="text-end tabular-nums">{row.charge}</td>
                     <td>
                       <StatusBadge status={row.status === "pending" ? "pending" : row.status === "rejected" ? "canceled" : "completed"} label={labels[`decision.${row.status}`] ?? row.status} />
                     </td>
@@ -107,7 +107,7 @@ export default function RequestManager({ rows, labels }: { rows: RequestRow[]; l
                           </button>
                         </div>
                       ) : (
-                        <span className="muted block text-right text-xs">{row.createdAt}</span>
+                        <span className="muted block text-end text-xs">{row.createdAt}</span>
                       )}
                     </td>
                   </tr>

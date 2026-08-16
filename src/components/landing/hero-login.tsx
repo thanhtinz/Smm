@@ -40,7 +40,7 @@ export default function HeroLogin({
       )}
 
       <div className="relative">
-        <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+        <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
           <Icon name="user" size={16} />
         </span>
         <label htmlFor="hero-identifier" className="sr-only">
@@ -53,12 +53,12 @@ export default function HeroLogin({
           autoComplete="username"
           placeholder={labels.username}
           defaultValue={state.values?.identifier}
-          className="field pl-11"
+          className="field ps-11"
         />
       </div>
 
       <div className="relative">
-        <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+        <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
           <Icon name="lock" size={16} />
         </span>
         <label htmlFor="hero-password" className="sr-only">
@@ -70,7 +70,7 @@ export default function HeroLogin({
           type="password"
           autoComplete="current-password"
           placeholder={labels.password}
-          className="field pl-11"
+          className="field ps-11"
         />
       </div>
 

@@ -47,7 +47,7 @@ export default function ContactDock({
 
   return (
     <div
-      className={`fixed right-4 z-40 flex flex-col gap-2.5 print:hidden ${
+      className={`fixed end-4 z-40 flex flex-col gap-2.5 print:hidden ${
         raised ? "bottom-20 lg:bottom-4" : "bottom-4"
       }`}
     >

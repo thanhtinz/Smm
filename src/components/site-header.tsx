@@ -63,11 +63,11 @@ export default function SiteHeader({
           <Logo text={settings["site.logoText"] as string} image={settings["site.logoUrl"] as string} />
         </Link>
 
-        <div className="ml-2 min-w-0 flex-1">
+        <div className="ms-2 min-w-0 flex-1">
           <SiteLinks links={links} />
         </div>
 
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+        <div className="ms-auto flex shrink-0 items-center gap-2">
           {preferences && <PreferenceMenu
             languages={ctx.languages}
             currencies={ctx.currencies}

@@ -123,8 +123,8 @@ export default async function AdminOverviewPage() {
                   <th className="w-24">{t("order.id")}</th>
                   <th className="w-36">{t("auth.username")}</th>
                   <th>{t("order.service")}</th>
-                  <th className="w-28 text-right">{t("order.quantity")}</th>
-                  <th className="w-28 text-right">{t("order.charge")}</th>
+                  <th className="w-28 text-end">{t("order.quantity")}</th>
+                  <th className="w-28 text-end">{t("order.charge")}</th>
                   <th className="w-32">{t("common.status")}</th>
                 </tr>
               </thead>
@@ -134,8 +134,8 @@ export default async function AdminOverviewPage() {
                     <td className="font-mono text-xs">#{o.publicId}</td>
                     <td>{o.user.username}</td>
                     <td className="max-w-[20rem] truncate">{o.service.name}</td>
-                    <td className="text-right tabular-nums">{formatCount(o.quantity, locale)}</td>
-                    <td className="text-right tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
+                    <td className="text-end tabular-nums">{formatCount(o.quantity, locale)}</td>
+                    <td className="text-end tabular-nums">{displayMoney(o.charge, currency, locale)}</td>
                     <td>
                       <StatusBadge status={o.status} label={t(`status.${o.status}`)} />
                     </td>

@@ -37,8 +37,8 @@ export default function PriceBoard(props: LayoutProps) {
           <div className="muted flex items-center gap-4 border-b border-[var(--border)] bg-[var(--surface2)] px-5 py-3 text-[0.68rem] font-semibold tracking-[0.16em] uppercase">
             <span className="w-6" />
             <span className="flex-1">{t("order.platform")}</span>
-            <span className="hidden w-24 text-right sm:block">{t("landing.board.services")}</span>
-            <span className="w-32 text-right sm:w-44">{t("landing.board.from")}</span>
+            <span className="hidden w-24 text-end sm:block">{t("landing.board.services")}</span>
+            <span className="w-32 text-end sm:w-44">{t("landing.board.from")}</span>
           </div>
 
           <ul>
@@ -53,7 +53,7 @@ export default function PriceBoard(props: LayoutProps) {
                       rather than a tint that is always on. */}
                   <span
                     aria-hidden
-                    className="absolute inset-y-0 left-0 w-[3px] scale-y-0 transition-transform duration-200 group-hover:scale-y-100"
+                    className="absolute inset-y-0 start-0 w-[3px] scale-y-0 transition-transform duration-200 group-hover:scale-y-100"
                     style={{ background: p.color }}
                   />
                   <span className="muted w-6 shrink-0 font-mono text-sm">{i + 1}</span>
@@ -70,10 +70,10 @@ export default function PriceBoard(props: LayoutProps) {
                       <QualityTags platform={p} t={t} />
                     </span>
                   </span>
-                  <span className="muted hidden w-24 text-right font-mono text-sm sm:block">
+                  <span className="muted hidden w-24 text-end font-mono text-sm sm:block">
                     {count.format(p.services)}
                   </span>
-                  <span className="w-32 text-right sm:w-44">
+                  <span className="w-32 text-end sm:w-44">
                     <span className="block font-mono text-[1.35rem] leading-none font-bold">
                       {rate(p.from).amount}
                     </span>

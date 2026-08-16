@@ -77,9 +77,9 @@ export default function PanelRequestForm({
             {history.map((r) => (
               <li key={r.id} className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
                 <span>
-                  <span className="muted mr-2 font-mono text-xs">#{r.publicId}</span>
+                  <span className="muted me-2 font-mono text-xs">#{r.publicId}</span>
                   {r.host}
-                  {r.note && <span className="muted ml-2 text-xs">{r.note}</span>}
+                  {r.note && <span className="muted ms-2 text-xs">{r.note}</span>}
                 </span>
                 <span className="muted flex items-center gap-2 text-xs">
                   {r.at}
@@ -159,7 +159,7 @@ function Waiting({ request, labels }: { request: OpenRequest; labels: Labels }) 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="font-semibold">
           {request.name}
-          <span className="muted ml-2 font-mono text-xs">#{request.publicId}</span>
+          <span className="muted ms-2 font-mono text-xs">#{request.publicId}</span>
         </h3>
         <span className={delegated ? "badge badge-success" : "badge badge-info"}>
           <Icon name={delegated ? "checkCircle" : "clock"} size={11} />

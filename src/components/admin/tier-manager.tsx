@@ -81,10 +81,10 @@ export default function TierManager({
               <thead>
                 <tr>
                   <th>{labels.tier}</th>
-                  <th className="w-28 text-right">{labels.discount}</th>
-                  <th className="w-36 text-right">{labels.minSpent}</th>
-                  <th className="w-24 text-right">{labels.members}</th>
-                  <th className="w-28 text-right">{labels.manual}</th>
+                  <th className="w-28 text-end">{labels.discount}</th>
+                  <th className="w-36 text-end">{labels.minSpent}</th>
+                  <th className="w-24 text-end">{labels.members}</th>
+                  <th className="w-28 text-end">{labels.manual}</th>
                   <th className="w-px" />
                 </tr>
               </thead>
@@ -103,12 +103,12 @@ export default function TierManager({
                       </span>
                       <span className="muted block font-mono text-xs">{row.slug}</span>
                     </td>
-                    <td className="text-right tabular-nums">
+                    <td className="text-end tabular-nums">
                       {row.discountPercent > 0 ? `-${row.discountPercent}%` : "—"}
                     </td>
-                    <td className="text-right tabular-nums">{row.minSpent > 0 ? fmt(row.minSpent) : "—"}</td>
-                    <td className="text-right tabular-nums">{row.members}</td>
-                    <td className="text-right tabular-nums">{row.manualPrices || "—"}</td>
+                    <td className="text-end tabular-nums">{row.minSpent > 0 ? fmt(row.minSpent) : "—"}</td>
+                    <td className="text-end tabular-nums">{row.members}</td>
+                    <td className="text-end tabular-nums">{row.manualPrices || "—"}</td>
                     <td>
                       <div className="flex justify-end gap-1.5">
                         <button

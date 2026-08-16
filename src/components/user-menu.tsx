@@ -38,7 +38,7 @@ export default function UserMenu(props: {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="menu"
-        className="ring-focus flex items-center gap-2 rounded-full border border-[var(--border)] py-1 pr-2.5 pl-1 transition-colors hover:bg-[var(--surface2)]"
+        className="ring-focus flex items-center gap-2 rounded-full border border-[var(--border)] py-1 pe-2.5 ps-1 transition-colors hover:bg-[var(--surface2)]"
       >
         <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[color-mix(in_srgb,var(--primary)_22%,transparent)] text-xs font-bold text-[var(--primary)]">
           {initials}

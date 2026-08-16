@@ -75,9 +75,9 @@ export default function PlatformManager({ rows, labels }: { rows: PlatformRow[];
                   <th className="w-16">{labels.icon}</th>
                   <th>{labels.name}</th>
                   <th className="w-40">{labels.slug}</th>
-                  <th className="w-28 text-right">{labels.categories}</th>
+                  <th className="w-28 text-end">{labels.categories}</th>
                   <th className="w-28">{labels.status}</th>
-                  <th className="w-24 text-right">{labels.actions}</th>
+                  <th className="w-24 text-end">{labels.actions}</th>
                 </tr>
               </thead>
               <tbody>
@@ -88,7 +88,7 @@ export default function PlatformManager({ rows, labels }: { rows: PlatformRow[];
                     </td>
                     <td className="font-medium">{row.name}</td>
                     <td className="muted font-mono text-xs">{row.slug}</td>
-                    <td className="text-right tabular-nums">{row.categoryCount}</td>
+                    <td className="text-end tabular-nums">{row.categoryCount}</td>
                     <td>
                       <span className={`badge ${row.visible ? "badge-success" : "badge-muted"}`}>
                         <Icon name={row.visible ? "eye" : "close"} size={11} />

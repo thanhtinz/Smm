@@ -117,9 +117,9 @@ export default function PanelManager({
                   <th>{labels.domain}</th>
                   <th className="w-32">{labels.owner}</th>
                   <th className="w-36">{labels.rent}</th>
-                  <th className="w-20 text-right">{labels.users}</th>
-                  <th className="w-20 text-right">{labels.orders}</th>
-                  <th className="w-32 text-right">{labels.earned}</th>
+                  <th className="w-20 text-end">{labels.users}</th>
+                  <th className="w-20 text-end">{labels.orders}</th>
+                  <th className="w-32 text-end">{labels.earned}</th>
                   <th className="w-24">{labels.status}</th>
                   <th className="w-px" />
                 </tr>
@@ -138,10 +138,10 @@ export default function PanelManager({
                       <td>
                         <span className="font-mono text-xs">{primary?.host ?? "—"}</span>
                         {primary && !primary.verified && (
-                          <span className="badge badge-warning ml-2">{labels.unverified}</span>
+                          <span className="badge badge-warning ms-2">{labels.unverified}</span>
                         )}
                         {row.domains.length > 1 && (
-                          <span className="muted ml-2 text-xs">+{row.domains.length - 1}</span>
+                          <span className="muted ms-2 text-xs">+{row.domains.length - 1}</span>
                         )}
                       </td>
                       <td className="muted text-xs">{row.ownerName}</td>
@@ -153,9 +153,9 @@ export default function PanelManager({
                           </span>
                         )}
                       </td>
-                      <td className="text-right tabular-nums">{row.users}</td>
-                      <td className="text-right tabular-nums">{row.orders}</td>
-                      <td className="text-right font-semibold tabular-nums">{row.earned}</td>
+                      <td className="text-end tabular-nums">{row.users}</td>
+                      <td className="text-end tabular-nums">{row.orders}</td>
+                      <td className="text-end font-semibold tabular-nums">{row.earned}</td>
                       <td>
                         <span className={`badge ${row.status === "active" ? "badge-success" : "badge-warning"}`}>
                           {labels[`status.${row.status}`] ?? row.status}

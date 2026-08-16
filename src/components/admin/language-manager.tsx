@@ -77,7 +77,7 @@ export default function LanguageManager({
                 <th>{labels.name}</th>
                 <th className="w-44">{labels.translations}</th>
                 <th className="w-28">{labels.status}</th>
-                <th className="w-40 text-right">{labels.actions}</th>
+                <th className="w-40 text-end">{labels.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -284,7 +284,7 @@ function TranslationEditor({
       )}
 
       <div className="relative">
-        <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+        <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
           <Icon name="search" size={16} />
         </span>
         <label htmlFor="key-search" className="sr-only">
@@ -296,7 +296,7 @@ function TranslationEditor({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={labels.searchKeys}
-          className="field pl-11"
+          className="field ps-11"
         />
       </div>
 

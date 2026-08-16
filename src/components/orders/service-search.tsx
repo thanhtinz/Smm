@@ -72,7 +72,7 @@ export default function ServiceSearch({
 
   return (
     <div ref={box} className="relative">
-      <span className="muted pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2">
+      <span className="muted pointer-events-none absolute top-1/2 start-3.5 -translate-y-1/2">
         <Icon name="search" size={16} />
       </span>
       <input
@@ -104,7 +104,7 @@ export default function ServiceSearch({
           }
         }}
         placeholder={placeholder}
-        className="field pl-11"
+        className="field ps-11"
         role="combobox"
         aria-expanded={open && query.trim().length > 0}
         aria-controls="service-search-results"

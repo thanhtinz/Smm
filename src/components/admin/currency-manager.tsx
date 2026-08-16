@@ -102,10 +102,10 @@ export default function CurrencyManager({
                 <th className="w-24">{labels.code}</th>
                 <th>{labels.name}</th>
                 <th className="w-20 text-center">{labels.symbol}</th>
-                <th className="w-40 text-right">{labels.rate}</th>
+                <th className="w-40 text-end">{labels.rate}</th>
                 <th className="w-32">{labels.autoRate}</th>
                 <th className="w-28">{labels.status}</th>
-                <th className="w-40 text-right">{labels.actions}</th>
+                <th className="w-40 text-end">{labels.actions}</th>
               </tr>
             </thead>
             <tbody>
@@ -114,7 +114,7 @@ export default function CurrencyManager({
                   <td className="font-mono font-semibold">{row.code}</td>
                   <td className="muted">{row.name}</td>
                   <td className="text-center">{row.symbol}</td>
-                  <td className="text-right tabular-nums">
+                  <td className="text-end tabular-nums">
                     {row.isBase ? <span className="badge badge-info">{labels.base}</span> : row.rate.toPrecision(6)}
                   </td>
                   <td>

@@ -259,7 +259,7 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="muted min-w-0 text-[0.82rem]">{label}</dt>
-      <dd className="shrink-0 text-right font-medium tabular-nums">{value}</dd>
+      <dd className="shrink-0 text-end font-medium tabular-nums">{value}</dd>
     </div>
   );
 }

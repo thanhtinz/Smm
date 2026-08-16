@@ -228,7 +228,7 @@ export default function Combobox({
           >
           {searchable && (
           <div className="relative border-b border-[var(--border)]">
-            <span className="muted pointer-events-none absolute top-1/2 left-3 -translate-y-1/2">
+            <span className="muted pointer-events-none absolute top-1/2 start-3 -translate-y-1/2">
               <Icon name="search" size={15} />
             </span>
             <input
@@ -238,7 +238,7 @@ export default function Combobox({
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder={searchPlaceholder}
-              className="w-full bg-transparent py-2.5 pr-3 pl-9 text-sm outline-none"
+              className="w-full bg-transparent py-2.5 pe-3 ps-9 text-sm outline-none"
               autoComplete="off"
               // Deliberately not role="combobox": the trigger above already is
               // one and already owns this listbox. Two of them claiming the
