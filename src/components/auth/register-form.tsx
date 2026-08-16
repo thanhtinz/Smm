@@ -21,10 +21,13 @@ export default function RegisterForm({
     | "title"
     | "sub"
     | "username"
+    | "usernameHint"
+    | "passwordHint"
     | "email"
     | "password"
     | "confirm"
     | "terms"
+    | "termsLink"
     | "submit"
     | "hasaccount"
     | "signin"
@@ -76,7 +79,7 @@ export default function RegisterForm({
           name="username"
           label={labels.username}
           error={state.fieldErrors?.username}
-          hint="3–24 characters, letters, numbers and underscore"
+          hint={labels.usernameHint}
           required
         >
           <TextInput
@@ -86,7 +89,7 @@ export default function RegisterForm({
             autoFocus
             defaultValue={state.values?.username}
             error={state.fieldErrors?.username}
-            hint="3–24 characters, letters, numbers and underscore"
+            hint={labels.usernameHint}
             placeholder="yourname"
           />
         </Field>
@@ -106,7 +109,7 @@ export default function RegisterForm({
           name="password"
           label={labels.password}
           error={state.fieldErrors?.password}
-          hint="At least 8 characters"
+          hint={labels.passwordHint}
           required
         >
           <TextInput
@@ -114,7 +117,7 @@ export default function RegisterForm({
             type="password"
             autoComplete="new-password"
             error={state.fieldErrors?.password}
-            hint="At least 8 characters"
+            hint={labels.passwordHint}
             placeholder="••••••••"
           />
         </Field>
@@ -135,8 +138,14 @@ export default function RegisterForm({
               <input type="checkbox" name="terms" className="mt-0.5 h-4 w-4 accent-[var(--primary)]" />
               <span className="muted">
                 {labels.terms}{" "}
+                {/* The link says what it opens. Its whole content used to be a
+                    literal → — announced as "arrow", so a screen reader user
+                    was asked to agree to something they could not find, and
+                    the glyph kept pointing right in a right-to-left sentence
+                    because the mirroring rule only covers <Icon> SVGs. */}
                 <Link href="/p/terms" className="text-[var(--primary)] hover:underline">
-                  &rarr;
+                  {labels.termsLink}
+                  <Icon name="arrowRight" size={13} />
                 </Link>
               </span>
             </label>

@@ -141,7 +141,19 @@ export default function Combobox({
 
   const commit = (option: ComboOption) => {
     onChange(option.value);
+    close();
+  };
+
+  /**
+   * Shuts the panel and puts focus back on the trigger.
+   *
+   * Escape used to call setOpen(false) and stop there, dropping focus onto
+   * document.body — a keyboard user in the middle of the order form lost their
+   * place entirely and had to Tab from the top of the page.
+   */
+  const close = () => {
     setOpen(false);
+    triggerRef.current?.focus();
   };
 
   const onKeyDown = (e: React.KeyboardEvent) => {
@@ -156,7 +168,7 @@ export default function Combobox({
       const option = filtered[cursor];
       if (option) commit(option);
     } else if (e.key === "Escape") {
-      setOpen(false);
+      close();
     }
   };
 
@@ -189,6 +201,11 @@ export default function Combobox({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={open ? listId : undefined}
+        // Which option the arrow keys are on. Without it the cursor moved
+        // silently: a screen reader announced nothing between opening the list
+        // and choosing from it, which made the platform and service steps
+        // unusable without sight.
+        aria-activedescendant={open && filtered[cursor] ? `${listId}-${cursor}` : undefined}
         aria-invalid={invalid || undefined}
         className="field flex items-center justify-between gap-2 text-left"
       >
@@ -223,9 +240,11 @@ export default function Combobox({
               placeholder={searchPlaceholder}
               className="w-full bg-transparent py-2.5 pr-3 pl-9 text-sm outline-none"
               autoComplete="off"
-              role="combobox"
-              aria-expanded
-              aria-controls={listId}
+              // Deliberately not role="combobox": the trigger above already is
+              // one and already owns this listbox. Two of them claiming the
+              // same list is a nested-combobox tree no reader can make sense
+              // of. This is the filter, so it says so.
+              aria-label={searchPlaceholder}
             />
           </div>
           )}
@@ -243,6 +262,7 @@ export default function Combobox({
               {filtered.map((o, i) => (
                 <li
                   key={o.value}
+                  id={`${listId}-${i}`}
                   role="option"
                   aria-selected={o.value === value}
                   onMouseEnter={() => setCursor(i)}

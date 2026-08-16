@@ -30,9 +30,22 @@ export default function NavTree({ platforms, title }: { platforms: TreePlatform[
   const pathname = usePathname();
 
   // Whichever platform the current page belongs to, unless the reader has
-  // since opened another one.
+  // since opened another one — and the "since" is what was missing.
+  //
+  // `opened` was set once and never cleared, and NavTree lives in the
+  // dashboard layout, which is never remounted. So: expand Instagram, collapse
+  // it — that stores "" rather than null, which is falsy but not nullish, so
+  // ?? kept it — then navigate to a TikTok category from a reorder link. The
+  // sidebar refused to expand the platform the reader was standing in. The
+  // choice is forgotten when the page changes, so following a link always
+  // opens where you landed and clicking a platform still overrides it.
   const current = platforms.find((p) => pathname.startsWith(`/dashboard/order/${p.slug}/`))?.slug ?? "";
   const [opened, setOpened] = useState<string | null>(null);
+  const [at, setAt] = useState(pathname);
+  if (at !== pathname) {
+    setAt(pathname);
+    setOpened(null);
+  }
   const open = opened ?? current;
 
   if (platforms.length === 0) return null;
@@ -66,7 +79,7 @@ export default function NavTree({ platforms, title }: { platforms: TreePlatform[
               </button>
 
               {expanded && (
-                <ul className="mt-0.5 ml-6 space-y-0.5 border-l border-[var(--border)] pl-2">
+                <ul className="mt-0.5 ms-6 space-y-0.5 border-s border-[var(--border)] ps-2">
                   {platform.categories.map((category) => {
                     const href = `/dashboard/order/${platform.slug}/${category.slug}`;
                     const active = pathname === href;

@@ -57,7 +57,7 @@ export default function BlocklistManager({ rows, labels }: { rows: BlockRow[]; l
 
       <form ref={form} action={action} className="card card-pad grid gap-4 sm:grid-cols-[10rem_1fr_1fr_auto] sm:items-end">
         <Field name="kind" label={labels.kind}>
-          <select name="kind" defaultValue="link" className="field">
+          <select id="kind" name="kind" defaultValue="link" className="field">
             <option value="link">{labels["kind.link"]}</option>
             <option value="username">{labels["kind.username"]}</option>
           </select>

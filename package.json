@@ -15,7 +15,8 @@
     "keys:check": "tsx scripts/audit-keys.mjs",
     "smoke": "node scripts/smoke.mjs",
     "actions:check": "node scripts/audit-actions.mjs",
-    "tokens:check": "node scripts/audit-tokens.mjs"
+    "tokens:check": "node scripts/audit-tokens.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
@@ -42,6 +43,7 @@
     "prisma": "^6.2.1",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.10"
   }
 }
