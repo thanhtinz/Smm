@@ -38,7 +38,7 @@ export default async function AdminKeywordsPage() {
               : source.reason === "noSource"
                 ? t("rank.setup.noSource")
                 : t("rank.setup.missing", { fields: source.reason.slice("missing:".length).split(",").join(", ") })}{" "}
-            <Link href="/admin/settings#seo" className="underline">
+            <Link href="/admin/settings/seo" className="underline">
               {t("rank.setup.link")}
             </Link>
           </span>

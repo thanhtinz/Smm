@@ -41,7 +41,9 @@ export default function SettingsForm({
 
   return (
     <form action={action} className="card card-pad space-y-4">
-      <h3 className="font-semibold">{title}</h3>
+      {/* Blank where the page already carries the heading — one section to a
+          page now, so repeating its name inside the card says nothing. */}
+      {title && <h3 className="font-semibold">{title}</h3>}
 
       {state.ok && (
         <div className="alert alert-success" role="status">

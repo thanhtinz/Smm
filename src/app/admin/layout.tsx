@@ -76,7 +76,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   function adminGroups(): NavGroup[] {
     return [
     {
-      title: "Overview",
+      title: t("admin.overview"),
       items: [
         { href: "/admin", label: t("admin.overview"), icon: "chart", exact: true },
         { href: "/admin/statistics", label: t("admin.statistics"), icon: "trending" },
