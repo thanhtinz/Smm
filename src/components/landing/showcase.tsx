@@ -62,8 +62,8 @@ export default function Showcase(props: LayoutProps) {
               <p className="flex items-center gap-2 text-sm font-medium">
                 <span className="flex gap-0.5" aria-hidden>
                   {Array.from({ length: 5 }, (_, i) => (
-                    <span key={i} className={i < filled ? "text-[var(--warning)]" : "muted opacity-40"}>
-                      <Icon name="star" size={14} />
+                    <span key={i} className={i < filled ? "text-[var(--warning)]" : "muted opacity-30"}>
+                      <Icon name={i < filled ? "starFilled" : "star"} size={14} />
                     </span>
                   ))}
                 </span>

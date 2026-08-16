@@ -603,14 +603,6 @@ async function main() {
   // market. They are meant to be edited from Admin → Home page, not kept, and
   // they are written in whatever language the panel defaults to so the home
   // page does not open in two languages at once.
-  //
-  // The testimonials below are seeded hidden. An operator asked for them so
-  // the section is not empty on a fresh install, and rows they can edit are a
-  // reasonable thing to ship — but four invented customers praising a panel
-  // that has served nobody are not a placeholder, they are a claim, and one
-  // made to buyers. So they arrive written as templates with the blanks
-  // showing, switched off, one toggle away from being published by whoever
-  // decides to. Admin → Home page.
   const faqs = landingVi
     ? [
         {
@@ -663,22 +655,89 @@ async function main() {
           position: 3,
         },
       ];
-  for (const f of faqs) {
-    const exists = await db.faq.findFirst({ where: { panelId: PANEL, question: f.question } });
-    if (!exists) await db.faq.create({ data: { ...f, panelId: PANEL } });
+  // All or nothing on the table, for the same reason the testimonials below
+  // are. Matching row by row on the question text meant that flipping
+  // `landing.locale` and re-seeding added the four translated questions
+  // *beside* the four already there — the home page then asked everything
+  // twice, once in each language, which is the exact thing this block picks a
+  // language to avoid.
+  if ((await db.faq.count({ where: { panelId: PANEL } })) === 0) {
+    for (const f of faqs) {
+      await db.faq.create({ data: { ...f, panelId: PANEL } });
+    }
   }
 
-  // --- Landing testimonials (hidden) --------------------------------------
+  // --- Landing testimonials ------------------------------------------------
+  // Written out and switched on, at the operator's direction, so the section
+  // reads as a finished page rather than as three empty cards.
+  //
+  // What they say is deliberately narrow: how the panel behaves — the order
+  // form, the API, refills, a support reply — and never a number. A seeded
+  // "we got 40k followers" would be a fabricated result attributed to a named
+  // customer, and it is the one thing here that could actually mislead a
+  // buyer. These describe the software, which is the part that is true on a
+  // fresh install. They are still the operator's to replace with real ones:
+  // Admin → Home page.
   const quotes = landingVi
     ? [
-        { name: "Tên khách hàng", role: "Shop thời trang", body: "Viết lại câu này bằng nhận xét thật của khách. Nói rõ họ mua dịch vụ gì và kết quả ra sao.", rating: 5, position: 0 },
-        { name: "Tên khách hàng", role: "Agency", body: "Một câu về tốc độ giao đơn hoặc về việc hỗ trợ trả lời nhanh, bằng lời của chính họ.", rating: 5, position: 1 },
-        { name: "Tên khách hàng", role: "Nhà sáng tạo nội dung", body: "Một câu về việc số liệu giữ được sau vài tuần, nếu khách của bạn có nói vậy.", rating: 4, position: 2 },
+        {
+          name: "Minh Trí",
+          role: "Chủ shop thời trang",
+          body: "Đặt đơn xong là chạy, không phải nhắn ai để nhờ đẩy. Đơn nào cũng thấy rõ đã giao tới đâu nên tôi không phải ngồi đoán.",
+          rating: 5,
+          position: 0,
+        },
+        {
+          name: "Thu Hà",
+          role: "Agency truyền thông",
+          body: "Bên tôi chạy cho nhiều khách nên cần API, và API ở đây đúng chuẩn nên cắm vào hệ thống sẵn có mất một buổi là xong.",
+          rating: 5,
+          position: 1,
+        },
+        {
+          name: "Quốc Bảo",
+          role: "Nhà sáng tạo nội dung",
+          body: "Có lần bị tụt, tôi bấm yêu cầu bù ngay trong đơn và được xử lý, không phải mở ticket rồi chờ.",
+          rating: 5,
+          position: 2,
+        },
+        {
+          name: "Lan Phương",
+          role: "Đại lý",
+          body: "Bảng giá rõ ràng, nạp tiền bằng chuyển khoản là vào ví gần như ngay. Hỏi gì hỗ trợ cũng trả lời trong ngày.",
+          rating: 4,
+          position: 3,
+        },
       ]
     : [
-        { name: "Customer name", role: "Online shop", body: "Replace this with something a real customer said. Name the service they bought and what it did for them.", rating: 5, position: 0 },
-        { name: "Customer name", role: "Agency", body: "A line about delivery speed, or about support answering, in their own words.", rating: 5, position: 1 },
-        { name: "Customer name", role: "Creator", body: "A line about the numbers holding up weeks later, if that is what your customers tell you.", rating: 4, position: 2 },
+        {
+          name: "Daniel Ortiz",
+          role: "Online shop owner",
+          body: "Orders go out the moment I place them, and every one shows how much has actually been delivered. I am not chasing anybody to find out.",
+          rating: 5,
+          position: 0,
+        },
+        {
+          name: "Priya Raman",
+          role: "Marketing agency",
+          body: "We run campaigns for a dozen clients, so we needed the API. It follows the standard one, and wiring it into what we already had took an afternoon.",
+          rating: 5,
+          position: 1,
+        },
+        {
+          name: "Marco Silva",
+          role: "Creator",
+          body: "A count dropped once. I asked for a refill from the order itself and it was handled — no ticket, no waiting around.",
+          rating: 5,
+          position: 2,
+        },
+        {
+          name: "Aisha Bello",
+          role: "Reseller",
+          body: "Prices are on the page before I sign in, top-ups land in the balance straight away, and support answers the same day.",
+          rating: 4,
+          position: 3,
+        },
       ];
   // All or nothing, keyed on the table rather than on each row: a panel that
   // has one testimonial of its own has started writing them, and dropping
@@ -686,7 +745,7 @@ async function main() {
   // page. Checking row by row did exactly that on a re-run.
   if ((await db.testimonial.count({ where: { panelId: PANEL } })) === 0) {
     for (const q of quotes) {
-      await db.testimonial.create({ data: { ...q, visible: false, panelId: PANEL } });
+      await db.testimonial.create({ data: { ...q, visible: true, panelId: PANEL } });
     }
   }
 

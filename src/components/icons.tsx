@@ -44,6 +44,24 @@ const raw = (children: React.ReactNode) => {
   return C;
 };
 
+/**
+ * The same shape, inked in rather than drawn.
+ *
+ * Every other glyph here is a 1.7px stroke, which is what makes the set look
+ * like one set. A rating is the one place that does not work: four out of five
+ * has to be legible as four, and two colours of the same outline is a
+ * difference the eye has to go looking for. So exactly one glyph gets a solid
+ * twin — not a licence for a solid variant of everything.
+ */
+const filled = (d: string) => {
+  const C = (props: IconProps) => (
+    <svg {...base(props)} fill="currentColor" stroke="none">
+      <path d={d} />
+    </svg>
+  );
+  return C;
+};
+
 export const Icons = {
   // --- Navigation -------------------------------------------------------
   dashboard: raw(
@@ -238,6 +256,7 @@ export const Icons = {
   moon: path("M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"),
   zap: path("M13 2 4 14h7l-1 8 9-12h-7z"),
   star: path("m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z"),
+  starFilled: filled("m12 3 2.8 5.7 6.2.9-4.5 4.4 1 6.2-5.5-2.9-5.5 2.9 1-6.2L3 9.6l6.2-.9z"),
   gift: raw(
     <>
       <rect x="3" y="8" width="18" height="4" rx="1" />

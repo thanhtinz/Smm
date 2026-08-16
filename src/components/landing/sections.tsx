@@ -191,12 +191,22 @@ export function Steps({ t }: Pick<LandingProps, "t">) {
 
 // ----------------------------------------------------------------- quotes
 
+/**
+ * Five stars, inked in as far as the rating goes.
+ *
+ * Drawing only as many stars as the rating meant four and five were told
+ * apart by counting, and outlines meant a full mark and a low one looked
+ * alike at a glance. A row of five with the score inked into it is read
+ * rather than counted.
+ */
 function Stars({ n }: { n: number }) {
   if (n <= 0) return null;
   return (
-    <span className="flex gap-0.5 text-[var(--warning)]" aria-label={`${n}/5`}>
-      {Array.from({ length: n }, (_, i) => (
-        <Icon key={i} name="star" size={14} />
+    <span className="flex gap-0.5" aria-label={`${n}/5`}>
+      {Array.from({ length: 5 }, (_, i) => (
+        <span key={i} className={i < n ? "text-[var(--warning)]" : "muted opacity-30"}>
+          <Icon name={i < n ? "starFilled" : "star"} size={14} />
+        </span>
       ))}
     </span>
   );
