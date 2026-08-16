@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { redirect } from "next/navigation";
 import RegisterForm from "@/components/auth/register-form";
 import { getAppContext } from "@/lib/context";
@@ -6,7 +6,7 @@ import { captchaFor } from "@/lib/captcha";
 import { getSetting } from "@/lib/settings";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Create account" };
+export const generateMetadata = pageTitle("nav.signup");
 
 export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ ref?: string }> }) {
   const { ref } = await searchParams;

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
@@ -11,7 +11,7 @@ import StatCard from "@/components/ui/stat-card";
 import WithdrawButton from "@/components/affiliate/withdraw-button";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Affiliate" };
+export const generateMetadata = pageTitle("affiliate.title");
 
 export default async function AffiliatePage() {
   const ctx = await getAppContext();

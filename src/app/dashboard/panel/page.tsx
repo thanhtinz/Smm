@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
@@ -9,7 +9,7 @@ import { effectiveMaxDepth } from "@/lib/panels";
 import PanelRequestForm from "@/components/panels/panel-request-form";
 import { Icon } from "@/components/icons";
 
-export const metadata: Metadata = { title: "Your own panel" };
+export const generateMetadata = pageTitle("nav.ownPanel");
 
 /**
  * Asking for a panel of your own.

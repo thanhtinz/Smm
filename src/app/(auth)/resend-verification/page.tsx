@@ -1,8 +1,8 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { getAppContext } from "@/lib/context";
 import ResendVerificationForm from "@/components/auth/resend-verification-form";
 
-export const metadata: Metadata = { title: "Confirm email" };
+export const generateMetadata = pageTitle("auth.verify.resendTitle");
 
 export default async function ResendVerificationPage({ searchParams }: { searchParams: Promise<{ email?: string }> }) {
   const { email } = await searchParams;

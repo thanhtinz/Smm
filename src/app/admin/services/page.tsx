@@ -182,6 +182,8 @@ export default async function AdminServicesPage() {
           promiseHint: t("admin.promiseHint"),
           tags: t("admin.tags"),
           tagsHint: t("admin.tagsHint"),
+          egTags: t("eg.serviceTags"),
+          egAverageTime: t("eg.averageTime"),
           position: t("admin.position"),
           provider: t("admin.provider"),
           noProvider: t("admin.noProvider"),

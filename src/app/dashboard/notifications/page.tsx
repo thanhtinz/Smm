@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { dateFormats } from "@/lib/dates";
 import { renderNotification } from "@/lib/notify";
 import NotificationList, { type NotificationRow } from "@/components/notification-list";
 
-export const metadata: Metadata = { title: "Notifications" };
+export const generateMetadata = pageTitle("dash.notifications");
 
 const PAGE_SIZE = 30;
 

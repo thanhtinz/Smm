@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import QRCode from "qrcode";
@@ -10,7 +10,7 @@ import { Icon } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 import CopyField from "@/components/ui/copy-field";
 
-export const metadata: Metadata = { title: "Payment" };
+export const generateMetadata = pageTitle("wallet.payment");
 
 export default async function DepositPage({
   params,

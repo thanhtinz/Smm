@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
@@ -7,7 +7,7 @@ import { displayMoney } from "@/lib/currency";
 import { Icon, type IconName } from "@/components/icons";
 import StatusBadge from "@/components/ui/status-badge";
 
-export const metadata: Metadata = { title: "Transactions" };
+export const generateMetadata = pageTitle("wallet.history");
 
 const PAGE_SIZE = 25;
 

@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { redirect } from "next/navigation";
 import { getAppContext } from "@/lib/context";
 import { pendingLogin, unusedRecoveryCount } from "@/lib/two-factor";
 import ChallengeForm from "@/components/auth/two-factor-challenge";
 import { safeNext } from "@/lib/next-path";
 
-export const metadata: Metadata = { title: "Two-step verification" };
+export const generateMetadata = pageTitle("auth.2fa.title");
 
 export default async function TwoFactorPage({
   searchParams,

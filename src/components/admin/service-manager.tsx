@@ -423,7 +423,7 @@ function ServiceForm({
           <TextInput name="max" type="number" defaultValue={String(row?.max ?? 10000)} error={state.fieldErrors?.max} />
         </Field>
         <Field name="averageTime" label={labels.averageTime}>
-          <TextInput name="averageTime" defaultValue={row?.averageTime} placeholder="1 hour" />
+          <TextInput name="averageTime" defaultValue={row?.averageTime} placeholder={labels.egAverageTime} />
         </Field>
 
         {/* What the customer scans before reading anything. The words are the
@@ -434,7 +434,7 @@ function ServiceForm({
             name="tags"
             defaultValue={row?.tags}
             hint={labels.tagsHint}
-            placeholder="Hot:danger, Giá rẻ:success, Ít tụt"
+            placeholder={labels.egTags}
           />
         </Field>
 

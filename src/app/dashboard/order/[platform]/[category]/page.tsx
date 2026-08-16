@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
@@ -15,7 +15,7 @@ import { toServiceOption } from "@/lib/service-option";
 import { serviceStatsMany } from "@/lib/service-stats";
 import { LINK_RULES } from "@/lib/links";
 
-export const metadata: Metadata = { title: "Order" };
+export const generateMetadata = pageTitle("dash.newOrder");
 
 /**
  * A category's order page, inside the panel.

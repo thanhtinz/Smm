@@ -1,11 +1,11 @@
-import type { Metadata } from "next";
+import { pageTitle } from "@/lib/page-title";
 import { redirect } from "next/navigation";
 import LoginForm from "@/components/auth/login-form";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
 import { safeNext } from "@/lib/next-path";
 
-export const metadata: Metadata = { title: "Sign in" };
+export const generateMetadata = pageTitle("nav.signin");
 
 export default async function LoginPage({
   searchParams,

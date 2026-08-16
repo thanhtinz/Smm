@@ -61,7 +61,12 @@ export default async function AdminSettingsPage() {
             group={group}
             title={groupTitle(group, t)}
             fields={fields}
-            labels={{ save: t("common.save"), saved: t("admin.saved") }}
+            labels={{
+              save: t("common.save"),
+              saved: t("admin.saved"),
+              perLine: t("admin.onePerLine"),
+              json: t("admin.jsonValue"),
+            }}
           />
         ))}
       </div>
