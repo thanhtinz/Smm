@@ -110,8 +110,18 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
-  return fail("Use POST");
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+
+  // Compatibility: some SMM clients use GET with query parameters.
+  // We translate the query string into an application/x-www-form-urlencoded
+  // body and run the same handler as POST.
+  const body = url.searchParams.toString();
+
+  const headers = new Headers(request.headers);
+  headers.set("content-type", "application/x-www-form-urlencoded");
+
+  return POST(new Request(request.url, { method: "POST", headers, body }));
 }
 
 /** The names the standard uses for service types in the `services` response. */
