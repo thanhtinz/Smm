@@ -137,6 +137,9 @@ export default async function ApiDocsPage() {
           <Row label="URL (v3)" value={endpointV3} mono />
           <Row label={t("api.key")} value="key" mono />
         </dl>
+        <p className="muted mt-3 text-sm">
+          You may also send the key as <span className="font-mono">Authorization: Bearer {"<key>"}</span>.
+        </p>
       </div>
 
       <div className="mt-8 space-y-5">
