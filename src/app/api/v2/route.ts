@@ -191,8 +191,6 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     const parsed = parseSubscription(
       {
         username: extractUsername(String(params.username ?? "")),
-        // Likes spread uses `old_posts` in some client libraries. Keep the
-        // internal representation unified as `posts`.
         posts:
           service.type === "spread"
             ? String(params.old_posts ?? params.posts ?? "")
@@ -521,13 +519,41 @@ function fail(message: string) {
 /** Accepts both form-encoded and JSON bodies, as clients differ. */
 async function readParams(request: Request): Promise<Record<string, unknown>> {
   const type = request.headers.get("content-type") ?? "";
+
+  // multipart/form-data needs the platform parser; urlencoded/json can be
+  // parsed from raw text.
+  if (type.includes("multipart/form-data")) {
+    try {
+      const form = await request.formData();
+      return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+    } catch {
+      return {};
+    }
+  }
+
+  let raw = "";
   try {
-    if (type.includes("application/json")) return (await request.json()) as Record<string, unknown>;
-    const form = await request.formData();
-    return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+    raw = await request.text();
   } catch {
     return {};
   }
+
+  const trimmed = raw.trim();
+  if (!trimmed) return {};
+
+  // JSON bodies sometimes come without an application/json Content-Type.
+  if (type.includes("application/json") || trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      // Fall through to urlencoded parsing.
+    }
+  }
+
+  // Default: treat the body as urlencoded key=value&key2=value2.
+  const form = new URLSearchParams(trimmed);
+  return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
 }
 
 /**
