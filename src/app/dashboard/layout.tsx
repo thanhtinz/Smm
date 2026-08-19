@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { SELLING_PLATFORM } from "@/lib/catalogue";
 import AppShell, { type Catalogue, type NavGroup, type NavItem } from "@/components/app-shell";
 import { getAppContext } from "@/lib/context";
 import { getSetting } from "@/lib/settings";
@@ -46,7 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     // empty opens onto nothing, and a category with no enabled service is a
     // page with a service picker that cannot be answered.
     db.platform.findMany({
-      where: { visible: true, categories: { some: { visible: true, services: { some: { enabled: true } } } } },
+      where: { ...SELLING_PLATFORM, categories: { some: { visible: true, services: { some: { enabled: true } } } } },
       orderBy: { position: "asc" },
       select: {
         slug: true,

@@ -5,6 +5,8 @@ import { getAppContext, readerMessages } from "@/lib/context";
 import { getSettings } from "@/lib/settings";
 import { Icon } from "@/components/icons";
 import SettingsForm from "@/components/admin/settings-form";
+import PlatformServicesToggles from "@/components/admin/platform-services-toggles";
+import { db } from "@/lib/db";
 import { groupSummary, groupTitle, settingFields, settingGroups } from "@/lib/setting-groups";
 
 export async function generateMetadata({ params }: { params: Promise<{ group: string }> }): Promise<Metadata> {
@@ -32,6 +34,38 @@ export default async function AdminSettingGroupPage({ params }: { params: Promis
   const fields = settingFields(group, t, current as Record<string, unknown>);
   const summary = groupSummary(group, t);
 
+  // The features section carries one thing the registry cannot hold: a switch
+  // per platform, and platforms are rows an operator adds rather than keys
+  // written at build time.
+  const platforms =
+    group === "features"
+      ? await db.platform.findMany({
+          orderBy: [{ position: "asc" }, { name: "asc" }],
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+            image: true,
+            color: true,
+            showServices: true,
+            categories: { select: { id: true } },
+          },
+        })
+      : [];
+
+  // What each platform actually has on sale, so a switch is not thrown blind.
+  // Grouped once rather than counted per platform: the page is a settings page,
+  // not a report.
+  const perCategory = new Map(
+    (group === "features"
+      ? await db.service.groupBy({ by: ["categoryId"], where: { enabled: true }, _count: { _all: true } })
+      : []
+    ).map((r) => [r.categoryId, r._count._all]),
+  );
+  const serviceCounts = new Map(
+    platforms.map((p) => [p.id, p.categories.reduce((sum, c) => sum + (perCategory.get(c.id) ?? 0), 0)]),
+  );
+
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <div>
@@ -54,6 +88,27 @@ export default async function AdminSettingGroupPage({ params }: { params: Promis
           json: t("admin.jsonValue"),
         }}
       />
+
+      {group === "features" && (
+        <PlatformServicesToggles
+          rows={platforms.map((p) => ({
+            id: p.id,
+            name: p.name,
+            icon: p.icon,
+            image: p.image,
+            color: p.color,
+            showServices: p.showServices,
+            services: t("features.platformServices", { n: serviceCounts.get(p.id) ?? 0 }),
+          }))}
+          labels={{
+            title: t("features.platforms"),
+            summary: t("features.platformsSub"),
+            empty: t("features.noPlatforms"),
+            on: t("admin.enabled"),
+            off: t("admin.disabled"),
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -127,8 +127,20 @@ export const settingDefinitions = {
   "currency.display": { group: "locale", type: "text", value: "USD" },
   "currency.allowUserCurrency": { group: "locale", type: "boolean", value: true },
 
+  // --- Features -----------------------------------------------------------
+  // The switches that turn a whole part of the panel on or off, gathered in
+  // one place. They were spread across the section that configures each one,
+  // which reads well until an operator wants to answer "what is this panel
+  // currently doing?" and has to open six pages to find out. Whatever a switch
+  // governs still lives with its own settings; only the switch moved.
+  "order.enabled": { group: "features", type: "boolean", value: true },
+  "order.allowCancelRequests": { group: "features", type: "boolean", value: true },
+  "support.enabled": { group: "features", type: "boolean", value: true },
+  "affiliate.enabled": { group: "features", type: "boolean", value: true },
+  "auth.registrationOpen": { group: "features", type: "boolean", value: true },
+  "api.enabled": { group: "features", type: "boolean", value: true },
+
   // --- Orders -------------------------------------------------------------
-  "order.enabled": { group: "order", type: "boolean", value: true },
   "order.minCharge": { group: "order", type: "number", value: 0 },
   "order.duplicateWindowMinutes": { group: "order", type: "number", value: 0 },
   // How far back the provider health figures look. Short enough that a
@@ -139,7 +151,6 @@ export const settingDefinitions = {
   // off holds the queue for an operator to send by hand.
   "order.autoSendToProvider": { group: "order", type: "boolean", value: true },
   "order.refillWindowDays": { group: "order", type: "number", value: 30 },
-  "order.allowCancelRequests": { group: "order", type: "boolean", value: true },
   "order.autoApproveRefill": { group: "order", type: "boolean", value: false },
   "order.autoApproveCancel": { group: "order", type: "boolean", value: false },
   "order.stuckAfterMinutes": { group: "order", type: "number", value: 0 },
@@ -208,7 +219,6 @@ export const settingDefinitions = {
   },
 
   // --- Affiliate ----------------------------------------------------------
-  "affiliate.enabled": { group: "affiliate", type: "boolean", value: true },
   "affiliate.commissionPercent": { group: "affiliate", type: "number", value: 5 },
   "affiliate.minWithdraw": { group: "affiliate", type: "number", value: 10 },
 
@@ -229,7 +239,6 @@ export const settingDefinitions = {
   // Verification emails an address may ask for in an hour. The action has to
   // be public, so this is the only thing standing between it and a mailbox.
   "auth.maxVerificationEmails": { group: "auth", type: "number", value: 5 },
-  "auth.registrationOpen": { group: "auth", type: "boolean", value: true },
   "auth.requireEmailVerification": { group: "auth", type: "boolean", value: false },
   "auth.requireAdminTwoFactor": { group: "auth", type: "boolean", value: false },
   "auth.signupBonus": { group: "auth", type: "number", value: 0 },
@@ -246,7 +255,6 @@ export const settingDefinitions = {
   "auth.termsRequired": { group: "auth", type: "boolean", value: true },
 
   // --- API ----------------------------------------------------------------
-  "api.enabled": { group: "api", type: "boolean", value: true },
   "api.rateLimitPerMinute": { group: "api", type: "number", value: 120 },
   // Callbacks cost nothing until a reseller sets a URL, so they are on.
   "api.callbacksEnabled": { group: "api", type: "boolean", value: true },
@@ -276,7 +284,6 @@ export const settingDefinitions = {
   "mail.onAdmin": { group: "mail", type: "boolean", value: false },
 
   // --- Support ------------------------------------------------------------
-  "support.enabled": { group: "support", type: "boolean", value: true },
   "support.maxOpenTickets": { group: "support", type: "number", value: 5 },
   "support.categories": {
     group: "support",

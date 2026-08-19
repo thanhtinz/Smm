@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ON_SALE } from "@/lib/catalogue";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { callerAddress } from "@/lib/auth-throttle";
@@ -109,8 +110,18 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
-  return fail("Use POST");
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+
+  // Compatibility: some SMM clients use GET with query parameters.
+  // We translate the query string into an application/x-www-form-urlencoded
+  // body and run the same handler as POST.
+  const body = url.searchParams.toString();
+
+  const headers = new Headers(request.headers);
+  headers.set("content-type", "application/x-www-form-urlencoded");
+
+  return POST(new Request(request.url, { method: "POST", headers, body }));
 }
 
 /** The names the standard uses for service types in the `services` response. */
@@ -134,7 +145,7 @@ type ApiCaller = {
 
 async function services(user: ApiCaller) {
   const rows = await db.service.findMany({
-    where: { enabled: true },
+    where: ON_SALE,
     orderBy: { publicId: "asc" },
     include: { category: { select: { name: true } } },
   });
@@ -175,7 +186,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   if (!Number.isInteger(serviceId)) return fail("Incorrect service ID");
 
   const service = await db.service.findFirst({
-    where: { publicId: serviceId, enabled: true },
+    where: { publicId: serviceId, ...ON_SALE },
     include: { category: { select: { platform: { select: LINK_RULES } } } },
   });
   if (!service) return fail("Incorrect service ID");

@@ -7,6 +7,7 @@
  */
 
 import { db } from "./db";
+import { ON_SALE, SELLING_PLATFORM } from "./catalogue";
 import { priceServices, resolvePricing } from "./pricing";
 
 export const LANDING_LAYOUTS = ["priceBoard", "orderFirst", "proof", "editorial", "catalogue", "spotlight", "grid", "showcase", "midnight"] as const;
@@ -113,12 +114,12 @@ export async function landingData(user: Parameters<typeof resolvePricing>[0]): P
   const [platforms, services, userCount, orderCount, completedCount, recentRows, quotes, questions, payments] =
     await Promise.all([
       db.platform.findMany({
-        where: { visible: true },
+        where: SELLING_PLATFORM,
         orderBy: { position: "asc" },
         include: { categories: { orderBy: { position: "asc" }, select: { id: true, name: true } } },
       }),
       db.service.findMany({
-        where: { enabled: true },
+        where: ON_SALE,
         orderBy: [{ position: "asc" }, { rate: "asc" }],
         select: {
           id: true,
