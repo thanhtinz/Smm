@@ -44,7 +44,9 @@ export async function POST(request: Request) {
   if (!(await getSetting("api.enabled"))) return fail("API is disabled");
 
   const params = await readParams(request);
-  const key = String(params.key ?? "");
+  const bearer = request.headers.get("authorization");
+  const bearerMatch = bearer ? bearer.match(/^\s*Bearer\s+(.+)\s*$/i) : null;
+  const key = String(params.key ?? (bearerMatch ? bearerMatch[1] : ""));
   if (!key) return fail("Missing key");
 
   // A panel that is not trading refuses its API too, or a reseller would keep
@@ -92,6 +94,9 @@ export async function POST(request: Request) {
     case "status":
       return status(user.id, params);
     case "orders":
+      return statuses(user.id, params);
+    case "multi-status":
+    case "multi_status":
       return statuses(user.id, params);
     case "refill":
       return raiseRequest(user.id, params, "refill");
@@ -186,7 +191,12 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     const parsed = parseSubscription(
       {
         username: extractUsername(String(params.username ?? "")),
-        posts: String(params.posts ?? ""),
+        // Likes spread uses `old_posts` in some client libraries. Keep the
+        // internal representation unified as `posts`.
+        posts:
+          service.type === "spread"
+            ? String(params.old_posts ?? params.posts ?? "")
+            : String(params.posts ?? ""),
         min: String(params.min ?? ""),
         max: String(params.max ?? ""),
         delay: String(params.delay ?? "0"),
