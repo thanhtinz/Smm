@@ -132,7 +132,7 @@ export default async function ApiDocsPage() {
 
       <div className="card card-pad mt-8 max-w-3xl">
         <dl className="space-y-2.5 text-sm">
-          <Row label="HTTP" value="POST" />
+          <Row label="HTTP" value="POST (or GET with query parameters)" />
           <Row label="URL (v2)" value={endpointV2} mono />
           <Row label="URL (v3)" value={endpointV3} mono />
           <Row label={t("api.key")} value="key" mono />
