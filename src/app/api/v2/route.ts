@@ -27,6 +27,7 @@ import { getBaseCurrency } from "@/lib/currency";
 import { logActivity } from "@/lib/auth";
 import { getCurrentPanel } from "@/lib/tenancy";
 import { STAFF_ROLES } from "@/lib/two-factor";
+import { readApiParams } from "@/lib/api-params";
 
 /**
  * Reseller API, shaped to the de-facto SMM panel standard so existing client
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
 
   if (!(await getSetting("api.enabled"))) return fail("API is disabled");
 
-  const params = await readParams(request);
+  const params = await readApiParams(request);
   const bearer = request.headers.get("authorization");
   const bearerMatch = bearer ? bearer.match(/^\s*Bearer\s+(.+)\s*$/i) : null;
   const key = String(params.key ?? (bearerMatch ? bearerMatch[1] : ""));
@@ -389,6 +390,10 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
 }
 
 async function status(userId: string, params: Record<string, unknown>) {
+  if (params.orders !== undefined && String(params.orders ?? "").trim()) {
+    return statuses(userId, params);
+  }
+
   const id = Number(params.order);
   if (!Number.isInteger(id)) return fail("Incorrect order ID");
 
@@ -525,46 +530,6 @@ function orderPayload(
 function fail(message: string) {
   // The standard returns errors with HTTP 200 and an `error` key.
   return NextResponse.json({ error: message });
-}
-
-/** Accepts both form-encoded and JSON bodies, as clients differ. */
-async function readParams(request: Request): Promise<Record<string, unknown>> {
-  const type = request.headers.get("content-type") ?? "";
-
-  // multipart/form-data needs the platform parser; urlencoded/json can be
-  // parsed from raw text.
-  if (type.includes("multipart/form-data")) {
-    try {
-      const form = await request.formData();
-      return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
-    } catch {
-      return {};
-    }
-  }
-
-  let raw = "";
-  try {
-    raw = await request.text();
-  } catch {
-    return {};
-  }
-
-  const trimmed = raw.trim();
-  if (!trimmed) return {};
-
-  // JSON bodies sometimes come without an application/json Content-Type.
-  if (type.includes("application/json") || trimmed.startsWith("{") || trimmed.startsWith("[")) {
-    try {
-      const parsed = JSON.parse(trimmed) as unknown;
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
-    } catch {
-      // Fall through to urlencoded parsing.
-    }
-  }
-
-  // Default: treat the body as urlencoded key=value&key2=value2.
-  const form = new URLSearchParams(trimmed);
-  return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
 }
 
 /**

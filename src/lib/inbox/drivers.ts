@@ -1,4 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
+import { metaChallenge, metaGraphBase, parseMetaMessaging, verifyMetaSignature } from "./meta";
+import { parseZaloWebhook, verifyZaloSignature, zaloApiBase } from "./zalo";
 
 /**
  * Messaging channels.
@@ -58,7 +60,10 @@ export type ChannelDriver = {
    * pasted them into. Anyone holding them could otherwise post messages into
    * the inbox as any customer.
    */
-  verify?(config: Record<string, string>, request: Request, secret: string): boolean;
+  verify?(config: Record<string, string>, request: Request, secret: string, rawBody?: string): boolean;
+
+  /** Meta-style subscription verification (GET hub.challenge). */
+  challenge?(request: Request, config: Record<string, string>): string | null;
 };
 
 /** Constant-time, and length-safe: timingSafeEqual throws on a mismatch. */
@@ -172,17 +177,144 @@ function apiBase(config: Record<string, string>): string {
   return `${base}/bot${config.token}`;
 }
 
-export const DRIVERS: Record<string, ChannelDriver> = { telegram };
+const messenger: ChannelDriver = {
+  kind: "messenger",
+  fields: [
+    { key: "pageAccessToken", secret: true },
+    { key: "appSecret", secret: true },
+    { key: "verifyToken", secret: true },
+  ],
 
-/**
- * Platforms the inbox is built for but has no driver for yet.
- *
- * Messenger, Instagram and Zalo all need a reviewed app and a business
- * account before a single message moves, none of which can be obtained or
- * exercised from here. Listing them as connectable and shipping code nobody
- * has ever run would be worse than saying plainly that they are next.
- */
-export const PLANNED_KINDS = ["messenger", "instagram", "zalo"] as const;
+  async check(config) {
+    try {
+      const res = await fetch(`${metaGraphBase(config)}/me?fields=id,name&access_token=${encodeURIComponent(config.pageAccessToken)}`);
+      const data = (await res.json()) as { id?: string; name?: string; error?: { message?: string } };
+      if (!data.id) return { ok: false, error: data.error?.message ?? "Graph API rejected the page token" };
+      return { ok: true, externalId: data.id, name: data.name ?? "Page" };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  },
+
+  parse(payload) {
+    return parseMetaMessaging(payload);
+  },
+
+  challenge(request, config) {
+    return metaChallenge(request, config.verifyToken);
+  },
+
+  verify(config, _request, _secret, rawBody = "") {
+    return verifyMetaSignature(config.appSecret, rawBody, _request.headers.get("x-hub-signature-256"));
+  },
+
+  async send(config, threadId, body) {
+    const res = await fetch(`${metaGraphBase(config)}/me/messages?access_token=${encodeURIComponent(config.pageAccessToken)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ recipient: { id: threadId }, message: { text: body } }),
+    });
+    const data = (await res.json()) as { message_id?: string; error?: { message?: string } };
+    if (!data.message_id) throw new Error(data.error?.message ?? "send failed");
+    return { externalId: data.message_id };
+  },
+};
+
+const instagram: ChannelDriver = {
+  kind: "instagram",
+  fields: [
+    { key: "pageAccessToken", secret: true },
+    { key: "appSecret", secret: true },
+    { key: "verifyToken", secret: true },
+  ],
+
+  async check(config) {
+    try {
+      const res = await fetch(
+        `${metaGraphBase(config)}/me?fields=instagram_business_account{id,username}&access_token=${encodeURIComponent(config.pageAccessToken)}`,
+      );
+      const data = (await res.json()) as {
+        instagram_business_account?: { id?: string; username?: string };
+        error?: { message?: string };
+      };
+      const ig = data.instagram_business_account;
+      if (!ig?.id) return { ok: false, error: data.error?.message ?? "No Instagram business account on this page" };
+      return { ok: true, externalId: ig.id, name: ig.username ? `@${ig.username}` : "Instagram" };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  },
+
+  parse(payload) {
+    return parseMetaMessaging(payload);
+  },
+
+  challenge(request, config) {
+    return metaChallenge(request, config.verifyToken);
+  },
+
+  verify(config, request, _secret, rawBody = "") {
+    return verifyMetaSignature(config.appSecret, rawBody, request.headers.get("x-hub-signature-256"));
+  },
+
+  async send(config, threadId, body) {
+    const res = await fetch(`${metaGraphBase(config)}/me/messages?access_token=${encodeURIComponent(config.pageAccessToken)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ recipient: { id: threadId }, message: { text: body } }),
+    });
+    const data = (await res.json()) as { message_id?: string; error?: { message?: string } };
+    if (!data.message_id) throw new Error(data.error?.message ?? "send failed");
+    return { externalId: data.message_id };
+  },
+};
+
+const zalo: ChannelDriver = {
+  kind: "zalo",
+  fields: [
+    { key: "oaId" },
+    { key: "accessToken", secret: true },
+    { key: "appSecret", secret: true },
+  ],
+
+  async check(config) {
+    try {
+      const res = await fetch(`${zaloApiBase(config)}/oa/getoa?access_token=${encodeURIComponent(config.accessToken)}`);
+      const data = (await res.json()) as { data?: { id?: string; name?: string }; error?: number; message?: string };
+      if (!data.data?.id) return { ok: false, error: data.message ?? "Zalo OA rejected the access token" };
+      return { ok: true, externalId: String(data.data.id), name: data.data.name ?? "Zalo OA" };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  },
+
+  parse(payload) {
+    return parseZaloWebhook(payload);
+  },
+
+  verify(config, _request, _secret, rawBody = "") {
+    return verifyZaloSignature(config.appSecret, rawBody, _request.headers.get("x-zalo-signature"));
+  },
+
+  async send(config, threadId, body) {
+    const res = await fetch(`${zaloApiBase(config)}/oa/message?access_token=${encodeURIComponent(config.accessToken)}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        recipient: { user_id: threadId },
+        message: { text: body },
+      }),
+    });
+    const data = (await res.json()) as { data?: { message_id?: string }; error?: number; message?: string };
+    if (!data.data?.message_id) throw new Error(data.message ?? "send failed");
+    return { externalId: data.data.message_id };
+  },
+};
+
+export const DRIVERS: Record<string, ChannelDriver> = { telegram, messenger, instagram, zalo };
+
+/** Kept for UI that still distinguishes planned vs live channels. */
+export const PLANNED_KINDS = [] as const;
 
 export function driverFor(kind: string): ChannelDriver | undefined {
   return DRIVERS[kind];

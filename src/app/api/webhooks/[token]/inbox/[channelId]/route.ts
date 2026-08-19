@@ -5,6 +5,33 @@ import { runAsPanel } from "@/lib/tenancy";
 import { driverFor } from "@/lib/inbox/drivers";
 import { receive } from "@/lib/inbox/store";
 
+async function loadChannel(token: string, channelId: string) {
+  const panel = await basePrisma.panel.findFirst({ where: { webhookToken: token } });
+  if (!panel) return null;
+
+  const channel = await basePrisma.channel.findFirst({ where: { id: channelId, panelId: panel.id } });
+  if (!channel || !channel.enabled) return null;
+
+  const driver = driverFor(channel.kind);
+  if (!driver) return null;
+
+  return { panel, channel, driver, config: JSON.parse(channel.config || "{}") as Record<string, string> };
+}
+
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ token: string; channelId: string }> },
+) {
+  const { token, channelId } = await params;
+  const loaded = await loadChannel(token, channelId);
+  if (!loaded) return NextResponse.json({ ok: false }, { status: 404 });
+
+  const challenge = loaded.driver.challenge?.(request, loaded.config);
+  if (challenge) return new Response(challenge, { status: 200 });
+
+  return NextResponse.json({ ok: false }, { status: 404 });
+}
+
 /**
  * Where messages arrive.
  *
@@ -22,42 +49,31 @@ export async function POST(
   { params }: { params: Promise<{ token: string; channelId: string }> },
 ) {
   const { token, channelId } = await params;
+  const loaded = await loadChannel(token, channelId);
+  if (!loaded) return NextResponse.json({ ok: false }, { status: 404 });
 
-  const panel = await basePrisma.panel.findFirst({ where: { webhookToken: token } });
-  if (!panel) return NextResponse.json({ ok: false }, { status: 404 });
+  const { panel, channel, driver, config } = loaded;
 
-  // Read outside the panel scope to check it, then act inside it: a channel
-  // id from another panel must not be reachable by knowing this panel's token.
-  const channel = await basePrisma.channel.findFirst({ where: { id: channelId, panelId: panel.id } });
-  if (!channel || !channel.enabled) return NextResponse.json({ ok: false }, { status: 404 });
+  const raw = await request.text();
 
-  const driver = driverFor(channel.kind);
-  if (!driver) return NextResponse.json({ ok: true });
-
-  // The URL is an address, not a credential: it holds the panel's token and
-  // the channel's id, both of which sit in an admin page and in whatever the
-  // operator pasted them into. Without a secret on top, anyone who came by
-  // either could post into the inbox as any customer.
-  //
-  // A channel connected before there was a secret has none stored, and is
-  // accepted rather than cut off: refusing would drop real customer messages
-  // on the floor at the moment of deploy, silently, because these platforms
-  // do not retry a 401. Reconnecting the channel registers one — which is
-  // what the warning on the channels page asks the operator to do.
-  const config = JSON.parse(channel.config || "{}") as Record<string, string>;
-  if (driver.verify && config.secret) {
-    if (!driver.verify(config, request, config.secret)) {
+  if (driver.verify) {
+    if (driver.kind === "telegram") {
+      if (config.secret && !driver.verify(config, request, config.secret, raw)) {
+        return NextResponse.json({ ok: false }, { status: 401 });
+      }
+    } else if (!driver.verify(config, request, config.secret ?? "", raw)) {
       return NextResponse.json({ ok: false }, { status: 401 });
     }
-  } else if (await getSetting("inbox.requireSignature")) {
-    // The operator has said every channel must prove itself. Refused rather
-    // than accepted, which is the whole point of the switch.
-    return NextResponse.json({ ok: false, message: "Channel has no signing secret" }, { status: 401 });
+  } else {
+    const requireSignature = await runAsPanel(panel.id, async () => getSetting("inbox.requireSignature"));
+    if (requireSignature) {
+      return NextResponse.json({ ok: false, message: "Channel has no signing secret" }, { status: 401 });
+    }
   }
 
   let payload: unknown;
   try {
-    payload = await request.json();
+    payload = JSON.parse(raw);
   } catch {
     return NextResponse.json({ ok: true });
   }
@@ -66,7 +82,9 @@ export async function POST(
   if (!messages.length) return NextResponse.json({ ok: true });
 
   await runAsPanel(panel.id, async () => {
-    for (const message of messages) await receive(channel.id, message);
+    for (const message of messages) {
+      await receive(channel.id, { ...message, accountId: message.accountId || channel.externalId });
+    }
   });
 
   return NextResponse.json({ ok: true });
