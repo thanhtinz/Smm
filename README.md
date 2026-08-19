@@ -254,6 +254,14 @@ field or as `Authorization: Bearer <key>`. Errors return HTTP 200 with an
 | `orders`        | `orders` (comma-separated, max 100)           |
 | `multi-status`  | same as `orders`                              |
 
+| Dashboard API (v2 + v3) | API docs (v3, multi-status) |
+| ----------------------- | --------------------------- |
+| ![](docs/screenshots/47-dashboard-api-v3.png) | ![](docs/screenshots/48-api-docs-v3.png) |
+
+| Payment methods (ViettelPay) | Inbox channels |
+| ------------------------------ | -------------- |
+| ![](docs/screenshots/49-admin-payments-viettelpay.png) | ![](docs/screenshots/50-admin-channels-inbox.png) |
+
 ![](docs/screenshots/43-api-docs.png)
 
 ## Provider integration
