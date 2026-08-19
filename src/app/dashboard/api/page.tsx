@@ -18,7 +18,9 @@ export default async function ApiPage() {
   const { t } = ctx;
 
   const enabled = await getSetting("api.enabled");
-  const endpoint = `${await panelBaseUrl()}/api/v2`;
+  const base = await panelBaseUrl();
+  const endpointV2 = `${base}/api/v2`;
+  const endpointV3 = `${base}/api/v3`;
 
   const callbacksOn = await getSetting("api.callbacksEnabled");
   const deliveries = callbacksOn ? await recentCallbacks(user.id) : [];
@@ -38,11 +40,19 @@ export default async function ApiPage() {
       <div className="card card-pad space-y-3">
         <CopyField
           label={t("api.endpoint")}
-          value={endpoint}
+          value={endpointV2}
           copyLabel={t("wallet.copy")}
           copiedLabel={t("wallet.copied")}
           mono
         />
+        <CopyField
+          label={t("api.endpointV3")}
+          value={endpointV3}
+          copyLabel={t("wallet.copy")}
+          copiedLabel={t("wallet.copied")}
+          mono
+        />
+        <p className="form-hint">{t("api.bearerHint")}</p>
         <CopyField
           label={t("api.key")}
           value={user.apiKey}

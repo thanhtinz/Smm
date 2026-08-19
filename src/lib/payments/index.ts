@@ -292,6 +292,55 @@ export const drivers: Record<string, Driver> = {
     },
   },
 
+  viettelpay: {
+    key: "viettelpay",
+    webhook: "viettelpay",
+    currencies: ["VND"],
+    required: ["merchantCode", "secretKey"],
+    fields: [
+      { name: "merchantCode", label: "Merchant code" },
+      { name: "secretKey", label: "Secret key", type: "password", hint: "Signs both the order and the callback" },
+      {
+        name: "apiUrl",
+        label: "API endpoint",
+        hint: "Leave blank for live. Sandbox: https://sandbox.viettelpay.vn/payment/v1/create-order",
+      },
+    ],
+    async prepare(ctx) {
+      const { signOrder } = await import("./viettelpay");
+      const endpoint = ctx.config.apiUrl || "https://sandbox.viettelpay.vn/payment/v1/create-order";
+
+      const values = {
+        merchant_code: ctx.config.merchantCode,
+        order_id: ctx.reference,
+        amount: String(Math.round(ctx.amount)),
+        currency: "VND",
+        order_desc: `Nap tien ${ctx.reference}`,
+        return_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?viettelpay=return`,
+        notify_url: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/viettelpay`,
+        version: "2.0",
+      };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({
+            ...values,
+            check_sum: signOrder(values, ctx.config.secretKey),
+          }),
+        });
+        const data = (await res.json()) as { checkout_url?: string; payment_url?: string; error_code?: string };
+        const url = data.checkout_url ?? data.payment_url;
+        if (!url) return { kind: "unconfigured", key: "err.payViettelpay" };
+        return { kind: "redirect", url };
+      } catch {
+        return { kind: "unconfigured", key: "err.payUnreachable" };
+      }
+    },
+  },
+
   link: {
     key: "link",
     webhook: "stripe",

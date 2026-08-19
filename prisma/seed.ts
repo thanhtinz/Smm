@@ -590,7 +590,7 @@ async function main() {
       maxAmount: 50000,
       feePercent: 1,
       feeFixed: 0,
-      position: 3,
+      position: 4,
       config: JSON.stringify({ apiKey: "", ipnSecret: "", payCurrency: "", apiUrl: "", prefix: "NOVA" }),
     },
     {
@@ -623,6 +623,19 @@ async function main() {
       config: JSON.stringify({ appId: "", key1: "", key2: "", apiUrl: "" }),
     },
     {
+      code: "viettelpay",
+      name: "ViettelPay",
+      driver: "viettelpay",
+      icon: "wallet",
+      description: inVietnamese ? "Thanh toán qua ví ViettelPay." : "Pay from the ViettelPay wallet.",
+      enabled: false,
+      currencies: JSON.stringify(["VND"]),
+      minAmount: 10000,
+      maxAmount: 50000000,
+      position: 3,
+      config: JSON.stringify({ merchantCode: "", secretKey: "", apiUrl: "" }),
+    },
+    {
       code: "manual_bank",
       name: inVietnamese ? "Chuyển khoản thủ công" : "Manual bank transfer",
       driver: "manual",
@@ -633,7 +646,7 @@ async function main() {
       enabled: false,
       currencies: JSON.stringify(["VND", "USD"]),
       minAmount: 50000,
-      position: 4,
+      position: 5,
       config: JSON.stringify({ instructions: "", accountNumber: "", accountName: "", bankName: "" }),
     },
   ];

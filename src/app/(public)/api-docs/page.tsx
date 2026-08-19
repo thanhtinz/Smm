@@ -79,13 +79,25 @@ export default async function ApiDocsPage() {
     },
     {
       action: "status",
-      summary: "Read one order.",
-      params: [["order", "Order id"]],
+      summary: "Read one order, or several when orders is set.",
+      params: [
+        ["order", "Order id — for one"],
+        ["orders", "Comma-separated order ids — batch (same response shape as orders)"],
+      ],
       response: { charge: "192000", start_count: "0", status: "Pending", remains: "8000", currency: "VND" },
     },
     {
       action: "orders",
       summary: "Read up to 100 orders at once.",
+      params: [["orders", "Comma-separated order ids"]],
+      response: {
+        "100002": { charge: "192000", start_count: "0", status: "Pending", remains: "8000", currency: "VND" },
+        "100003": { error: "Incorrect order ID" },
+      },
+    },
+    {
+      action: "multi-status",
+      summary: "Alias for orders — some client libraries send this action name instead.",
       params: [["orders", "Comma-separated order ids"]],
       response: {
         "100002": { charge: "192000", start_count: "0", status: "Pending", remains: "8000", currency: "VND" },

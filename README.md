@@ -79,6 +79,21 @@ diện, ngôn ngữ và tiền tệ.
 **Lệnh hay dùng:** `npm run dev` (chạy phát triển), `npm test` (test đơn vị),
 `npm run smoke` (mở mọi trang — cần app đang chạy sẵn).
 
+## Production
+
+SQLite is fine for a single machine. For a hosted deployment with more than one
+process, switch the Prisma datasource to PostgreSQL:
+
+1. Set `provider = "postgresql"` in `prisma/schema.prisma`
+2. Point `DATABASE_URL` at your database (see `.env.example`)
+3. Run `npx prisma migrate deploy`
+
+**API rate limiting** is held in memory per server process. On one Node instance
+that is enough; behind a load balancer each replica keeps its own counter, so
+either run a single API worker or put a shared limiter (Redis, edge rate limit)
+in front if you need a hard ceiling across machines. The per-minute limit is
+configured in Admin → Settings → API.
+
 Một điểm khác nhau giữa `npm run dev` và `npm run start`: bản production phục vụ
 thư mục `public/` theo ảnh chụp lúc khởi động, nên **ảnh vừa upload chỉ hiện sau
 khi khởi động lại server**. Chạy `npm run dev` thì không dính.
@@ -88,6 +103,9 @@ khi khởi động lại server**. Chạy `npm run dev` thì không dính.
 | Method                | Region        | Flow                                          |
 | --------------------- | ------------- | --------------------------------------------- |
 | SePay                 | Vietnam       | Bank transfer + QR, credited by webhook       |
+| MoMo                  | Vietnam       | Wallet redirect, credited on IPN              |
+| ZaloPay               | Vietnam       | Wallet redirect, credited on callback         |
+| ViettelPay            | Vietnam       | Wallet redirect, credited on IPN              |
 | PayPal                | Global        | Hosted checkout, credited on capture          |
 | Link by Stripe        | Global        | Payment intent, credited on webhook           |
 | Manual bank transfer  | Any           | Operator reviews and approves                 |
@@ -221,17 +239,20 @@ one. The list orders itself by use.
 
 ## Reseller API
 
-One endpoint, `POST /api/v2`, shaped to the de-facto SMM panel standard so
-existing client libraries work unchanged. Accepts form or JSON bodies; errors
-return HTTP 200 with an `error` key.
+`/api/v2` and `/api/v3` expose the same handler, shaped to the de-facto SMM
+panel standard so existing client libraries work unchanged. Accepts POST bodies
+(form or JSON) or GET with query parameters; the API key may be sent as a body
+field or as `Authorization: Bearer <key>`. Errors return HTTP 200 with an
+`error` key.
 
-| Action     | Parameters                                    |
-| ---------- | --------------------------------------------- |
-| `services` | —                                             |
-| `balance`  | —                                             |
-| `add`      | `service`, `link`, `quantity`, `runs`, `interval` |
-| `status`   | `order`                                       |
-| `orders`   | `orders` (comma-separated, max 100)           |
+| Action          | Parameters                                    |
+| --------------- | --------------------------------------------- |
+| `services`      | —                                             |
+| `balance`       | —                                             |
+| `add`           | `service`, `link`, `quantity`, `runs`, `interval` |
+| `status`        | `order`, or `orders` for a batch              |
+| `orders`        | `orders` (comma-separated, max 100)           |
+| `multi-status`  | same as `orders`                              |
 
 ![](docs/screenshots/43-api-docs.png)
 
