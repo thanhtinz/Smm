@@ -44,13 +44,15 @@ export async function POST(request: Request) {
   if (!(await getSetting("api.enabled"))) return fail("API is disabled");
 
   const params = await readParams(request);
-  const key = String(params.key ?? "");
+  const bearer = request.headers.get("authorization");
+  const bearerMatch = bearer ? bearer.match(/^\s*Bearer\s+(.+)\s*$/i) : null;
+  const key = String(params.key ?? (bearerMatch ? bearerMatch[1] : ""));
   if (!key) return fail("Missing key");
 
   // A panel that is not trading refuses its API too, or a reseller would keep
   // taking orders it can no longer fulfil.
   if (panel.status !== "active") {
-    return NextResponse.json({ error: "This panel is temporarily unavailable" }, { status: 503 });
+    return fail("This panel is temporarily unavailable");
   }
 
   // Before the lookup, so an invalid-key flood costs a map read rather than a
@@ -79,7 +81,7 @@ export async function POST(request: Request) {
   // Reads stay open while the panel is closed for maintenance, so a reseller
   // can still track orders it has already paid for. Only new business stops.
   if (action === "add" && (await getSetting("maintenance.enabled")) && !STAFF_ROLES.has(user.role)) {
-    return NextResponse.json({ error: String(await getSetting("maintenance.message")) }, { status: 503 });
+    return fail(String(await getSetting("maintenance.message")));
   }
 
   switch (action) {
@@ -92,6 +94,9 @@ export async function POST(request: Request) {
     case "status":
       return status(user.id, params);
     case "orders":
+      return statuses(user.id, params);
+    case "multi-status":
+    case "multi_status":
       return statuses(user.id, params);
     case "refill":
       return raiseRequest(user.id, params, "refill");
@@ -186,7 +191,10 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
     const parsed = parseSubscription(
       {
         username: extractUsername(String(params.username ?? "")),
-        posts: String(params.posts ?? ""),
+        posts:
+          service.type === "spread"
+            ? String(params.old_posts ?? params.posts ?? "")
+            : String(params.posts ?? ""),
         min: String(params.min ?? ""),
         max: String(params.max ?? ""),
         delay: String(params.delay ?? "0"),
@@ -511,13 +519,41 @@ function fail(message: string) {
 /** Accepts both form-encoded and JSON bodies, as clients differ. */
 async function readParams(request: Request): Promise<Record<string, unknown>> {
   const type = request.headers.get("content-type") ?? "";
+
+  // multipart/form-data needs the platform parser; urlencoded/json can be
+  // parsed from raw text.
+  if (type.includes("multipart/form-data")) {
+    try {
+      const form = await request.formData();
+      return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+    } catch {
+      return {};
+    }
+  }
+
+  let raw = "";
   try {
-    if (type.includes("application/json")) return (await request.json()) as Record<string, unknown>;
-    const form = await request.formData();
-    return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
+    raw = await request.text();
   } catch {
     return {};
   }
+
+  const trimmed = raw.trim();
+  if (!trimmed) return {};
+
+  // JSON bodies sometimes come without an application/json Content-Type.
+  if (type.includes("application/json") || trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed) as unknown;
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : {};
+    } catch {
+      // Fall through to urlencoded parsing.
+    }
+  }
+
+  // Default: treat the body as urlencoded key=value&key2=value2.
+  const form = new URLSearchParams(trimmed);
+  return Object.fromEntries([...form.entries()].map(([k, v]) => [k, String(v)]));
 }
 
 /**
