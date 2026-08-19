@@ -52,7 +52,7 @@ export async function POST(request: Request) {
   // A panel that is not trading refuses its API too, or a reseller would keep
   // taking orders it can no longer fulfil.
   if (panel.status !== "active") {
-    return NextResponse.json({ error: "This panel is temporarily unavailable" }, { status: 503 });
+    return fail("This panel is temporarily unavailable");
   }
 
   // Before the lookup, so an invalid-key flood costs a map read rather than a
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
   // Reads stay open while the panel is closed for maintenance, so a reseller
   // can still track orders it has already paid for. Only new business stops.
   if (action === "add" && (await getSetting("maintenance.enabled")) && !STAFF_ROLES.has(user.role)) {
-    return NextResponse.json({ error: String(await getSetting("maintenance.message")) }, { status: 503 });
+    return fail(String(await getSetting("maintenance.message")));
   }
 
   switch (action) {
