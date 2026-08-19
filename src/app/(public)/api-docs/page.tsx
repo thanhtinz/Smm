@@ -19,7 +19,8 @@ export default async function ApiDocsPage() {
   const { t } = ctx;
   const enabled = await getSetting("api.enabled");
   const callbacksOn = await getSetting("api.callbacksEnabled");
-  const endpoint = `${await panelBaseUrl()}/api/v2`;
+  const endpointV2 = `${await panelBaseUrl()}/api/v2`;
+  const endpointV3 = `${await panelBaseUrl()}/api/v3`;
 
   // The sample response shows a service this panel actually sells; a
   // hand-written one would advertise a catalogue a child panel does not have.
@@ -132,7 +133,8 @@ export default async function ApiDocsPage() {
       <div className="card card-pad mt-8 max-w-3xl">
         <dl className="space-y-2.5 text-sm">
           <Row label="HTTP" value="POST" />
-          <Row label="URL" value={endpoint} mono />
+          <Row label="URL (v2)" value={endpointV2} mono />
+          <Row label="URL (v3)" value={endpointV3} mono />
           <Row label={t("api.key")} value="key" mono />
         </dl>
       </div>
