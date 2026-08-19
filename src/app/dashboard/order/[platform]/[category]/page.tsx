@@ -1,4 +1,5 @@
 import { pageTitle } from "@/lib/page-title";
+import { SELLING_PLATFORM } from "@/lib/catalogue";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
@@ -40,7 +41,7 @@ export default async function PanelCategoryOrderPage({
   const { t } = ctx;
 
   const category = await db.category.findFirst({
-    where: { slug, visible: true, platform: { slug: platformSlug, visible: true } },
+    where: { slug, visible: true, platform: { slug: platformSlug, ...SELLING_PLATFORM } },
     include: {
       platform: { select: { ...LINK_RULES, id: true, slug: true, name: true, icon: true, image: true, color: true } },
       services: { where: { enabled: true }, orderBy: [{ position: "asc" }, { rate: "asc" }] },

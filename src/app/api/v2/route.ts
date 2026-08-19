@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { ON_SALE } from "@/lib/catalogue";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { callerAddress } from "@/lib/auth-throttle";
@@ -129,7 +130,7 @@ type ApiCaller = {
 
 async function services(user: ApiCaller) {
   const rows = await db.service.findMany({
-    where: { enabled: true },
+    where: ON_SALE,
     orderBy: { publicId: "asc" },
     include: { category: { select: { name: true } } },
   });
@@ -170,7 +171,7 @@ async function add(user: ApiCaller, params: Record<string, unknown>) {
   if (!Number.isInteger(serviceId)) return fail("Incorrect service ID");
 
   const service = await db.service.findFirst({
-    where: { publicId: serviceId, enabled: true },
+    where: { publicId: serviceId, ...ON_SALE },
     include: { category: { select: { platform: { select: LINK_RULES } } } },
   });
   if (!service) return fail("Incorrect service ID");

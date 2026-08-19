@@ -59,6 +59,15 @@ describe("settingBands", () => {
     }
   });
 
+  // Adding a group to the registry and forgetting to place it in a band is the
+  // easy mistake, and it does not break anything loudly: the section just
+  // appears at the bottom under "other", where nobody looks for it.
+  it("places the features section deliberately rather than leaving it to the leftovers", () => {
+    const other = settingBands().find((b) => b.key === "other");
+    expect(other?.groups ?? []).not.toContain("features");
+    expect(SETTING_BANDS.flatMap((b) => b.groups)).toContain("features");
+  });
+
   it("gathers anything the bands do not mention rather than losing it", () => {
     // Today every group is arranged, so the mechanism is asserted rather than
     // observed: whatever is missing from SETTING_BANDS is exactly what the

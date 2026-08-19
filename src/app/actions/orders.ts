@@ -1,6 +1,7 @@
 "use server";
 
 import { panelSuspended } from "@/lib/tenancy";
+import { ON_SALE } from "@/lib/catalogue";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { getCurrentUser, logActivity } from "@/lib/auth";
@@ -64,7 +65,7 @@ export async function placeOrderAction(_prev: OrderState, formData: FormData): P
 
   // Read first: the service type decides what the rest of the form means.
   const service = await db.service.findFirst({
-    where: { id: serviceId, enabled: true },
+    where: { id: serviceId, ...ON_SALE },
     include: { category: { select: { platform: { select: LINK_RULES } } } },
   });
   if (!service) return { fieldErrors: { serviceId: t("err.serviceGone") } };
@@ -373,7 +374,7 @@ export async function massOrderAction(_prev: MassOrderState, formData: FormData)
   if (lines.length > MAX_LINES) return { error: t("err.linesMax", { max: MAX_LINES }) };
 
   const services = await db.service.findMany({
-    where: { enabled: true },
+    where: ON_SALE,
     include: { category: { select: { platform: { select: LINK_RULES } } } },
   });
   const byPublicId = new Map(services.map((s) => [String(s.publicId), s]));

@@ -18,6 +18,7 @@ export type PlatformRow = {
   image: string;
   color: string;
   visible: boolean;
+  showServices: boolean;
   position: number;
   categoryCount: number;
   hosts: string;
@@ -207,10 +208,21 @@ function PlatformForm({
         </Field>
       </div>
 
-      <label className="flex cursor-pointer items-center gap-2.5 text-sm">
-        <input type="checkbox" name="visible" defaultChecked={row?.visible ?? true} className="h-4 w-4 accent-[var(--primary)]" />
-        {labels.visible}
-      </label>
+      <div className="space-y-2.5">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+          <input type="checkbox" name="visible" defaultChecked={row?.visible ?? true} className="h-4 w-4 accent-[var(--primary)]" />
+          {labels.visible}
+        </label>
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            name="showServices"
+            defaultChecked={row?.showServices ?? true}
+            className="h-4 w-4 accent-[var(--primary)]"
+          />
+          {labels.showServices}
+        </label>
+      </div>
 
       {/* What a link to this platform looks like. Each rule left blank is one
           check not made, so a platform can be added first and taught later. */}

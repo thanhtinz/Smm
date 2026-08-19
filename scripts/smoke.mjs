@@ -37,6 +37,7 @@ const ADMIN = [
   "/admin/categories",
   "/admin/services",
   "/admin/providers",
+  "/admin/providers/import",
   "/admin/keywords",
   "/admin/coupons",
   "/admin/transactions",

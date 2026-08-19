@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 import {
   deleteProviderAction,
   dispatchOrdersAction,
-  importProviderServicesAction,
   syncProviderPricesAction,
   refreshProviderBalanceAction,
   saveProviderAction,
@@ -166,15 +166,10 @@ export default function ProviderManager({
                   <Icon name="refresh" size={14} />
                   {labels.syncPrices}
                 </button>
-                <button
-                  type="button"
-                  onClick={() => run(() => importProviderServicesAction(row.id))}
-                  disabled={pending}
-                  className="btn btn-ghost btn-sm"
-                >
+                <Link href={`/admin/providers/import?provider=${row.id}`} className="btn btn-ghost btn-sm">
                   <Icon name="download" size={14} />
                   {labels.import}
-                </button>
+                </Link>
                 <button type="button" onClick={() => setEditing(row)} className="btn btn-ghost btn-sm">
                   <Icon name="edit" size={14} />
                 </button>

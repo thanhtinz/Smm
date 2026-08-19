@@ -1,4 +1,5 @@
 import { pageTitle } from "@/lib/page-title";
+import { ON_SALE, SELLING_PLATFORM } from "@/lib/catalogue";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import NewOrderForm, { type Currency, type Prefill, type ServiceOption } from "@/components/orders/new-order-form";
@@ -36,10 +37,10 @@ export default async function NewOrderPage({
   }
 
   const [platforms, categories, services] = await Promise.all([
-    db.platform.findMany({ where: { visible: true }, orderBy: { position: "asc" } }),
+    db.platform.findMany({ where: SELLING_PLATFORM, orderBy: { position: "asc" } }),
     db.category.findMany({ where: { visible: true }, orderBy: [{ position: "asc" }, { name: "asc" }] }),
     db.service.findMany({
-      where: { enabled: true },
+      where: ON_SALE,
       orderBy: [{ position: "asc" }, { rate: "asc" }],
       // The platform's example link, so the form can show the shape wanted
       // before the order is refused for not having it.

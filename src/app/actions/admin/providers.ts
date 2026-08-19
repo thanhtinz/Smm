@@ -90,29 +90,6 @@ export async function refreshProviderBalanceAction(id: string): Promise<SyncResu
   return { ok: true, message: `${result.data.balance} ${result.data.currency}` };
 }
 
-/**
- * The manual pull, from the admin area. Same engine as the scheduled run,
- * with new services turned on: asking for an import is asking for the rows.
- */
-export async function importProviderServicesAction(id: string): Promise<SyncResult> {
-  const t = await readerMessages();
-  const admin = await requireRootAdmin();
-  const provider = await db.provider.findUnique({ where: { id } });
-  if (!provider) return { error: t("adm.providerMissing") };
-
-  const report = await syncProviderCatalogue(provider, { importNew: true });
-  if (report.fault) return { error: t(report.fault.key, report.fault.vars) };
-
-  await logActivity(
-    admin.id,
-    "admin.provider.import",
-    `${providerLabel(provider)}: +${report.created} ~${report.updated} price ${report.repriced}`,
-  );
-  revalidatePath("/admin/providers");
-  revalidatePath("/admin/services");
-  return { ok: true, message: summarise(report) };
-}
-
 /** Refreshes prices without taking on anything new. */
 export async function syncProviderPricesAction(id: string): Promise<SyncResult> {
   const t = await readerMessages();
@@ -131,7 +108,6 @@ export async function syncProviderPricesAction(id: string): Promise<SyncResult> 
 
 function summarise(report: SyncReport): string {
   const parts = [
-    report.created ? `${report.created} new` : "",
     `${report.updated} checked`,
     report.repriced ? `${report.repriced} repriced` : "",
     report.missing ? `${report.missing} delisted` : "",

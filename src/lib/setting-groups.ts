@@ -21,7 +21,7 @@ export const SETTING_BANDS: { key: string; groups: string[] }[] = [
   { key: "shopfront", groups: ["branding", "appearance", "locale", "seo"] },
   { key: "trading", groups: ["order", "wallet", "affiliate"] },
   { key: "accounts", groups: ["auth", "api", "support", "mail"] },
-  { key: "operations", groups: ["panel", "maintenance"] },
+  { key: "operations", groups: ["features", "panel", "maintenance"] },
 ];
 
 /** Every group in the registry, in the order above, with the rest appended. */

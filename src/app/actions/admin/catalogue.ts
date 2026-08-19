@@ -71,6 +71,7 @@ export async function savePlatformAction(_prev: ActionResult, form: FormData): P
     image: String(form.get("image") ?? "").trim(),
     color: String(form.get("color") ?? "#6366f1"),
     visible: bool(form, "visible"),
+    showServices: bool(form, "showServices"),
     position: num(form, "position"),
     hosts: parseHosts(String(form.get("hosts") ?? "")).join(", "),
     postPattern,
@@ -386,6 +387,29 @@ export async function massEditRatesAction(
   );
   revalidateCatalogue();
   return { ok: true, changed: targets.length, skipped };
+}
+
+/**
+ * Takes a whole platform off sale, or puts it back.
+ *
+ * Separate from `visible`, which decides whether the platform is listed at
+ * all. This decides whether anything under it can be found or ordered, so an
+ * operator whose supplier has gone down can stop selling one platform for a
+ * night without hiding it from the site or switching off its services one by
+ * one — and switch it back with the same click.
+ */
+export async function togglePlatformServicesAction(id: string, showServices: boolean): Promise<ActionResult> {
+  const t = await readerMessages();
+  const admin = await requireAdmin();
+
+  const platform = await db.platform.findUnique({ where: { id }, select: { name: true } });
+  if (!platform) return { error: t("adm.platformMissing") };
+
+  await db.platform.update({ where: { id }, data: { showServices } });
+  await logActivity(admin.id, "admin.platform.update", `${platform.name}: services ${showServices ? "on" : "off"}`);
+  revalidateCatalogue();
+  revalidatePath("/admin/settings/features");
+  return { ok: true };
 }
 
 export async function toggleServiceAction(id: string, enabled: boolean): Promise<ActionResult> {

@@ -331,6 +331,11 @@ model Platform {
   postExample    String     @default("")
   profileExample String     @default("")
   visible        Boolean    @default(true)
+  /// Whether this platform's services are on sale at all. `visible` decides
+  /// whether the platform is listed; this decides whether anything under it
+  /// can be found or ordered — a whole platform taken off sale for a night
+  /// without hiding it or switching off its services one by one.
+  showServices   Boolean    @default(true)
   position       Int        @default(0)
   categories     Category[]
 
