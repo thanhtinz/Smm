@@ -278,6 +278,18 @@ export const settingDefinitions = {
   "auth.captchaOnRegister": { group: "auth", type: "boolean", value: true },
   "auth.termsRequired": { group: "auth", type: "boolean", value: true },
 
+  // --- Social sign-in -----------------------------------------------------
+  // Off until an operator has registered the panel with the provider and
+  // pasted the pair back here. The switch lives beside the credentials rather
+  // than on the features page, because switching it on without them would put
+  // a button on the sign-in page that goes nowhere.
+  "oauth.googleEnabled": { group: "oauth", type: "boolean", value: false },
+  "oauth.googleClientId": { group: "oauth", type: "text", value: "" },
+  "oauth.googleClientSecret": { group: "oauth", type: "password", value: "" },
+  "oauth.facebookEnabled": { group: "oauth", type: "boolean", value: false },
+  "oauth.facebookClientId": { group: "oauth", type: "text", value: "" },
+  "oauth.facebookClientSecret": { group: "oauth", type: "password", value: "" },
+
   // --- API ----------------------------------------------------------------
   // Per authenticated API key. Counted in memory on each Node process, so a
   // deployment behind several of them allows this many per process.

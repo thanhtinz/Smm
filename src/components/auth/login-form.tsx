@@ -12,6 +12,8 @@ export default function LoginForm({
   captcha,
   notice,
   next,
+  social,
+  error,
   labels,
 }: {
   /** Null when captcha is off or not configured. */
@@ -20,6 +22,10 @@ export default function LoginForm({
   notice?: string;
   /** Where to go once they are in. Already checked by the page. */
   next?: string;
+  /** The other ways in, rendered on the server because they read settings. */
+  social?: React.ReactNode;
+  /** A refusal that happened before the form, e.g. a failed trip to Google. */
+  error?: string;
   labels: Record<"title" | "sub" | "identifier" | "password" | "remember" | "forgot" | "submit" | "noaccount" | "signup" | "unverified" | "resend", string>;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, {});
@@ -29,10 +35,10 @@ export default function LoginForm({
       <h1 className="text-2xl font-bold tracking-tight">{labels.title}</h1>
       <p className="muted mt-2 text-sm">{labels.sub}</p>
 
-      {state.error && (
+      {(state.error || error) && (
         <div className="alert alert-danger mt-6" role="alert">
           <Icon name="alert" size={16} />
-          <span>{state.error}</span>
+          <span>{state.error || error}</span>
         </div>
       )}
 
@@ -96,6 +102,8 @@ export default function LoginForm({
           <Icon name="arrowRight" size={16} />
         </SubmitButton>
       </form>
+
+      {social}
 
       <p className="muted mt-6 text-center text-sm">
         {labels.noaccount}{" "}

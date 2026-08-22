@@ -159,6 +159,7 @@ model User {
 
   sessions        Session[]
   authTokens      AuthToken[]
+  oauthAccounts   OAuthAccount[]
   recoveryCodes   RecoveryCode[]
   orders          Order[]
   callbacks       Callback[]
@@ -249,6 +250,32 @@ model RecoveryCode {
   usedAt    DateTime?
   createdAt DateTime  @default(now())
 
+  @@index([userId])
+  @@index([panelId])
+}
+
+/// An account at Google or Facebook that this user signs in with.
+///
+/// Kept as its own row rather than a column on the user because the link is to
+/// the provider's permanent id, not to the address: somebody who changes the
+/// email on their Google account must still be the same customer here, and an
+/// address that later lands on somebody else's account must not become a way
+/// in. One person may link both providers, so this is a list.
+model OAuthAccount {
+  id                String   @id @default(cuid())
+  panelId           String   @default("")
+  panel             Panel    @relation("PanelOAuthAccounts", fields: [panelId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "google" | "facebook"
+  provider          String
+  /// The provider's own id for the account. Never the email address.
+  providerAccountId String
+  email             String   @default("")
+  createdAt         DateTime @default(now())
+
+  @@unique([panelId, provider, providerAccountId])
+  @@unique([panelId, provider, userId])
   @@index([userId])
   @@index([panelId])
 }
@@ -1283,6 +1310,7 @@ model Panel {
   users             User[]             @relation("PanelUsers")
   sessions          Session[]          @relation("PanelSessions")
   authTokens        AuthToken[]        @relation("PanelAuthTokens")
+  oauthAccounts     OAuthAccount[]     @relation("PanelOAuthAccounts")
   recoveryCodes     RecoveryCode[]     @relation("PanelRecoveryCodes")
   activityLogs      ActivityLog[]      @relation("PanelActivityLogs")
   media             Media[]            @relation("PanelMedia")

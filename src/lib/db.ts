@@ -12,6 +12,7 @@ const TENANT_MODELS = new Set([
   "User",
   "Session",
   "AuthToken",
+  "OAuthAccount",
   "RecoveryCode",
   "ActivityLog",
   "Media",

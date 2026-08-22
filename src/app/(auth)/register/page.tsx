@@ -1,6 +1,7 @@
 import { pageTitle } from "@/lib/page-title";
 import { redirect } from "next/navigation";
 import RegisterForm from "@/components/auth/register-form";
+import SocialButtons from "@/components/auth/social-buttons";
 import { getAppContext } from "@/lib/context";
 import { captchaFor } from "@/lib/captcha";
 import { getSetting } from "@/lib/settings";
@@ -30,6 +31,7 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
   return (
     <RegisterForm
       captcha={await captchaFor("register")}
+      social={<SocialButtons />}
       referralCode={(ref ?? "").trim().toUpperCase()}
       termsRequired={Boolean(termsRequired)}
       labels={{

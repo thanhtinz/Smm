@@ -13,10 +13,13 @@ export default function RegisterForm({
   labels,
   termsRequired,
   referralCode,
+  social,
 }: {
   /** Null when captcha is off or not configured. */
   captcha: CaptchaProps | null;
   referralCode?: string;
+  /** The other ways in, rendered on the server because they read settings. */
+  social?: React.ReactNode;
   labels: Record<
     | "title"
     | "sub"
@@ -165,6 +168,8 @@ export default function RegisterForm({
           <Icon name="arrowRight" size={16} />
         </SubmitButton>
       </form>
+
+      {social}
 
       <p className="muted mt-6 text-center text-sm">
         {labels.hasaccount}{" "}

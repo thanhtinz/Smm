@@ -304,6 +304,14 @@ export const Icons = {
       <Seg d="M17 6.8h.01" />
     </>
   ),
+  // Drawn in the same stroked line as everything else rather than pasted in
+  // as Google's four-colour mark: a brand logo among stroked glyphs reads as
+  // a foreign object, and the button says the name anyway.
+  google: raw(
+    <>
+      <Seg d="M21 12.2c0 5-3.4 8.6-8.6 8.6a8.8 8.8 0 1 1 0-17.6c2.4 0 4.4.9 5.9 2.3l-2.4 2.3A5 5 0 0 0 12.4 7a5 5 0 1 0 4.8 6.4h-4.8v-3H21z" />
+    </>
+  ),
   facebook: path("M14.5 8.5V6.8c0-.8.4-1.3 1.4-1.3H17V3h-2.4c-2.4 0-3.6 1.4-3.6 3.6v1.9H9V11h2v10h3.5V11H17l.5-2.5z"),
   youtube: raw(
     <>
