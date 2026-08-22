@@ -279,7 +279,8 @@ export const settingDefinitions = {
   "auth.termsRequired": { group: "auth", type: "boolean", value: true },
 
   // --- API ----------------------------------------------------------------
-  // Per authenticated API key. Counted in memory on each Node process — see README
+  // Per authenticated API key. Counted in memory on each Node process, so a
+  // deployment behind several of them allows this many per process.
   // "Production" if you run more than one replica behind a load balancer.
   "api.rateLimitPerMinute": { group: "api", type: "number", value: 120 },
   // Callbacks cost nothing until a reseller sets a URL, so they are on.
