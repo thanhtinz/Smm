@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   binancePaySign,
+  hmacOverBody,
+  midtransSignature,
+  payosSignature,
   cryptomusSign,
   cryptomusWebhookValid,
   payeerCallbackFields,
@@ -169,5 +172,77 @@ describe("signaturesMatch", () => {
     expect(signaturesMatch("abcdef", "abc")).toBe(false);
     expect(signaturesMatch("abcdef", "")).toBe(false);
     expect(signaturesMatch("", "")).toBe(false);
+  });
+});
+
+describe("hmacOverBody", () => {
+  const raw = '{"event":"charge:confirmed","data":{"code":"AB12"}}';
+
+  it("matches Coinbase Commerce, computed outside this codebase", () => {
+    expect(hmacOverBody(raw, "cb-secret", "sha256")).toBe(
+      "553cd620dec4c70c4a7d800b7529f21c168da600d51eeb955e03e6a6ea405174",
+    );
+  });
+
+  it("matches OxaPay, computed outside this codebase", () => {
+    expect(hmacOverBody(raw, "ox-key", "sha512")).toBe(
+      "837ecff1962188b72353d12361bd513360e33c7906ec45deeb4d555363068b92ae8680658d24504c5bb94cf07853367bb7f690dc505c0290413f886a9135eb20",
+    );
+  });
+
+  it("matches Razorpay, computed outside this codebase", () => {
+    expect(hmacOverBody(raw, "rzp-secret", "sha256")).toBe(
+      "3b7595b86ae835fa0698431dfedb5599cacffa92507d269809bfd588c542f3fe",
+    );
+  });
+
+  it("matches CoinPayments over a form body", () => {
+    expect(hmacOverBody("merchant=m1&status=100&amount1=10.00", "cp-ipn-secret", "sha512")).toBe(
+      "bc4bbfc34e3c0c900e66d90af2bf9952f6326c790f936e2089fb35cf885209456a68d898f49441a2cf3d53b5599b8bc4cec2d3dcd5f0c56558ad70aa1f180154",
+    );
+  });
+
+  // Re-serialising a parsed body before hashing is what breaks all four of
+  // these, and it breaks them for payloads that differ only in whitespace.
+  it("is over the exact bytes, so whitespace changes the answer", () => {
+    expect(hmacOverBody('{"a":1}', "k", "sha256")).not.toBe(hmacOverBody('{ "a": 1 }', "k", "sha256"));
+  });
+});
+
+describe("midtransSignature", () => {
+  it("matches a signature computed outside this codebase", () => {
+    expect(
+      midtransSignature({ orderId: "NOVA1042", statusCode: "200", grossAmount: "10000.00", serverKey: "srv-key" }),
+    ).toBe(
+      "e5b9570386d3e1509548d0d56ab838aef8505236d409f60da6f1cbe1d4e3d541e1b3b4df156733e0c07bd129cd8b95df724a8adaac5579bb8a3f04fce5e90d67",
+    );
+  });
+
+  // The amount is hashed as the string they sent it as. Reformatting it here
+  // produces a signature that never matches, for every single payment.
+  it("treats the amount as the string it arrived as", () => {
+    const a = midtransSignature({ orderId: "o", statusCode: "200", grossAmount: "10000.00", serverKey: "k" });
+    const b = midtransSignature({ orderId: "o", statusCode: "200", grossAmount: "10000", serverKey: "k" });
+    expect(a).not.toBe(b);
+  });
+});
+
+describe("payosSignature", () => {
+  it("matches a signature computed outside this codebase", () => {
+    expect(payosSignature({ orderCode: 1042, amount: 10000, description: "NOVA1042" }, "po-checksum")).toBe(
+      "ce21860d37b4358b7b375b07aff807115a1ee8e5710f31d1dc8839d9b22cd9a2",
+    );
+  });
+
+  // Whatever order the sender serialised its JSON in, the signature is the
+  // same — which is the entire reason the keys are sorted.
+  it("does not depend on the order the fields arrived in", () => {
+    const a = payosSignature({ orderCode: 1042, amount: 10000, description: "NOVA1042" }, "k");
+    const b = payosSignature({ description: "NOVA1042", amount: 10000, orderCode: 1042 }, "k");
+    expect(a).toBe(b);
+  });
+
+  it("writes a missing value as empty rather than as the word null", () => {
+    expect(payosSignature({ a: null, b: "x" }, "k")).toBe(payosSignature({ a: "", b: "x" }, "k"));
   });
 });

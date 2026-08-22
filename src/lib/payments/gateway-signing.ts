@@ -16,6 +16,7 @@ import { createHash, createHmac, timingSafeEqual } from "crypto";
 
 const md5 = (input: string) => createHash("md5").update(input).digest("hex");
 const sha256 = (input: string) => createHash("sha256").update(input).digest("hex");
+const sha512 = (input: string) => createHash("sha512").update(input).digest("hex");
 
 /** Compares two signatures without leaking how much of one was right. */
 export function signaturesMatch(expected: string, provided: string): boolean {
@@ -148,4 +149,60 @@ export function perfectMoneyHash(args: {
       args.timestampGmt,
     ].join(":"),
   ).toUpperCase();
+}
+
+// -------------------------------------------------------- HMAC over raw bytes
+
+/**
+ * The commonest scheme there is: HMAC over the exact bytes that arrived.
+ *
+ * Coinbase Commerce, CoinPayments, OxaPay and Razorpay all do this and differ
+ * only in the digest and which header carries the result. Re-serialising the
+ * parsed body before hashing is the mistake that breaks every one of them, so
+ * the raw text is what this takes.
+ */
+export function hmacOverBody(raw: string, secret: string, algorithm: "sha256" | "sha512"): string {
+  return createHmac(algorithm, secret).update(raw, "utf8").digest("hex");
+}
+
+// ------------------------------------------------------------------- Midtrans
+
+/**
+ * Midtrans signs four values concatenated with no separator at all, hashed
+ * with SHA-512 — the order id, the status code, the gross amount as a string,
+ * and the server key.
+ *
+ * The gross amount has to be the string Midtrans sent, not a number reformatted
+ * on the way in: "10000.00" and "10000" hash differently and only one of them
+ * is what they signed.
+ */
+export function midtransSignature(args: {
+  orderId: string;
+  statusCode: string;
+  grossAmount: string;
+  serverKey: string;
+}): string {
+  return sha512(`${args.orderId}${args.statusCode}${args.grossAmount}${args.serverKey}`);
+}
+
+// ---------------------------------------------------------------------- PayOS
+
+/**
+ * PayOS signs its callback's `data` object as `key=value` pairs sorted by key
+ * and joined with "&", under HMAC-SHA256.
+ *
+ * Sorting is what makes it reproducible: JSON object order is whatever the
+ * sender happened to serialise, and hashing it in that order would work right
+ * up until they changed a library.
+ */
+export function payosSignature(data: Record<string, unknown>, checksumKey: string): string {
+  const body = Object.keys(data)
+    .sort()
+    .map((key) => {
+      const value = data[key];
+      // null and undefined are sent as empty, not as the words.
+      return `${key}=${value === null || value === undefined ? "" : String(value)}`;
+    })
+    .join("&");
+  return createHmac("sha256", checksumKey).update(body, "utf8").digest("hex");
 }

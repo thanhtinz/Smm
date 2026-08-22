@@ -506,6 +506,33 @@ export const drivers: Record<string, Driver> = {
     },
   },
 
+  merchantqr: {
+    key: "merchantqr",
+    required: ["staticPayload"],
+    fields: [
+      {
+        name: "staticPayload",
+        label: "Your merchant QR code",
+        hint: "The long string encoded in the static merchant QR your bank issued — DuitNow, QRPh, KHQR or any other EMVCo code. This panel puts each deposit's amount into it.",
+      },
+      { name: "country", label: "Country code", hint: "Two letters, e.g. MY. Leave blank to accept whatever the code declares" },
+      { name: "payeeName", label: "Merchant name" },
+    ],
+    async prepare(ctx) {
+      const { withAmount } = await import("./asia-qr");
+      const payload = withAmount(ctx.config.staticPayload, ctx.amount, ctx.config.country?.trim() || undefined);
+      if (!payload) return { kind: "unconfigured", key: "err.payQrTarget" };
+      return {
+        kind: "qr",
+        payload,
+        payee: "",
+        payeeLabel: ctx.config.payeeName || "",
+        reference: ctx.reference,
+        note: "merchantqr",
+      };
+    },
+  },
+
   // ---------------------------------------------------------------- crypto
 
   cryptomus: {
@@ -678,6 +705,245 @@ export const drivers: Record<string, Driver> = {
           SUGGESTED_MEMO: ctx.reference,
         },
       };
+    },
+  },
+
+  coinbase: {
+    key: "coinbase",
+    webhook: "coinbase",
+    required: ["apiKey", "webhookSecret"],
+    fields: [
+      { name: "apiKey", label: "API key", type: "password" },
+      { name: "webhookSecret", label: "Webhook shared secret", type: "password", hint: "Signs the callback, so it is what proves a payment" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the charge code, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const res = await fetch("https://api.commerce.coinbase.com/charges", {
+        method: "POST",
+        headers: { "X-CC-Api-Key": ctx.config.apiKey, "X-CC-Version": "2018-03-22", "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          name: `Balance top-up ${ctx.reference}`,
+          description: `Top-up ${ctx.reference}`,
+          pricing_type: "fixed_price",
+          local_price: { amount: ctx.amount.toFixed(2), currency: ctx.currency.toUpperCase() },
+          metadata: { reference: ctx.reference },
+          redirect_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          cancel_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+        }),
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+      const data = (await res.json()) as { data?: { hosted_url?: string } };
+      if (!data.data?.hosted_url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.data.hosted_url };
+    },
+  },
+
+  coinpayments: {
+    key: "coinpayments",
+    webhook: "coinpayments",
+    required: ["merchantId", "ipnSecret"],
+    fields: [
+      { name: "merchantId", label: "Merchant id" },
+      { name: "ipnSecret", label: "IPN secret", type: "password", hint: "Signs the callback, so it is what proves a payment" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the order id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      // CoinPayments takes a signed form rather than an API call.
+      return {
+        kind: "form",
+        url: "https://www.coinpayments.net/index.php",
+        fields: {
+          cmd: "_pay_simple",
+          reset: "1",
+          merchant: ctx.config.merchantId,
+          item_name: `Balance top-up ${ctx.reference}`,
+          item_number: ctx.reference,
+          currency: ctx.currency.toUpperCase(),
+          amountf: ctx.amount.toFixed(2),
+          want_shipping: "0",
+          ipn_url: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/coinpayments`,
+          success_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          cancel_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+        },
+      };
+    },
+  },
+
+  oxapay: {
+    key: "oxapay",
+    webhook: "oxapay",
+    required: ["merchantApiKey"],
+    fields: [
+      { name: "merchantApiKey", label: "Merchant API key", type: "password", hint: "Creates the invoice and signs the callback" },
+      { name: "payCurrency", label: "Coin", hint: "Leave blank to let the payer choose, e.g. USDT" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the order id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const res = await fetch("https://api.oxapay.com/merchants/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          merchant: ctx.config.merchantApiKey,
+          amount: ctx.amount,
+          currency: ctx.currency.toUpperCase(),
+          ...(ctx.config.payCurrency ? { payCurrency: ctx.config.payCurrency } : {}),
+          orderId: ctx.reference,
+          callbackUrl: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/oxapay`,
+          returnUrl: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          description: `Balance top-up ${ctx.reference}`,
+        }),
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+      const data = (await res.json()) as { result?: number; payLink?: string };
+      if (data.result !== 100 || !data.payLink) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.payLink };
+    },
+  },
+
+  razorpay: {
+    key: "razorpay",
+    webhook: "razorpay",
+    currencies: ["INR"],
+    required: ["keyId", "keySecret", "webhookSecret"],
+    fields: [
+      { name: "keyId", label: "Key id" },
+      { name: "keySecret", label: "Key secret", type: "password" },
+      { name: "webhookSecret", label: "Webhook secret", type: "password", hint: "Signs the callback, so it is what proves a payment" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the receipt, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const auth = Buffer.from(`${ctx.config.keyId}:${ctx.config.keySecret}`, "utf8").toString("base64");
+      const res = await fetch("https://api.razorpay.com/v1/payment_links", {
+        method: "POST",
+        headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          // Razorpay counts in paise, as every Indian gateway does.
+          amount: Math.round(ctx.amount * 100),
+          currency: ctx.currency.toUpperCase(),
+          description: `Balance top-up ${ctx.reference}`,
+          reference_id: ctx.reference,
+          callback_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          callback_method: "get",
+        }),
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+      const data = (await res.json()) as { short_url?: string };
+      if (!data.short_url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.short_url };
+    },
+  },
+
+  midtrans: {
+    key: "midtrans",
+    webhook: "midtrans",
+    currencies: ["IDR"],
+    required: ["serverKey"],
+    fields: [
+      { name: "serverKey", label: "Server key", type: "password", hint: "Creates the payment and proves the callback" },
+      { name: "sandbox", label: "Environment", type: "select", options: ["live", "sandbox"] },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the order id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const host =
+        ctx.config.sandbox === "sandbox" ? "https://app.sandbox.midtrans.com" : "https://app.midtrans.com";
+      const auth = Buffer.from(`${ctx.config.serverKey}:`, "utf8").toString("base64");
+      const res = await fetch(`${host}/snap/v1/transactions`, {
+        method: "POST",
+        headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json", Accept: "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          // Rupiah has no subunit, and Midtrans refuses a fractional amount.
+          transaction_details: { order_id: ctx.reference, gross_amount: Math.round(ctx.amount) },
+          callbacks: { finish: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}` },
+        }),
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+      const data = (await res.json()) as { redirect_url?: string };
+      if (!data.redirect_url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.redirect_url };
+    },
+  },
+
+  xendit: {
+    key: "xendit",
+    webhook: "xendit",
+    required: ["secretKey", "callbackToken"],
+    fields: [
+      { name: "secretKey", label: "Secret API key", type: "password" },
+      {
+        name: "callbackToken",
+        label: "Callback verification token",
+        type: "password",
+        hint: "Xendit sends this back in a header; it is what proves a callback",
+      },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the external id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const auth = Buffer.from(`${ctx.config.secretKey}:`, "utf8").toString("base64");
+      const res = await fetch("https://api.xendit.co/v2/invoices", {
+        method: "POST",
+        headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/json" },
+        cache: "no-store",
+        body: JSON.stringify({
+          external_id: ctx.reference,
+          amount: ctx.amount,
+          currency: ctx.currency.toUpperCase(),
+          description: `Balance top-up ${ctx.reference}`,
+          success_redirect_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          failure_redirect_url: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+        }),
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+      const data = (await res.json()) as { invoice_url?: string };
+      if (!data.invoice_url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.invoice_url };
+    },
+  },
+
+  payos: {
+    key: "payos",
+    webhook: "payos",
+    currencies: ["VND"],
+    required: ["clientId", "apiKey", "checksumKey"],
+    fields: [
+      { name: "clientId", label: "Client id" },
+      { name: "apiKey", label: "API key", type: "password" },
+      { name: "checksumKey", label: "Checksum key", type: "password", hint: "Signs the request and proves the callback" },
+    ],
+    async prepare(ctx) {
+      const { payosSignature } = await import("./gateway-signing");
+      // PayOS addresses an order by a number of its own, and the panel's
+      // deposit number is already one.
+      const orderCode = ctx.publicId;
+      const amount = Math.round(ctx.amount);
+      const description = ctx.reference.slice(0, 25);
+      const returnUrl = `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`;
+      const cancelUrl = returnUrl;
+
+      const res = await fetch("https://api-merchant.payos.vn/v2/payment-requests", {
+        method: "POST",
+        headers: {
+          "x-client-id": ctx.config.clientId,
+          "x-api-key": ctx.config.apiKey,
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          orderCode,
+          amount,
+          description,
+          returnUrl,
+          cancelUrl,
+          signature: payosSignature({ amount, cancelUrl, description, orderCode, returnUrl }, ctx.config.checksumKey),
+        }),
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+      const data = (await res.json()) as { code?: string; data?: { checkoutUrl?: string } };
+      if (data.code !== "00" || !data.data?.checkoutUrl) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.data.checkoutUrl };
     },
   },
 

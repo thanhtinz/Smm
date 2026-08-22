@@ -5,6 +5,9 @@ import { parseConfig } from "./index";
 import {
   cryptomusWebhookValid,
   binancePaySign,
+  hmacOverBody,
+  midtransSignature,
+  payosSignature,
   payeerCallbackFields,
   payeerSign,
   perfectMoneyHash,
@@ -212,4 +215,268 @@ export async function handlePerfectMoneyWebhook(request: Request) {
 
   await creditDeposit(txn.id, body.PAYMENT_BATCH_NUM ?? "", { automatic: true });
   return NextResponse.json({ success: true });
+}
+
+// ---------------------------------------------------- HMAC-over-body gateways
+
+/**
+ * Four gateways, one shape.
+ *
+ * Coinbase Commerce, CoinPayments, OxaPay and Razorpay all sign the exact
+ * bytes of the callback and differ only in the digest, the header, and where
+ * the reference and the status sit in the body. Writing that out four times
+ * would be four chances to verify a signature and then forget to check the
+ * status, so it is written once.
+ */
+async function hmacGateway(
+  request: Request,
+  spec: {
+    driver: string;
+    secretField: string;
+    header: string;
+    algorithm: "sha256" | "sha512";
+    /** Reads the reference and what happened, from the parsed body. */
+    read: (body: Record<string, unknown>) => { reference: string; paid: boolean; dead: boolean; id: string };
+    /** Form-encoded rather than JSON, as CoinPayments is. */
+    form?: boolean;
+  },
+) {
+  const found = await methodFor(spec.driver);
+  if (!found) return disabled();
+  const { method, config } = found;
+  const secret = config[spec.secretField]?.trim();
+  if (!secret) return unconfigured();
+
+  // Read once as text: the signature covers these exact bytes, and parsing
+  // then re-serialising would change them.
+  const raw = await request.text();
+  const provided = request.headers.get(spec.header) ?? "";
+  if (!provided || !signaturesMatch(hmacOverBody(raw, secret, spec.algorithm), provided)) return badSignature();
+
+  let body: Record<string, unknown> = {};
+  if (spec.form) {
+    body = Object.fromEntries(new URLSearchParams(raw).entries());
+  } else {
+    try {
+      body = JSON.parse(raw) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
+    }
+  }
+
+  const { reference, paid, dead, id } = spec.read(body);
+  const txn = await depositFor(method.id, reference, config.prefix);
+  if (!txn) return unknownReference();
+
+  if (dead) {
+    await failDeposit(txn.id, `${spec.driver} payment failed`);
+    return NextResponse.json({ success: true, message: "failed" });
+  }
+  if (!paid) return NextResponse.json({ success: true, message: "ignored" });
+
+  return NextResponse.json({ success: true, message: await creditDeposit(txn.id, id, { automatic: true }) });
+}
+
+export function handleCoinbaseWebhook(request: Request) {
+  return hmacGateway(request, {
+    driver: "coinbase",
+    secretField: "webhookSecret",
+    header: "x-cc-webhook-signature",
+    algorithm: "sha256",
+    read: (body) => {
+      const event = (body.event ?? {}) as Record<string, unknown>;
+      const data = (event.data ?? {}) as Record<string, unknown>;
+      const type = String(event.type ?? "");
+      const metadata = (data.metadata ?? {}) as Record<string, unknown>;
+      return {
+        reference: String(metadata.reference ?? data.code ?? ""),
+        paid: type === "charge:confirmed",
+        dead: type === "charge:failed" || type === "charge:expired",
+        id: String(data.code ?? ""),
+      };
+    },
+  });
+}
+
+export function handleCoinPaymentsWebhook(request: Request) {
+  return hmacGateway(request, {
+    driver: "coinpayments",
+    secretField: "ipnSecret",
+    header: "hmac",
+    algorithm: "sha512",
+    form: true,
+    read: (body) => {
+      // 100 and 2 are "complete"; anything below zero is cancelled or timed out.
+      const status = Number(body.status ?? 0);
+      return {
+        reference: String(body.item_number ?? ""),
+        paid: status >= 100 || status === 2,
+        dead: status < 0,
+        id: String(body.txn_id ?? ""),
+      };
+    },
+  });
+}
+
+export function handleOxapayWebhook(request: Request) {
+  return hmacGateway(request, {
+    driver: "oxapay",
+    secretField: "merchantApiKey",
+    header: "hmac",
+    algorithm: "sha512",
+    read: (body) => {
+      const status = String(body.status ?? "").toLowerCase();
+      return {
+        reference: String(body.orderId ?? ""),
+        paid: status === "paid",
+        dead: status === "expired" || status === "failed",
+        id: String(body.trackId ?? ""),
+      };
+    },
+  });
+}
+
+export function handleRazorpayWebhook(request: Request) {
+  return hmacGateway(request, {
+    driver: "razorpay",
+    secretField: "webhookSecret",
+    header: "x-razorpay-signature",
+    algorithm: "sha256",
+    read: (body) => {
+      const payload = (body.payload ?? {}) as Record<string, unknown>;
+      const entity =
+        (((payload.payment_link ?? {}) as Record<string, unknown>).entity ?? {}) as Record<string, unknown>;
+      const payment = (((payload.payment ?? {}) as Record<string, unknown>).entity ?? {}) as Record<string, unknown>;
+      const event = String(body.event ?? "");
+      return {
+        reference: String(entity.reference_id ?? payment.notes ?? ""),
+        paid: event === "payment_link.paid",
+        dead: event === "payment_link.cancelled" || event === "payment_link.expired",
+        id: String(payment.id ?? entity.id ?? ""),
+      };
+    },
+  });
+}
+
+// ------------------------------------------------------------------- Midtrans
+
+export async function handleMidtransWebhook(request: Request) {
+  const found = await methodFor("midtrans");
+  if (!found) return disabled();
+  const { method, config } = found;
+  if (!config.serverKey) return unconfigured();
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
+  }
+
+  const expected = midtransSignature({
+    orderId: String(body.order_id ?? ""),
+    statusCode: String(body.status_code ?? ""),
+    // Hashed as the string they sent, not as a number reformatted here.
+    grossAmount: String(body.gross_amount ?? ""),
+    serverKey: config.serverKey,
+  });
+  if (!signaturesMatch(expected, String(body.signature_key ?? ""))) return badSignature();
+
+  const txn = await depositFor(method.id, String(body.order_id ?? ""), config.prefix);
+  if (!txn) return unknownReference();
+
+  const status = String(body.transaction_status ?? "").toLowerCase();
+  if (["deny", "cancel", "expire", "failure"].includes(status)) {
+    await failDeposit(txn.id, `Midtrans payment ${status}`);
+    return NextResponse.json({ success: true, message: status });
+  }
+  // "capture" only counts once fraud review has passed.
+  const accepted =
+    status === "settlement" || (status === "capture" && String(body.fraud_status ?? "accept") === "accept");
+  if (!accepted) return NextResponse.json({ success: true, message: `ignored ${status || "unknown"}` });
+
+  return NextResponse.json({
+    success: true,
+    message: await creditDeposit(txn.id, String(body.transaction_id ?? ""), { automatic: true }),
+  });
+}
+
+// --------------------------------------------------------------------- Xendit
+
+/**
+ * Xendit does not sign anything: it sends back the verification token the
+ * operator configured, in a header. That makes the token a shared secret, so
+ * it is compared the same way a signature is.
+ */
+export async function handleXenditWebhook(request: Request) {
+  const found = await methodFor("xendit");
+  if (!found) return disabled();
+  const { method, config } = found;
+  if (!config.callbackToken) return unconfigured();
+
+  if (!signaturesMatch(config.callbackToken, request.headers.get("x-callback-token") ?? "")) return badSignature();
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
+  }
+
+  const txn = await depositFor(method.id, String(body.external_id ?? ""), config.prefix);
+  if (!txn) return unknownReference();
+
+  const status = String(body.status ?? "").toUpperCase();
+  if (status === "EXPIRED" || status === "FAILED") {
+    await failDeposit(txn.id, `Xendit invoice ${status.toLowerCase()}`);
+    return NextResponse.json({ success: true, message: status });
+  }
+  if (status !== "PAID" && status !== "SETTLED") {
+    return NextResponse.json({ success: true, message: `ignored ${status || "unknown"}` });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: await creditDeposit(txn.id, String(body.id ?? ""), { automatic: true }),
+  });
+}
+
+// ---------------------------------------------------------------------- PayOS
+
+export async function handlePayosWebhook(request: Request) {
+  const found = await methodFor("payos");
+  if (!found) return disabled();
+  const { method, config } = found;
+  if (!config.checksumKey) return unconfigured();
+
+  let body: Record<string, unknown>;
+  try {
+    body = (await request.json()) as Record<string, unknown>;
+  } catch {
+    return NextResponse.json({ success: false, message: "Invalid JSON" }, { status: 400 });
+  }
+
+  const data = (body.data ?? {}) as Record<string, unknown>;
+  if (!signaturesMatch(payosSignature(data, config.checksumKey), String(body.signature ?? ""))) {
+    return badSignature();
+  }
+
+  // PayOS addresses the deposit by its own number rather than by a reference
+  // string, which is why this one does not go through depositFor.
+  const orderCode = Number(data.orderCode ?? 0);
+  const txn = orderCode
+    ? await db.transaction.findFirst({ where: { publicId: orderCode, type: "deposit", methodId: method.id } })
+    : null;
+  if (!txn) return unknownReference();
+
+  const paid = String(body.code ?? data.code ?? "") === "00" && Boolean(body.success ?? true);
+  if (!paid) {
+    await failDeposit(txn.id, "PayOS payment failed");
+    return NextResponse.json({ success: true, message: "failed" });
+  }
+
+  return NextResponse.json({
+    success: true,
+    message: await creditDeposit(txn.id, String(data.reference ?? ""), { automatic: true }),
+  });
 }

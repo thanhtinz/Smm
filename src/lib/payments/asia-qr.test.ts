@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checksumValid, parse, seal, tlv } from "./emvco";
-import { buildPayNow, buildPromptPay, buildQris, buildUpi, promptPayTarget } from "./asia-qr";
+import { buildPayNow, buildPromptPay, buildQris, buildUpi, promptPayTarget, withAmount } from "./asia-qr";
 
 /**
  * A payment QR fails in one direction only: silently.
@@ -167,6 +167,53 @@ describe("buildQris", () => {
   it("refuses an amount that is not one", () => {
     expect(buildQris(staticQris, 0)).toBeNull();
     expect(buildQris(staticQris, -5)).toBeNull();
+  });
+});
+
+describe("withAmount", () => {
+  // The same transformation serves DuitNow, QRPh and KHQR, none of which this
+  // file knows anything about — it only edits the code the operator pasted in.
+  const merchantCode = (country: string) =>
+    seal(
+      tlv("00", "01") +
+        tlv("01", "11") +
+        tlv("26", tlv("00", "MY.COM.PAYNET.MERCHANT") + tlv("01", "123456789012345")) +
+        tlv("52", "5812") +
+        tlv("53", "458") +
+        tlv("58", country) +
+        tlv("59", "NOVA MY") +
+        tlv("60", "KUALA LUMPUR"),
+    );
+
+  it("names the amount in a code from a scheme it has never heard of", () => {
+    const dynamic = withAmount(merchantCode("MY"), 88.5)!;
+    expect(checksumValid(dynamic)).toBe(true);
+    expect(parse(dynamic)!.find((f) => f.tag === "54")?.value).toBe("88.50");
+    expect(parse(dynamic)!.find((f) => f.tag === "01")?.value).toBe("12");
+  });
+
+  it("leaves the merchant's own block untouched", () => {
+    const before = parse(merchantCode("MY"))!.find((f) => f.tag === "26")?.value;
+    const after = parse(withAmount(merchantCode("MY"), 10)!)!.find((f) => f.tag === "26")?.value;
+    expect(after).toBe(before);
+  });
+
+  // An operator who pastes their Malaysian code into the Indonesian method
+  // should be told, not handed a QR that scans into nothing.
+  it("refuses a code from the wrong country when one is named", () => {
+    expect(withAmount(merchantCode("MY"), 10, "ID")).toBeNull();
+    expect(withAmount(merchantCode("MY"), 10, "MY")).not.toBeNull();
+  });
+
+  it("takes any country when none is named", () => {
+    expect(withAmount(merchantCode("PH"), 10)).not.toBeNull();
+    expect(withAmount(merchantCode("KH"), 10)).not.toBeNull();
+  });
+
+  it("refuses what is not a merchant code, and an amount that is not one", () => {
+    expect(withAmount("not a payload", 10)).toBeNull();
+    expect(withAmount(merchantCode("MY"), 0)).toBeNull();
+    expect(withAmount(merchantCode("MY"), -1)).toBeNull();
   });
 });
 

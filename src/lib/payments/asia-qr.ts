@@ -125,26 +125,35 @@ export function buildPayNow({ proxyType, proxy, merchantName, amount, expiry }: 
 // ------------------------------------------------------------------ QRIS (ID)
 
 /**
- * Putting an amount into the merchant's own QRIS code.
+ * Putting an amount into a merchant QR the operator already has.
  *
- * A QRIS code is issued to the merchant by their acquirer and cannot be
- * assembled from scratch by anyone else. What an operator has is their static
- * code — the one printed on the counter — and what the panel needs is that
- * code carrying this deposit's amount, which is a defined transformation:
- * point-of-initiation becomes one-time, an amount field is inserted in tag
- * order, and the checksum is recomputed.
+ * Half of Asia pays on an EMVCo merchant code — QRIS in Indonesia, DuitNow in
+ * Malaysia, QRPh in the Philippines, KHQR in Cambodia — and every one of them
+ * is issued to the merchant by their bank or acquirer. Nobody else can
+ * assemble one, and a code assembled from a guess is a customer whose money
+ * goes nowhere.
  *
- * Returns null when the input is not a QRIS code at all, rather than emitting
- * something that scans into a payment to nobody.
+ * What an operator does have is the static code printed on their counter, and
+ * turning that into one that names an amount is a defined transformation
+ * rather than a guess: point-of-initiation becomes one-time, an amount field
+ * is inserted in tag order, and the checksum is recomputed. That works for
+ * every scheme above without this file knowing anything about any of them.
+ *
+ * `country` is checked when the caller names one, so an operator who pastes
+ * their Thai code into the Indonesian method is told rather than handed a
+ * broken QR.
  */
-export function buildQris(staticPayload: string, amount: number): string | null {
+export function withAmount(staticPayload: string, amount: number, country?: string): string | null {
   const fields = parse(staticPayload.trim());
   if (!fields) return null;
-  // Every EMVCo code opens with the format indicator, and an Indonesian one
-  // names its own country.
+  // Every EMVCo code opens with the format indicator.
   if (fields[0]?.tag !== "00" || fields[0].value !== "01") return null;
-  if (!fields.some((f) => f.tag === "58" && f.value.toUpperCase() === "ID")) return null;
   if (!(amount > 0)) return null;
+
+  if (country) {
+    const declared = fields.find((f) => f.tag === "58")?.value?.toUpperCase();
+    if (declared !== country.toUpperCase()) return null;
+  }
 
   const next: Field[] = [];
   for (const field of fields) {
@@ -165,6 +174,11 @@ export function buildQris(staticPayload: string, amount: number): string | null 
   else next.splice(at, 0, amountField);
 
   return build(next);
+}
+
+/** Indonesia's own name for the same thing, kept for the QRIS method. */
+export function buildQris(staticPayload: string, amount: number): string | null {
+  return withAmount(staticPayload, amount, "ID");
 }
 
 // ------------------------------------------------------------------- UPI (IN)
