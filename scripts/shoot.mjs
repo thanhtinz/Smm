@@ -3,7 +3,8 @@
  *   node scripts/shoot.mjs <name> <path> [--mode=dark|light] [--theme=slug]
  *                          [--full] [--width=1440] [--height=900] [--login=user]
  *                          [--click=<selector>]
- * Output lands in docs/screenshots/<name>.png
+ * Output lands in var/screenshots/<name>.png, which the repository ignores:
+ * a screenshot is a picture of a run, not a source file.
  */
 import { chromium } from "playwright";
 import { mkdirSync } from "fs";
@@ -19,7 +20,7 @@ const flag = (k, d) => {
 const has = (k) => args.includes(`--${k}`);
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";
-const outDir = resolve(process.cwd(), "docs/screenshots");
+const outDir = resolve(process.cwd(), "var/screenshots");
 mkdirSync(outDir, { recursive: true });
 
 const browser = await chromium.launch({ args: ["--no-sandbox"] });

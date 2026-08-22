@@ -299,8 +299,9 @@ model Media {
   size      Int
   width     Int      @default(0)
   height    Int      @default(0)
-  /// Where the file sits under public/, e.g. uploads/<panel>/<name>.png. The
-  /// row is the record and the panel's claim on it; the bytes are a file.
+  /// Where the file sits under var/, e.g. uploads/<panel>/<name>.png, served
+  /// by the /uploads route. The row is the record and the panel's claim on
+  /// it; the bytes are a file.
   path      String   @default("")
   /// Older uploads, kept in the database before files were written to disk.
   /// Still served by /api/media/<id>; nothing new is written here.
@@ -401,77 +402,77 @@ model Provider {
 }
 
 model Service {
-  id                      String         @id @default(cuid())
-  panelId                 String         @default("")
-  panel                   Panel          @relation("PanelServices", fields: [panelId], references: [id], onDelete: Cascade)
+  id                      String            @id @default(cuid())
+  panelId                 String            @default("")
+  panel                   Panel             @relation("PanelServices", fields: [panelId], references: [id], onDelete: Cascade)
   publicId                Int
   categoryId              String
-  category                Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  category                Category          @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   providerId              String?
-  provider                Provider?      @relation(fields: [providerId], references: [id], onDelete: SetNull)
-  providerServiceId       String         @default("")
+  provider                Provider?         @relation(fields: [providerId], references: [id], onDelete: SetNull)
+  providerServiceId       String            @default("")
   /// Where an order goes when the provider above refuses it. A service with
   /// no backup simply stays queued for an operator to look at.
   backupProviderId        String?
-  backupProvider          Provider?      @relation("BackupServices", fields: [backupProviderId], references: [id], onDelete: SetNull)
-  backupProviderServiceId String         @default("")
+  backupProvider          Provider?         @relation("BackupServices", fields: [backupProviderId], references: [id], onDelete: SetNull)
+  backupProviderServiceId String            @default("")
   /// The parent panel's Service this one is bought from. A child panel has no
   /// providers of its own — its only supplier is the panel above it.
-  sourceServiceId         String         @default("")
+  sourceServiceId         String            @default("")
   name                    String
-  description             String         @default("")
-  type                    String         @default("default") // default | custom_comments | subscription
+  description             String            @default("")
+  type                    String            @default("default") // default | custom_comments | subscription
   /// What the link has to point at: a single post, or the account itself.
   /// Likes belong on a post, followers belong on a profile, and sending one
   /// where the other was meant is the most common way an order fails.
-  target                  String         @default("post") // post | profile
+  target                  String            @default("post") // post | profile
   rate                    Float // price per 1000, in base currency
-  providerRate            Float          @default(0)
+  providerRate            Float             @default(0)
   /// Cleared to pin a hand-set price against the provider sync, the same way
   /// a currency pins its rate. Set means the sell price is the provider's
   /// cost plus the provider's markup, recalculated on every sync.
-  autoPrice               Boolean        @default(false)
+  autoPrice               Boolean           @default(false)
   /// Set when the provider stopped listing this service. The row is kept —
   /// orders reference it — but it is taken off sale until it comes back.
   missingSince            DateTime?
-  min                     Int            @default(10)
-  max                     Int            @default(100000)
-  refill                  Boolean        @default(false)
-  cancel                  Boolean        @default(false)
-  dripfeed                Boolean        @default(false)
+  min                     Int               @default(10)
+  max                     Int               @default(100000)
+  refill                  Boolean           @default(false)
+  cancel                  Boolean           @default(false)
+  dripfeed                Boolean           @default(false)
   /// Free text from the provider, shown as written. It cannot be compared,
   /// sorted or added up, which is why the three numbers below exist.
-  averageTime             String         @default("")
+  averageTime             String            @default("")
   /// Short labels the customer scans before reading anything: "Hot", "Giá rẻ",
   /// "Ít tụt". Comma separated, and a label may name its colour after a colon
   /// — "Hot:danger" — from the badge set the rest of the panel uses. The words
   /// are the operator's; this file does not know a vocabulary.
-  tags                    String         @default("")
+  tags                    String            @default("")
   /// The three figures this market quotes, as numbers the operator states.
   /// Zero means "not stated" and shows nothing — a service that has never
   /// been sold saying "0 minutes" is a lie in the other direction.
-  warrantyDays            Int            @default(0)
-  startMinutes            Int            @default(0)
-  speedPerDay             Int            @default(0)
-  enabled                 Boolean        @default(true)
+  warrantyDays            Int               @default(0)
+  startMinutes            Int               @default(0)
+  speedPerDay             Int               @default(0)
+  enabled                 Boolean           @default(true)
   /// Quantities must be a multiple of this. Zero is off, which is every
   /// service until an operator says otherwise — a provider that only takes
   /// hundreds is the exception, not the rule.
-  increment               Int            @default(0)
+  increment               Int               @default(0)
   /// Percent sent upstream on top of what the customer bought, to cover the
   /// share that unsubscribes again. The customer is charged for what they
   /// asked for; the buffer comes out of the margin. Zero is off.
-  overflowPercent         Float          @default(0)
+  overflowPercent         Float             @default(0)
   /// Set instead of deleting the row. Orders reference services, so a real
   /// delete either fails or takes the order history with it — and an operator
   /// who removes the wrong service wants it back, not a support ticket.
   deletedAt               DateTime?
-  position                Int            @default(0)
+  position                Int               @default(0)
   orders                  Order[]
   routes                  ServiceRoute[]
   tierPrices              TierPrice[]
   userRates               UserServiceRate[]
-  createdAt               DateTime       @default(now())
+  createdAt               DateTime          @default(now())
 
   @@unique([panelId, publicId])
   @@index([categoryId])
@@ -695,7 +696,35 @@ model TicketMessage {
   body      String
   createdAt DateTime @default(now())
 
+  attachments TicketAttachment[]
+
   @@index([ticketId])
+  @@index([panelId])
+}
+
+/// An image posted with a ticket message. Kept apart from Media, which holds
+/// what an operator uploaded for the panel to show in public: these belong to
+/// one conversation, are readable only by the two people in it, and are
+/// deleted with the message rather than outliving it in a library.
+model TicketAttachment {
+  id        String        @id @default(cuid())
+  panelId   String        @default("")
+  panel     Panel         @relation("PanelTicketAttachments", fields: [panelId], references: [id], onDelete: Cascade)
+  messageId String
+  message   TicketMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  /// Path under var/, e.g. ticket-attachments/<panel>/<name>.png. Never under
+  /// var/uploads: nothing here may be reachable by the public /uploads route.
+  path      String
+  mime      String
+  size      Int
+  width     Int           @default(0)
+  height    Int           @default(0)
+  /// The name it arrived with, shown to whoever reads the ticket. Display
+  /// only — where the file sits is decided by `path`.
+  filename  String        @default("")
+  createdAt DateTime      @default(now())
+
+  @@index([messageId])
   @@index([panelId])
 }
 
@@ -1025,8 +1054,8 @@ model SavedReply {
   panelId String @default("")
   panel   Panel  @relation("PanelSavedReplies", fields: [panelId], references: [id], onDelete: Cascade)
 
-  title String
-  body  String
+  title    String
+  body     String
   /// Blank offers this reply on every ticket; a category name offers it only
   /// on tickets filed under that category, so a queue of billing tickets does
   /// not scroll past nine refill answers to find the one that fits.
@@ -1049,16 +1078,16 @@ model BlogPost {
   panelId String @default("")
   panel   Panel  @relation("PanelBlogPosts", fields: [panelId], references: [id], onDelete: Cascade)
 
-  slug    String
-  title   String
+  slug     String
+  title    String
   /// Shown on the index and used as the meta description when none is set.
-  excerpt String @default("")
+  excerpt  String @default("")
   /// Markdown-ish: the same restricted subset the Page model renders.
-  body    String @default("")
+  body     String @default("")
   coverUrl String @default("")
   /// Comma-separated, for the index filter and nothing more clever.
-  tags    String @default("")
-  author  String @default("")
+  tags     String @default("")
+  author   String @default("")
 
   metaTitle       String @default("")
   metaDescription String @default("")
@@ -1248,50 +1277,51 @@ model Panel {
   nextDueAt    DateTime?
   lastBilledAt DateTime?
 
-  domains        PanelDomain[]
-  settings       Setting[]          @relation("PanelSettings")
-  counters       Counter[]          @relation("PanelCounters")
-  users          User[]             @relation("PanelUsers")
-  sessions       Session[]          @relation("PanelSessions")
-  authTokens     AuthToken[]        @relation("PanelAuthTokens")
-  recoveryCodes  RecoveryCode[]     @relation("PanelRecoveryCodes")
-  activityLogs   ActivityLog[]      @relation("PanelActivityLogs")
-  media          Media[]            @relation("PanelMedia")
-  platforms      Platform[]         @relation("PanelPlatforms")
-  categories     Category[]         @relation("PanelCategories")
-  providers      Provider[]         @relation("PanelProviders")
-  serviceRoutes  ServiceRoute[]     @relation("PanelServiceRoutes")
-  services       Service[]          @relation("PanelServices")
-  orders         Order[]            @relation("PanelOrders")
-  orderRequests  OrderRequest[]     @relation("PanelOrderRequests")
-  paymentMethods PaymentMethod[]    @relation("PanelPaymentMethods")
-  transactions   Transaction[]      @relation("PanelTransactions")
-  tickets        Ticket[]           @relation("PanelTickets")
-  ticketMessages TicketMessage[]    @relation("PanelTicketMessages")
-  notifications  Notification[]     @relation("PanelNotifications")
-  coupons        Coupon[]           @relation("PanelCoupons")
-  redemptions    CouponRedemption[] @relation("PanelCouponRedemptions")
-  earnings       ReferralEarning[]  @relation("PanelReferralEarnings")
-  announcements  Announcement[]     @relation("PanelAnnouncements")
-  pages          Page[]             @relation("PanelPages")
-  testimonials   Testimonial[]      @relation("PanelTestimonials")
-  faqs           Faq[]              @relation("PanelFaqs")
-  channels       Channel[]          @relation("PanelChannels")
-  conversations  Conversation[]     @relation("PanelConversations")
-  inboxMessages  InboxMessage[]     @relation("PanelInboxMessages")
-  orderEvents    OrderEvent[]       @relation("PanelOrderEvents")
-  blocklist      Blocklist[]        @relation("PanelBlocklist")
-  callbacks      Callback[]         @relation("PanelCallbacks")
-  keywords       Keyword[]          @relation("PanelKeywords")
-  keywordRanks   KeywordRank[]      @relation("PanelKeywordRanks")
-  tiers          UserTier[]         @relation("PanelTiers")
-  tierPrices     TierPrice[]        @relation("PanelTierPrices")
-  userRates      UserServiceRate[]  @relation("PanelUserServiceRates")
-  savedReplies   SavedReply[]       @relation("PanelSavedReplies")
-  blogPosts      BlogPost[]         @relation("PanelBlogPosts")
-  panelRequests  PanelRequest[]     @relation("PanelPanelRequests")
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  domains           PanelDomain[]
+  settings          Setting[]          @relation("PanelSettings")
+  counters          Counter[]          @relation("PanelCounters")
+  users             User[]             @relation("PanelUsers")
+  sessions          Session[]          @relation("PanelSessions")
+  authTokens        AuthToken[]        @relation("PanelAuthTokens")
+  recoveryCodes     RecoveryCode[]     @relation("PanelRecoveryCodes")
+  activityLogs      ActivityLog[]      @relation("PanelActivityLogs")
+  media             Media[]            @relation("PanelMedia")
+  platforms         Platform[]         @relation("PanelPlatforms")
+  categories        Category[]         @relation("PanelCategories")
+  providers         Provider[]         @relation("PanelProviders")
+  serviceRoutes     ServiceRoute[]     @relation("PanelServiceRoutes")
+  services          Service[]          @relation("PanelServices")
+  orders            Order[]            @relation("PanelOrders")
+  orderRequests     OrderRequest[]     @relation("PanelOrderRequests")
+  paymentMethods    PaymentMethod[]    @relation("PanelPaymentMethods")
+  transactions      Transaction[]      @relation("PanelTransactions")
+  tickets           Ticket[]           @relation("PanelTickets")
+  ticketMessages    TicketMessage[]    @relation("PanelTicketMessages")
+  ticketAttachments TicketAttachment[] @relation("PanelTicketAttachments")
+  notifications     Notification[]     @relation("PanelNotifications")
+  coupons           Coupon[]           @relation("PanelCoupons")
+  redemptions       CouponRedemption[] @relation("PanelCouponRedemptions")
+  earnings          ReferralEarning[]  @relation("PanelReferralEarnings")
+  announcements     Announcement[]     @relation("PanelAnnouncements")
+  pages             Page[]             @relation("PanelPages")
+  testimonials      Testimonial[]      @relation("PanelTestimonials")
+  faqs              Faq[]              @relation("PanelFaqs")
+  channels          Channel[]          @relation("PanelChannels")
+  conversations     Conversation[]     @relation("PanelConversations")
+  inboxMessages     InboxMessage[]     @relation("PanelInboxMessages")
+  orderEvents       OrderEvent[]       @relation("PanelOrderEvents")
+  blocklist         Blocklist[]        @relation("PanelBlocklist")
+  callbacks         Callback[]         @relation("PanelCallbacks")
+  keywords          Keyword[]          @relation("PanelKeywords")
+  keywordRanks      KeywordRank[]      @relation("PanelKeywordRanks")
+  tiers             UserTier[]         @relation("PanelTiers")
+  tierPrices        TierPrice[]        @relation("PanelTierPrices")
+  userRates         UserServiceRate[]  @relation("PanelUserServiceRates")
+  savedReplies      SavedReply[]       @relation("PanelSavedReplies")
+  blogPosts         BlogPost[]         @relation("PanelBlogPosts")
+  panelRequests     PanelRequest[]     @relation("PanelPanelRequests")
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
 
   @@index([parentId])
   @@index([path])

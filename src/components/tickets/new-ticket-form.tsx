@@ -8,9 +8,12 @@ import { Icon } from "@/components/icons";
 
 export default function NewTicketForm({
   categories,
+  attachments = null,
   labels,
 }: {
   categories: string[];
+  /** Null when the operator has attachments switched off. */
+  attachments?: { maxFiles: number; maxKb: number } | null;
   labels: Record<string, string>;
 }) {
   const [state, action] = useActionState<TicketState, FormData>(createTicketAction, {});
@@ -25,7 +28,10 @@ export default function NewTicketForm({
       )}
 
       <Field name="category" label={labels.category}>
-        <select id="category" name="category" className="field" defaultValue={categories[0]}>
+        {/* defaultValue rather than value: React resets the form once the
+            action returns, and a refusal hands back what was typed so the
+            reset lands on it instead of on empty. */}
+        <select id="category" name="category" className="field" defaultValue={state.values?.category ?? categories[0]}>
           {categories.map((c) => (
             <option key={c} value={c}>
               {labels[`category.${c}`] ?? c}
@@ -35,7 +41,7 @@ export default function NewTicketForm({
       </Field>
 
       <Field name="subject" label={labels.subject} error={state.fieldErrors?.subject} required>
-        <TextInput name="subject" error={state.fieldErrors?.subject} autoFocus />
+        <TextInput name="subject" defaultValue={state.values?.subject ?? ""} error={state.fieldErrors?.subject} autoFocus />
       </Field>
 
       <div>
@@ -46,6 +52,7 @@ export default function NewTicketForm({
           id="body"
           name="body"
           rows={6}
+          defaultValue={state.values?.body ?? ""}
           className="field"
           aria-invalid={state.fieldErrors?.body ? true : undefined}
         />
@@ -56,6 +63,26 @@ export default function NewTicketForm({
           </p>
         )}
       </div>
+
+      {attachments && (
+        <div>
+          <label htmlFor="files" className="label">
+            {labels.attach}
+          </label>
+          <input
+            id="files"
+            type="file"
+            name="files"
+            multiple
+            accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+            className="field"
+          />
+          {/* A file input cannot be refilled from script, so a refused post
+              always costs the picking again. Saying so beats a hint that is
+              only true the first time. */}
+          <p className="muted mt-1 text-xs">{state.error ? labels.attachAgain : labels.attachHint}</p>
+        </div>
+      )}
 
       <SubmitButton className="btn btn-primary">
         <Icon name="send" size={16} />

@@ -7,6 +7,7 @@ import { getSetting } from "@/lib/settings";
 import NewTicketForm from "@/components/tickets/new-ticket-form";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
+import { attachmentRules } from "@/lib/ticket-attachments";
 
 export const generateMetadata = pageTitle("dash.tickets");
 
@@ -16,9 +17,10 @@ export default async function TicketsPage() {
   const { t, locale, timezone } = ctx;
   const dates = dateFormats(locale, timezone);
 
-  const [enabled, categories, tickets] = await Promise.all([
+  const [enabled, categories, attachments, tickets] = await Promise.all([
     getSetting("support.enabled"),
     getSetting("support.categories"),
+    attachmentRules(),
     db.ticket.findMany({
       where: { userId: user.id },
       orderBy: { updatedAt: "desc" },
@@ -33,6 +35,9 @@ export default async function TicketsPage() {
     subject: t("support.subject"),
     message: t("support.message"),
     submit: t("support.submit"),
+    attach: t("support.attach"),
+    attachHint: attachments ? t("support.attachHint", { count: attachments.maxFiles, kb: attachments.maxKb }) : "",
+    attachAgain: t("support.attachAgain"),
   };
   const categoryList = [...(categories as readonly string[])];
   for (const c of categoryList) labels[`category.${c}`] = t(`support.category.${c}`);
@@ -47,7 +52,7 @@ export default async function TicketsPage() {
           <span>{t("support.disabled")}</span>
         </div>
       ) : (
-        <NewTicketForm categories={categoryList} labels={labels} />
+        <NewTicketForm categories={categoryList} attachments={attachments} labels={labels} />
       )}
 
       <div className="card overflow-hidden">

@@ -12,6 +12,7 @@ import TicketTriage from "@/components/tickets/ticket-triage";
 import MergeTicket from "@/components/tickets/merge-ticket";
 import { TICKET_PRIORITIES, priorityKey, priorityTone } from "@/lib/tickets";
 import { STAFF_ROLES } from "@/lib/two-factor";
+import { attachmentRules } from "@/lib/ticket-attachments";
 
 export const metadata: Metadata = { title: "Ticket" };
 
@@ -33,10 +34,18 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
       user: { select: { username: true, email: true, balance: true, publicId: true } },
       mergedInto: { select: { id: true, publicId: true } },
       mergedFrom: { select: { id: true, publicId: true } },
-      messages: { orderBy: { createdAt: "asc" }, include: { author: { select: { username: true } } } },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: { select: { username: true } },
+          attachments: { select: { id: true, filename: true, width: true, height: true } },
+        },
+      },
     },
   });
   if (!ticket) notFound();
+
+  const attachments = await attachmentRules();
 
   // The desk's canned answers: the ones written for this ticket's category,
   // plus the ones written for every category. Most-used first, so the list
@@ -151,6 +160,7 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
           fromStaff: m.fromStaff,
           author: m.author?.username ?? "—",
           createdAt: fmtDate.format(m.createdAt),
+          attachments: m.attachments,
         }))}
         labels={{
           savedReply: t("reply.insert"),
@@ -160,7 +170,11 @@ export default async function AdminTicketPage({ params }: { params: Promise<{ id
           close: t("support.close"),
           reopen: t("support.reopen"),
           closedNote: t("support.closedNote"),
+          attach: t("support.attach"),
+          attachHint: attachments ? t("support.attachHint", { count: attachments.maxFiles, kb: attachments.maxKb }) : "",
+          attachAgain: t("support.attachAgain"),
         }}
+        attachments={attachments}
       />
     </div>
   );

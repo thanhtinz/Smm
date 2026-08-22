@@ -11,13 +11,44 @@ import { readerMessages } from "@/lib/context";
 import { deny } from "@/lib/access";
 import { OPEN_TICKET_STATUSES, TICKET_STATUSES, priorityKey, priorityValue } from "@/lib/tickets";
 import { STAFF_ROLES } from "@/lib/two-factor";
+import { attachmentLimits, planAttachments, storeAttachments } from "@/lib/ticket-attachments";
 
 export type TicketState = {
   error?: string;
   fieldErrors?: Record<string, string>;
   /** Set when a reply was actually posted, so the box can empty itself. */
   ok?: true;
+  /**
+   * What was typed, handed back with every refusal. React resets an
+   * uncontrolled form once the action returns, so without this a customer who
+   * picked the wrong sort of image — or wrote too short a subject — loses the
+   * paragraph they wrote about their problem and has to write it again.
+   */
+  values?: { subject: string; category: string; body: string };
 };
+
+/**
+ * Validates what was picked and writes it. Returns the rows to nest under the
+ * message, or the message to show instead of posting anything.
+ */
+async function takeAttachments(
+  form: FormData,
+  panelId: string,
+  t: Awaited<ReturnType<typeof readerMessages>>,
+): Promise<{ files: Awaited<ReturnType<typeof storeAttachments>> } | { error: string }> {
+  const picked = form.getAll("files").filter((f): f is File => f instanceof File);
+  const limits = await attachmentLimits();
+  const plan = planAttachments(picked, limits);
+
+  if (!plan.ok) {
+    if (plan.error === "disabled") return { error: t("err.attachOff") };
+    if (plan.error === "tooMany") return { error: t("err.attachCount", { count: limits.maxFiles }) };
+    if (plan.error === "type") return { error: t("adm.imageType") };
+    return { error: t("adm.imageTooBig", { kb: Math.round(limits.maxBytes / 1024) }) };
+  }
+
+  return { files: await storeAttachments(panelId, plan.files) };
+}
 
 export async function createTicketAction(_prev: TicketState, form: FormData): Promise<TicketState> {
   const t = await readerMessages();
@@ -35,18 +66,23 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
   const category = String(form.get("category") ?? "general").trim();
   const body = String(form.get("body") ?? "").trim();
 
+  const values = { subject, category, body };
+
   const fieldErrors: Record<string, string> = {};
   if (subject.length < 4) fieldErrors.subject = t("err.subjectRequired");
   if (body.length < 10) fieldErrors.body = t("err.bodyShort");
-  if (Object.keys(fieldErrors).length) return { fieldErrors };
+  if (Object.keys(fieldErrors).length) return { fieldErrors, values };
 
   const maxOpen = Number(await getSetting("support.maxOpenTickets")) || 0;
   if (maxOpen > 0) {
     const open = await db.ticket.count({ where: { userId: user.id, status: { in: OPEN_TICKET_STATUSES } } });
     if (open >= maxOpen) {
-      return { error: t("err.ticketsOpen", { count: open }) };
+      return { error: t("err.ticketsOpen", { count: open }), values };
     }
   }
+
+  const attached = await takeAttachments(form, user.panelId, t);
+  if ("error" in attached) return { error: attached.error, values };
 
   const ticket = await db.ticket.create({
     data: {
@@ -56,8 +92,19 @@ export async function createTicketAction(_prev: TicketState, form: FormData): Pr
       category,
       status: "open",
       // Nested writes bypass the panel filter in src/lib/db.ts — it only sees
-      // the outer ticket.create — so the first message carries its own panelId.
-      messages: { create: { panelId: user.panelId, authorId: user.id, fromStaff: false, body } },
+      // the outer ticket.create — so the first message and its attachments
+      // carry their own panelId.
+      messages: {
+        create: {
+          panelId: user.panelId,
+          authorId: user.id,
+          fromStaff: false,
+          body,
+          attachments: {
+            create: attached.files.map((f) => ({ panelId: user.panelId, ...f })),
+          },
+        },
+      },
     },
   });
 
@@ -82,9 +129,22 @@ export async function replyTicketAction(_prev: TicketState, form: FormData): Pro
   if (!ticket) return { error: t("err.ticketGone") };
   if (ticket.status === "closed") return { error: t("err.ticketClosed") };
 
+  const attached = await takeAttachments(form, user.panelId, t);
+  if ("error" in attached) return { error: attached.error };
+
   await db.$transaction([
     db.ticketMessage.create({
-      data: { ticketId: ticket.id, authorId: user.id, fromStaff: isStaff, body },
+      data: {
+        ticketId: ticket.id,
+        authorId: user.id,
+        fromStaff: isStaff,
+        body,
+        // Nested, so the panel filter that stamps the message does not reach
+        // these; they carry the panel the message was written under.
+        attachments: {
+          create: attached.files.map((f) => ({ panelId: user.panelId, ...f })),
+        },
+      },
     }),
     db.ticket.update({
       where: { id: ticket.id },

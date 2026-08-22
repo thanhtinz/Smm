@@ -1,10 +1,18 @@
 "use client";
 
-import { useActionState, useEffect, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { replyTicketAction, setTicketStatusAction, type TicketState } from "@/app/actions/tickets";
 import { recordSavedReplyUseAction } from "@/app/actions/admin/saved-replies";
 import SubmitButton from "@/components/ui/submit-button";
 import { Icon } from "@/components/icons";
+
+export type ThreadAttachment = {
+  id: string;
+  filename: string;
+  /** Zero when the header could not be read; the thumbnail falls back to CSS. */
+  width: number;
+  height: number;
+};
 
 export type ThreadMessage = {
   id: string;
@@ -12,7 +20,11 @@ export type ThreadMessage = {
   fromStaff: boolean;
   author: string;
   createdAt: string;
+  attachments: ThreadAttachment[];
 };
+
+/** Null when the operator has attachments switched off. */
+export type AttachmentRules = { maxFiles: number; maxKb: number } | null;
 
 export type SavedReply = { id: string; title: string; body: string };
 
@@ -22,12 +34,14 @@ export default function TicketThread({
   status,
   isStaff,
   savedReplies = [],
+  attachments = null,
   labels,
 }: {
   ticketId: string;
   messages: ThreadMessage[];
   status: string;
   isStaff: boolean;
+  attachments?: AttachmentRules;
   /** Empty for a customer: these are the desk's words, not theirs. */
   savedReplies?: SavedReply[];
   labels: Record<string, string>;
@@ -36,6 +50,8 @@ export default function TicketThread({
   const [error, setError] = useState("");
   const [body, setBody] = useState("");
   const [pending, start] = useTransition();
+  const [picked, setPicked] = useState<string[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
   const closed = status === "closed";
 
   // The box is controlled now, so that a saved reply can be dropped into it.
@@ -44,7 +60,16 @@ export default function TicketThread({
   // one exactly as it was, which would show the reply still sitting there
   // unsent next to its own copy in the thread above.
   useEffect(() => {
-    if (state.ok) setBody("");
+    // A refusal resets the form as surely as a success does, so the list of
+    // picked names has to go either way: left up it would name images the
+    // input no longer holds and the next reply would not carry.
+    if (state.ok || state.error) {
+      setPicked([]);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+    if (state.ok) {
+      setBody("");
+    }
   }, [state]);
 
   // Inserted rather than substituted: a saved reply is the bones of an answer,
@@ -90,6 +115,39 @@ export default function TicketThread({
               <span className="muted ms-auto text-xs">{m.createdAt}</span>
             </div>
             <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap">{m.body}</p>
+            {m.attachments.length > 0 && (
+              <ul className="mt-3 flex flex-wrap gap-2">
+                {m.attachments.map((a) => (
+                  <li key={a.id}>
+                    {/* A plain link, opened in a new tab: the full-size image
+                        is the point of attaching it, and a lightbox here would
+                        be a second place for the same picture to go wrong. */}
+                    <a
+                      href={`/api/tickets/attachments/${a.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="surface-2 block overflow-hidden rounded-lg border border-[var(--border)]"
+                      title={a.filename}
+                    >
+                      {/* Not next/image: these are private bytes behind an
+                          authorised route, and the optimiser would need to
+                          fetch them as nobody. Contained rather than cropped —
+                          these are nearly always screenshots, and a square
+                          crop of one shows background and none of the problem. */}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={`/api/tickets/attachments/${a.id}`}
+                        alt={a.filename}
+                        width={a.width || undefined}
+                        height={a.height || undefined}
+                        className="h-24 w-auto max-w-40 object-contain"
+                        loading="lazy"
+                      />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </li>
         ))}
       </ol>
@@ -174,6 +232,27 @@ export default function TicketThread({
               </p>
             )}
           </div>
+
+          {attachments && (
+            <div>
+              <label htmlFor="files" className="label">
+                {labels.attach}
+              </label>
+              <input
+                id="files"
+                ref={fileRef}
+                type="file"
+                name="files"
+                multiple
+                accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                onChange={(e) => setPicked(Array.from(e.target.files ?? []).map((f) => f.name))}
+                className="field"
+              />
+              <p className="muted mt-1 text-xs">
+                {picked.length > 0 ? picked.join(", ") : state.error ? labels.attachAgain : labels.attachHint}
+              </p>
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <SubmitButton className="btn btn-primary">
