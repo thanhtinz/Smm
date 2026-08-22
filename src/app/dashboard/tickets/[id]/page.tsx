@@ -7,6 +7,7 @@ import { dateFormats } from "@/lib/dates";
 import TicketThread from "@/components/tickets/ticket-thread";
 import StatusBadge from "@/components/ui/status-badge";
 import { Icon } from "@/components/icons";
+import { attachmentRules } from "@/lib/ticket-attachments";
 
 export const generateMetadata = pageTitle("ticket.heading");
 
@@ -21,10 +22,18 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
     where: { id, userId: user.id },
     include: {
       mergedInto: { select: { id: true, publicId: true } },
-      messages: { orderBy: { createdAt: "asc" }, include: { author: { select: { username: true } } } },
+      messages: {
+        orderBy: { createdAt: "asc" },
+        include: {
+          author: { select: { username: true } },
+          attachments: { select: { id: true, filename: true, width: true, height: true } },
+        },
+      },
     },
   });
   if (!ticket) notFound();
+
+  const attachments = await attachmentRules();
 
   const fmtDate = { format: dates.stamp };
 
@@ -67,6 +76,7 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
           fromStaff: m.fromStaff,
           author: m.author?.username ?? "—",
           createdAt: fmtDate.format(m.createdAt),
+          attachments: m.attachments,
         }))}
         labels={{
           staff: t("support.staff"),
@@ -75,7 +85,11 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
           close: t("support.close"),
           reopen: t("support.reopen"),
           closedNote: t("support.closedNote"),
+          attach: t("support.attach"),
+          attachHint: attachments ? t("support.attachHint", { count: attachments.maxFiles, kb: attachments.maxKb }) : "",
+          attachAgain: t("support.attachAgain"),
         }}
+        attachments={attachments}
       />
     </div>
   );

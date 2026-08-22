@@ -292,6 +292,14 @@ export const settingDefinitions = {
     type: "list",
     value: ["general", "payment", "order", "api", "other"],
   },
+  // A screenshot is what most support tickets in this market are actually
+  // about — "this order is not running, look". Asking for it in words costs
+  // the desk a round trip per ticket.
+  "support.attachments": { group: "support", type: "boolean", value: true },
+  "support.attachmentMaxFiles": { group: "support", type: "number", value: 3 },
+  // Under the 2 MB server-action body limit at three files, with the reply
+  // text alongside them.
+  "support.attachmentMaxKb": { group: "support", type: "number", value: 512 },
 
   // --- Child panels -------------------------------------------------------
   "panel.childrenEnabled": { group: "panel", type: "boolean", value: false },

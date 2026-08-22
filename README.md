@@ -238,6 +238,20 @@ one. The list orders itself by use.
 
 ![](docs/screenshots/61-admin-saved-replies.png)
 
+Both sides can attach images. Most tickets in this market are a screenshot —
+"this order is not running, look" — and asking for it in words costs the desk a
+round trip per ticket. The number allowed and the size of each are the
+operator's, in Settings → Support, and switching them off removes the picker
+rather than refusing at the end.
+
+The files are not public. Everything an operator uploads is served to anyone
+who knows the address; a customer's screenshot is served only to the customer
+whose ticket it is and to the desk, through a route that checks the reader.
+Anyone else gets 404 rather than 403 — a 403 confirms the attachment exists,
+which is most of what an id is worth.
+
+![](docs/screenshots/66-ticket-attachments.png)
+
 ## Reseller API
 
 `/api/v2` and `/api/v3` expose the same handler, shaped to the de-facto SMM

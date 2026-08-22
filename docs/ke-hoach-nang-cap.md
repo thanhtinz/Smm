@@ -504,6 +504,61 @@ nhãn và điều hướng bằng bàn phím), 27/27 cho đặt lịch — múi 
 (+7, và Berlin hai mùa), tám chuỗi rác bị từ chối, tiền trừ ngay, dispatcher
 bỏ qua đơn chưa tới giờ rồi nhận nó khi tới.
 
+## Thêm: ảnh vừa upload không cần khởi động lại, và ảnh đính kèm ticket
+
+Hai việc còn lại sau khi cả hai kế hoạch đã xong.
+
+**Ảnh upload 404 cho tới lần khởi động lại.** `next start` đọc `public/` đúng
+một lần, lúc khởi động. File upload rơi vào `public/uploads`, nên ảnh operator
+vừa đổi trong admin trả 404 cho tới khi có người restart. Trước đây nó được ghi
+vào README như một đặc tính của cách chạy chứ không phải lỗi — nó là lỗi: người
+đổi logo không có lý do gì để đoán ra điều đó.
+
+Giờ upload nằm ở `var/uploads`, route `/uploads/[...path]` đọc thẳng từ đĩa mỗi
+lượt gọi. **Địa chỉ giữ nguyên**, cố ý: chuỗi đó đã nằm trong settings, trong
+nội dung trang và bài blog, đổi đi là một migration đổi lấy không gì cả. File
+ghi từ trước vẫn ở chỗ cũ và vẫn đọc được.
+
+Kiểu file phục vụ ra quyết định bằng **đuôi mà panel đã tự đặt lúc ghi**, không
+phải bằng thứ request nói — đuôi panel không ghi thì panel không phục vụ, nên
+`.svg` không lọt kể cả khi nó vào được thư mục bằng đường khác.
+
+**Chứng minh.** Trên bản production thật: PNG ghi vào `var/uploads` *sau* khi
+server đã chạy trả 200 kèm `image/png`; một file thả vào `public/` sau khi khởi
+động, không có route đứng sau, vẫn 404 — đúng cái hành vi đang phải đi vòng.
+Traversal thô và traversal mã hoá đều 404, `.svg` nằm sẵn trong thư mục cũng
+404, và host lạ cũng 404.
+
+**Ảnh đính kèm ticket.** Ticket ở thị trường này phần lớn là một ảnh chụp màn
+hình — "đơn không chạy, đây này". Không cho gửi ảnh thì mỗi ticket tốn thêm một
+vòng hỏi đáp.
+
+Cả khách và nhân viên đều đính kèm được. Số ảnh và dung lượng mỗi ảnh do
+operator đặt trong Cài đặt → Hỗ trợ; tắt thì **ô chọn file biến mất**, chứ
+không phải cho chọn rồi từ chối lúc gửi.
+
+**File này không công khai.** Ảnh operator upload thì ai biết địa chỉ cũng xem
+được — đó là ý định. Ảnh của khách thì chỉ chính khách đó và bộ phận hỗ trợ đọc
+được, qua route kiểm người đọc; nó nằm ở `var/ticket-attachments`, ngoài tầm
+với của route `/uploads` công khai. Người khác nhận **404 chứ không phải 403**:
+403 là xác nhận file có thật, mà đó gần như là toàn bộ giá trị của một cái id.
+
+**Một lỗi cũ lộ ra trong lúc làm.** Form mở ticket là form không do state giữ,
+nên mỗi lần bị từ chối React reset sạch — khách gõ tiêu đề quá ngắn là mất luôn
+đoạn văn vừa viết về vấn đề của mình. Lỗi này có từ trước, thêm một đường từ
+chối nữa (ảnh sai kiểu, quá nặng, quá nhiều) chỉ làm nó gặp thường xuyên hơn.
+Giờ mọi lần từ chối trả lại đúng thứ đã gõ. **Ô chọn file thì không trả lại
+được** — trình duyệt không cho script điền vào input file — nên chỗ đó nói thẳng
+là phải chọn lại, thay vì để lại một dòng gợi ý chỉ đúng ở lần đầu.
+
+**Chứng minh.** Chạy trên bản production thật, trình duyệt thật: khách mở ticket
+kèm hai ảnh, cả hai hiện trong luồng và **trình duyệt decode được** (40×25 và
+16×16, đúng số đo đọc từ header). Chính khách đó tải được ảnh; khách khác 404;
+chưa đăng nhập 404; id không có thật 404; admin tải được. Admin trả lời kèm ảnh,
+khách nhìn thấy. `.svg` bị từ chối, ảnh 733 KB bị từ chối bằng đúng ngưỡng 512
+KB của panel (chứ không phải bằng giới hạn body 2 MB của server action), bốn ảnh
+vượt ngưỡng ba bị từ chối, và **không lần nào ghi ra một dòng nào**. 19/19.
+
 ---
 
 ## Đã cân nhắc và loại

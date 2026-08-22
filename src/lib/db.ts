@@ -32,6 +32,7 @@ const TENANT_MODELS = new Set([
   "Transaction",
   "Ticket",
   "TicketMessage",
+  "TicketAttachment",
   "Notification",
   "Coupon",
   "CouponRedemption",
