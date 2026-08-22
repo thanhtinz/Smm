@@ -7,27 +7,12 @@ import { requirePanel } from "@/lib/tenancy";
 import { mkdir, writeFile } from "fs/promises";
 import { join } from "path";
 import { randomBytes } from "crypto";
+import { UPLOAD_ROOT, UPLOAD_TYPES } from "@/lib/uploads";
 
-/**
- * SVG is deliberately excluded: it can carry script, and these files are
- * served back from our own origin.
- */
-const ALLOWED = new Set(["image/png", "image/jpeg", "image/webp", "image/gif", "image/avif"]);
+const ALLOWED = new Set(Object.keys(UPLOAD_TYPES));
 const MAX_BYTES = 512 * 1024;
 
 export type UploadResult = { url?: string; id?: string; error?: string };
-
-/** Where the file lands. Served straight by the web server, not by a route. */
-const UPLOAD_ROOT = join(process.cwd(), "public", "uploads");
-
-/** The extension is chosen from the type we verified, never from the name. */
-const EXTENSION: Record<string, string> = {
-  "image/png": "png",
-  "image/jpeg": "jpg",
-  "image/webp": "webp",
-  "image/gif": "gif",
-  "image/avif": "avif",
-};
 
 /** Reads the intrinsic size straight from the file header. */
 function readDimensions(mime: string, bytes: Uint8Array): { width: number; height: number } {
@@ -74,7 +59,9 @@ export async function uploadImageAction(formData: FormData): Promise<UploadResul
 
   // Written under the panel's own folder: it keeps one panel's uploads
   // separable on disk, which is what makes them possible to back up, move or
-  // delete as a unit.
+  // delete as a unit. The folder sits outside public/, so the file is served
+  // by the /uploads route and is readable the moment it is written rather
+  // than after the next restart.
   const panel = await requirePanel();
   const folder = join(UPLOAD_ROOT, panel.id);
   await mkdir(folder, { recursive: true });
@@ -82,7 +69,7 @@ export async function uploadImageAction(formData: FormData): Promise<UploadResul
   // The name is random rather than the one the file arrived with. An operator
   // uploading "logo.png" twice must not overwrite the first, and a name from
   // outside must not choose where it lands.
-  const filename = `${randomBytes(12).toString("hex")}.${EXTENSION[file.type]}`;
+  const filename = `${randomBytes(12).toString("hex")}.${UPLOAD_TYPES[file.type]}`;
   await writeFile(join(folder, filename), bytes);
 
   const path = `uploads/${panel.id}/${filename}`;

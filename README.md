@@ -94,9 +94,10 @@ either run a single API worker or put a shared limiter (Redis, edge rate limit)
 in front if you need a hard ceiling across machines. The per-minute limit is
 configured in Admin → Settings → API.
 
-Một điểm khác nhau giữa `npm run dev` và `npm run start`: bản production phục vụ
-thư mục `public/` theo ảnh chụp lúc khởi động, nên **ảnh vừa upload chỉ hiện sau
-khi khởi động lại server**. Chạy `npm run dev` thì không dính.
+Ảnh upload nằm ở `var/uploads/` — **ngoài** `public/`, vì bản production phục vụ
+`public/` theo ảnh chụp lúc khởi động: file ghi vào đó sau khi server chạy sẽ 404
+cho tới lần khởi động lại. Route `/uploads/...` đọc thẳng từ đĩa mỗi lượt gọi, nên
+ảnh vừa upload hiện ra ngay. Sao lưu ảnh là sao lưu thư mục `var/uploads/`.
 
 ## Payment methods
 

@@ -299,8 +299,9 @@ model Media {
   size      Int
   width     Int      @default(0)
   height    Int      @default(0)
-  /// Where the file sits under public/, e.g. uploads/<panel>/<name>.png. The
-  /// row is the record and the panel's claim on it; the bytes are a file.
+  /// Where the file sits under var/, e.g. uploads/<panel>/<name>.png, served
+  /// by the /uploads route. The row is the record and the panel's claim on
+  /// it; the bytes are a file.
   path      String   @default("")
   /// Older uploads, kept in the database before files were written to disk.
   /// Still served by /api/media/<id>; nothing new is written here.
