@@ -1,3 +1,5 @@
+import { crc16, tlv } from "./emvco";
+
 /**
  * VietQR payload builder (EMVCo Merchant Presented QR, NAPAS profile).
  *
@@ -38,23 +40,6 @@ export const VIETQR_BANKS: Record<string, { bin: string; name: string }> = {
   SGB: { bin: "970400", name: "SaigonBank" },
   BVB: { bin: "970438", name: "BaoVietBank" },
 };
-
-/** EMVCo TLV: two-digit tag, two-digit length, value. */
-function tlv(tag: string, value: string): string {
-  return `${tag}${String(value.length).padStart(2, "0")}${value}`;
-}
-
-/** CRC-16/CCITT-FALSE over the payload including the "6304" tag. */
-function crc16(input: string): string {
-  let crc = 0xffff;
-  for (let i = 0; i < input.length; i++) {
-    crc ^= input.charCodeAt(i) << 8;
-    for (let b = 0; b < 8; b++) {
-      crc = crc & 0x8000 ? ((crc << 1) ^ 0x1021) & 0xffff : (crc << 1) & 0xffff;
-    }
-  }
-  return crc.toString(16).toUpperCase().padStart(4, "0");
-}
 
 export type VietQrInput = {
   bankCode: string;

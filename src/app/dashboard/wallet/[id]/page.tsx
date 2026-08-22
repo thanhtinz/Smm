@@ -161,6 +161,81 @@ export default async function DepositPage({
         </div>
       )}
 
+      {instruction?.kind === "qr" && (
+        <div className="card card-pad space-y-5">
+          <div className="grid gap-5 sm:grid-cols-[auto_1fr] sm:items-start">
+            <div className="mx-auto rounded-2xl bg-white p-3">
+              <div
+                className="h-44 w-44"
+                // Generated on this machine from the scheme's own payload, so
+                // the code keeps working with no outbound request and the
+                // amount encoded is the amount owed.
+                dangerouslySetInnerHTML={{
+                  __html: await QRCode.toString(instruction.payload, {
+                    type: "svg",
+                    margin: 0,
+                    width: 176,
+                    errorCorrectionLevel: "M",
+                  }),
+                }}
+              />
+              <p className="mt-2 text-center text-[0.7rem] font-medium text-black">{t("wallet.scan")}</p>
+            </div>
+
+            <div className="min-w-0 space-y-3">
+              {instruction.payeeLabel && (
+                <CopyField
+                  label={t("wallet.accountName")}
+                  value={instruction.payeeLabel}
+                  copyLabel={t("wallet.copy")}
+                  copiedLabel={t("wallet.copied")}
+                />
+              )}
+              {instruction.payee && (
+                <CopyField
+                  label={t("wallet.account")}
+                  value={instruction.payee}
+                  copyLabel={t("wallet.copy")}
+                  copiedLabel={t("wallet.copied")}
+                  mono
+                />
+              )}
+              <CopyField
+                label={t("wallet.reference")}
+                value={instruction.reference}
+                copyLabel={t("wallet.copy")}
+                copiedLabel={t("wallet.copied")}
+                mono
+                highlight
+              />
+            </div>
+          </div>
+
+          <div className="alert alert-info" role="note">
+            <Icon name="info" size={16} />
+            <span>{t("wallet.transferNote")}</span>
+          </div>
+        </div>
+      )}
+
+      {instruction?.kind === "form" && (
+        <div className="card card-pad text-center">
+          {/* Posted rather than linked: these gateways take a signed form, and
+              the signature covers the fields below. Not auto-submitted — a
+              page that navigates away on its own is a page the payer cannot
+              read. */}
+          <form method="POST" action={instruction.url}>
+            {Object.entries(instruction.fields).map(([name, value]) => (
+              <input key={name} type="hidden" name={name} value={value} />
+            ))}
+            <button type="submit" className="btn btn-primary btn-lg">
+              <Icon name="external" size={17} />
+              {t("wallet.openGateway")}
+            </button>
+          </form>
+        </div>
+      )}
+
       {instruction?.kind === "redirect" && (
         <div className="card card-pad text-center">
           <a href={instruction.url} className="btn btn-primary btn-lg" rel="noopener noreferrer">

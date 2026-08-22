@@ -764,6 +764,7 @@ export const en = {
   "err.payViettelpay": "ViettelPay would not open a payment. Check the merchant code and secret key.",
   "err.payCryptoAuth": "The crypto gateway rejected the request. Check the API key.",
   "err.payCryptoInvoice": "The crypto gateway returned no invoice.",
+  "err.payQrTarget": "This payment method is not set up correctly. Please choose another one or contact support.",
   "err.payStripeAuth": "Stripe rejected the configured credentials.",
   "err.payStripeLink": "Stripe did not return a checkout URL.",
 
@@ -2534,6 +2535,7 @@ export const vi: Partial<Record<keyof typeof en, string>> = {
   "err.payViettelpay": "ViettelPay không mở được thanh toán. Kiểm tra lại mã merchant và secret key.",
   "err.payCryptoAuth": "Cổng crypto từ chối yêu cầu. Kiểm tra lại khoá API.",
   "err.payCryptoInvoice": "Cổng crypto không trả về hoá đơn.",
+  "err.payQrTarget": "Phương thức này chưa được cấu hình đúng. Chọn cách khác hoặc liên hệ hỗ trợ giúp tôi.",
   "err.payStripeAuth": "Stripe từ chối thông tin đã cấu hình.",
   "err.payStripeLink": "Stripe không trả về liên kết thanh toán.",
 

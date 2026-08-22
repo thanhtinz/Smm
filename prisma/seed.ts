@@ -594,6 +594,125 @@ async function main() {
       config: JSON.stringify({ apiKey: "", ipnSecret: "", payCurrency: "", apiUrl: "", prefix: "NOVA" }),
     },
     {
+      code: "cryptomus",
+      name: inVietnamese ? "Cryptomus" : "Cryptomus",
+      driver: "cryptomus",
+      icon: "bitcoin",
+      description: inVietnamese
+        ? "Trả bằng USDT, BTC hoặc coin khác qua Cryptomus."
+        : "Pay in USDT, BTC or another coin through Cryptomus.",
+      enabled: false,
+      currencies: JSON.stringify(["USD"]),
+      minAmount: 5,
+      maxAmount: 50000,
+      position: 20,
+      config: JSON.stringify({ merchantId: "", apiKey: "", network: "", toCurrency: "", prefix: "NOVA" }),
+    },
+    {
+      code: "binancepay",
+      name: "Binance Pay",
+      driver: "binancepay",
+      icon: "bitcoin",
+      description: inVietnamese
+        ? "Trả thẳng từ số dư Binance, không mất phí mạng."
+        : "Pay straight from a Binance balance, with no network fee.",
+      enabled: false,
+      currencies: JSON.stringify(["USD"]),
+      minAmount: 1,
+      maxAmount: 50000,
+      position: 21,
+      config: JSON.stringify({ apiKey: "", apiSecret: "", prefix: "NOVA" }),
+    },
+    {
+      code: "payeer",
+      name: "Payeer",
+      driver: "payeer",
+      icon: "wallet",
+      description: inVietnamese ? "Ví Payeer." : "The Payeer wallet.",
+      enabled: false,
+      currencies: JSON.stringify(["USD"]),
+      minAmount: 1,
+      maxAmount: 10000,
+      position: 22,
+      config: JSON.stringify({ shopId: "", secretKey: "", prefix: "NOVA" }),
+    },
+    {
+      code: "perfectmoney",
+      name: "Perfect Money",
+      driver: "perfectmoney",
+      icon: "wallet",
+      description: inVietnamese ? "Ví Perfect Money." : "The Perfect Money wallet.",
+      enabled: false,
+      currencies: JSON.stringify(["USD"]),
+      minAmount: 1,
+      maxAmount: 10000,
+      position: 23,
+      config: JSON.stringify({ payeeAccount: "", payeeName: "", passphrase: "", prefix: "NOVA" }),
+    },
+    {
+      // The rest of Asia. Each is a QR the customer scans with their own
+      // banking app, so the money goes straight to the operator's account and
+      // an operator approves the deposit the way they approve a transfer.
+      code: "promptpay",
+      name: inVietnamese ? "PromptPay (Thái Lan)" : "PromptPay (Thailand)",
+      driver: "promptpay",
+      icon: "qrcode",
+      description: inVietnamese
+        ? "Quét mã bằng app ngân hàng Thái Lan."
+        : "Scan with any Thai banking app.",
+      enabled: false,
+      currencies: JSON.stringify(["THB"]),
+      minAmount: 50,
+      maxAmount: 500000,
+      position: 24,
+      config: JSON.stringify({ target: "", payeeName: "" }),
+    },
+    {
+      code: "paynow",
+      name: inVietnamese ? "PayNow (Singapore)" : "PayNow (Singapore)",
+      driver: "paynow",
+      icon: "qrcode",
+      description: inVietnamese
+        ? "Quét mã bằng app ngân hàng Singapore."
+        : "Scan with any Singapore banking app.",
+      enabled: false,
+      currencies: JSON.stringify(["SGD"]),
+      minAmount: 2,
+      maxAmount: 20000,
+      position: 25,
+      config: JSON.stringify({ proxyType: "mobile", proxy: "", merchantName: "" }),
+    },
+    {
+      code: "qris",
+      name: inVietnamese ? "QRIS (Indonesia)" : "QRIS (Indonesia)",
+      driver: "qris",
+      icon: "qrcode",
+      description: inVietnamese
+        ? "Quét mã bằng app ngân hàng hoặc ví Indonesia."
+        : "Scan with any Indonesian bank or wallet app.",
+      enabled: false,
+      currencies: JSON.stringify(["IDR"]),
+      minAmount: 10000,
+      maxAmount: 20000000,
+      position: 26,
+      config: JSON.stringify({ staticPayload: "", payeeName: "" }),
+    },
+    {
+      code: "upi",
+      name: inVietnamese ? "UPI (Ấn Độ)" : "UPI (India)",
+      driver: "upi",
+      icon: "qrcode",
+      description: inVietnamese
+        ? "Quét mã hoặc mở app UPI."
+        : "Scan the code, or open it in any UPI app.",
+      enabled: false,
+      currencies: JSON.stringify(["INR"]),
+      minAmount: 50,
+      maxAmount: 100000,
+      position: 27,
+      config: JSON.stringify({ vpa: "", payeeName: "" }),
+    },
+    {
       // The two wallets this market actually pays from. Seeded switched off
       // and unconfigured, like the rest: a driver nobody can see in the admin
       // area is a driver nobody uses.

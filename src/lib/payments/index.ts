@@ -20,6 +20,13 @@ export type DepositContext = {
 export type DepositInstruction =
   | { kind: "transfer"; bankName: string; accountNumber: string; accountName: string; reference: string; qrPayload?: string }
   | { kind: "redirect"; url: string }
+  // A code the payer scans with their own banking or wallet app. No gateway
+  // stands between the two accounts, so nothing confirms it automatically —
+  // the operator reconciles it the way a transfer is reconciled.
+  | { kind: "qr"; payload: string; payee: string; payeeLabel: string; reference: string; note: string }
+  // A gateway that takes a signed form rather than a link. The fields are
+  // already signed; the page only has to post them.
+  | { kind: "form"; url: string; fields: Record<string, string> }
   | { kind: "manual"; instructions: string; reference: string }
   // Why the gateway could not be reached — worded by the wallet page, which
   // knows the customer's language. A driver does not.
@@ -378,6 +385,299 @@ export const drivers: Record<string, Driver> = {
       const session = (await res.json()) as { url?: string };
       if (!session.url) return { kind: "unconfigured", key: "err.payStripeLink" };
       return { kind: "redirect", url: session.url };
+    },
+  },
+
+  // ------------------------------------------------------------- Asian QR
+
+  // These four share a shape: the code is generated on this machine, the money
+  // moves straight between two bank or wallet accounts, and no gateway is
+  // involved — so nothing confirms the payment automatically. The operator
+  // approves the deposit the way they approve a bank transfer.
+
+  promptpay: {
+    key: "promptpay",
+    currencies: ["THB"],
+    required: ["target"],
+    fields: [
+      {
+        name: "target",
+        label: "PromptPay ID",
+        hint: "A Thai mobile number, a 13-digit national ID, or a 15-digit e-wallet id",
+      },
+      { name: "payeeName", label: "Account holder" },
+    ],
+    async prepare(ctx) {
+      const { buildPromptPay } = await import("./asia-qr");
+      const payload = buildPromptPay({ target: ctx.config.target, amount: ctx.amount });
+      if (!payload) return { kind: "unconfigured", key: "err.payQrTarget" };
+      return {
+        kind: "qr",
+        payload,
+        payee: ctx.config.target,
+        payeeLabel: ctx.config.payeeName || "",
+        reference: ctx.reference,
+        note: "promptpay",
+      };
+    },
+  },
+
+  paynow: {
+    key: "paynow",
+    currencies: ["SGD"],
+    required: ["proxy", "merchantName"],
+    fields: [
+      { name: "proxyType", label: "Addressed by", type: "select", options: ["mobile", "uen"] },
+      { name: "proxy", label: "Mobile number or UEN" },
+      { name: "merchantName", label: "Merchant name", hint: "Shown in the payer's banking app" },
+    ],
+    async prepare(ctx) {
+      const { buildPayNow } = await import("./asia-qr");
+      const payload = buildPayNow({
+        proxyType: ctx.config.proxyType === "uen" ? "uen" : "mobile",
+        proxy: ctx.config.proxy,
+        merchantName: ctx.config.merchantName,
+        amount: ctx.amount,
+      });
+      if (!payload) return { kind: "unconfigured", key: "err.payQrTarget" };
+      return {
+        kind: "qr",
+        payload,
+        payee: ctx.config.proxy,
+        payeeLabel: ctx.config.merchantName,
+        reference: ctx.reference,
+        note: "paynow",
+      };
+    },
+  },
+
+  qris: {
+    key: "qris",
+    currencies: ["IDR"],
+    required: ["staticPayload"],
+    fields: [
+      {
+        name: "staticPayload",
+        label: "Your QRIS code",
+        hint: "The long string encoded in the static QRIS your acquirer issued. This panel puts each deposit's amount into it.",
+      },
+      { name: "payeeName", label: "Merchant name" },
+    ],
+    async prepare(ctx) {
+      const { buildQris } = await import("./asia-qr");
+      const payload = buildQris(ctx.config.staticPayload, ctx.amount);
+      if (!payload) return { kind: "unconfigured", key: "err.payQrTarget" };
+      return {
+        kind: "qr",
+        payload,
+        payee: "",
+        payeeLabel: ctx.config.payeeName || "",
+        reference: ctx.reference,
+        note: "qris",
+      };
+    },
+  },
+
+  upi: {
+    key: "upi",
+    currencies: ["INR"],
+    required: ["vpa", "payeeName"],
+    fields: [
+      { name: "vpa", label: "UPI ID", hint: "The address money arrives at, e.g. nova@okhdfcbank" },
+      { name: "payeeName", label: "Payee name" },
+    ],
+    async prepare(ctx) {
+      const { buildUpi } = await import("./asia-qr");
+      const payload = buildUpi({
+        vpa: ctx.config.vpa,
+        payeeName: ctx.config.payeeName,
+        amount: ctx.amount,
+        reference: ctx.reference,
+      });
+      if (!payload) return { kind: "unconfigured", key: "err.payQrTarget" };
+      return {
+        kind: "qr",
+        payload,
+        payee: ctx.config.vpa,
+        payeeLabel: ctx.config.payeeName,
+        reference: ctx.reference,
+        note: "upi",
+      };
+    },
+  },
+
+  // ---------------------------------------------------------------- crypto
+
+  cryptomus: {
+    key: "cryptomus",
+    webhook: "cryptomus",
+    required: ["merchantId", "apiKey"],
+    fields: [
+      { name: "merchantId", label: "Merchant UUID" },
+      { name: "apiKey", label: "Payment API key", type: "password", hint: "Signs the request and proves the callback" },
+      { name: "network", label: "Network", hint: "Leave blank to let the payer choose, or set one, e.g. tron" },
+      { name: "toCurrency", label: "Settle in", hint: "Coin the payment is converted to, e.g. USDT" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the order id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const { cryptomusSign } = await import("./gateway-signing");
+      const body = JSON.stringify({
+        amount: ctx.amount.toFixed(2),
+        currency: ctx.currency.toUpperCase(),
+        order_id: ctx.reference,
+        url_callback: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/cryptomus`,
+        url_return: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+        url_success: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}?crypto=success`,
+        ...(ctx.config.network ? { network: ctx.config.network } : {}),
+        ...(ctx.config.toCurrency ? { to_currency: ctx.config.toCurrency.toUpperCase() } : {}),
+      });
+
+      const res = await fetch("https://api.cryptomus.com/v1/payment", {
+        method: "POST",
+        headers: {
+          merchant: ctx.config.merchantId,
+          sign: cryptomusSign(body, ctx.config.apiKey),
+          "Content-Type": "application/json",
+        },
+        cache: "no-store",
+        body,
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+
+      const data = (await res.json()) as { result?: { url?: string } };
+      if (!data.result?.url) return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      return { kind: "redirect", url: data.result.url };
+    },
+  },
+
+  binancepay: {
+    key: "binancepay",
+    webhook: "binancepay",
+    required: ["apiKey", "apiSecret"],
+    fields: [
+      { name: "apiKey", label: "API key" },
+      { name: "apiSecret", label: "API secret", type: "password", hint: "Signs the order and proves the callback" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the order id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const { binancePaySign } = await import("./gateway-signing");
+      const { randomBytes } = await import("crypto");
+
+      const body = JSON.stringify({
+        env: { terminalType: "WEB" },
+        merchantTradeNo: ctx.reference,
+        orderAmount: Number(ctx.amount.toFixed(2)),
+        currency: ctx.currency.toUpperCase(),
+        goods: {
+          goodsType: "02",
+          goodsCategory: "Z000",
+          referenceGoodsId: String(ctx.publicId),
+          goodsName: `Balance top-up ${ctx.reference}`,
+        },
+        returnUrl: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+        webhookUrl: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/binancepay`,
+      });
+
+      const timestamp = String(Date.now());
+      const nonce = randomBytes(16).toString("hex");
+
+      const res = await fetch("https://bpay.binanceapi.com/binancepay/openapi/v3/order", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "BinancePay-Timestamp": timestamp,
+          "BinancePay-Nonce": nonce,
+          "BinancePay-Certificate-SN": ctx.config.apiKey,
+          "BinancePay-Signature": binancePaySign({ timestamp, nonce, body, secret: ctx.config.apiSecret }),
+        },
+        cache: "no-store",
+        body,
+      });
+      if (!res.ok) return { kind: "unconfigured", key: "err.payCryptoAuth" };
+
+      const data = (await res.json()) as { status?: string; data?: { checkoutUrl?: string } };
+      if (data.status !== "SUCCESS" || !data.data?.checkoutUrl) {
+        return { kind: "unconfigured", key: "err.payCryptoInvoice" };
+      }
+      return { kind: "redirect", url: data.data.checkoutUrl };
+    },
+  },
+
+  payeer: {
+    key: "payeer",
+    webhook: "payeer",
+    currencies: ["USD", "EUR", "RUB"],
+    required: ["shopId", "secretKey"],
+    fields: [
+      { name: "shopId", label: "Shop id" },
+      { name: "secretKey", label: "Secret key", type: "password", hint: "Signs the payment and proves the callback" },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the order id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      const { payeerFormFields, payeerSign } = await import("./gateway-signing");
+      const amount = ctx.amount.toFixed(2);
+      const currency = ctx.currency.toUpperCase();
+      const description = Buffer.from(`Balance top-up ${ctx.reference}`, "utf8").toString("base64");
+
+      const fields = payeerFormFields({
+        shopId: ctx.config.shopId,
+        orderId: ctx.reference,
+        amount,
+        currency,
+        descriptionBase64: description,
+      });
+
+      return {
+        kind: "form",
+        url: "https://payeer.com/merchant/",
+        fields: {
+          m_shop: ctx.config.shopId,
+          m_orderid: ctx.reference,
+          m_amount: amount,
+          m_curr: currency,
+          m_desc: description,
+          m_sign: payeerSign(fields, ctx.config.secretKey),
+        },
+      };
+    },
+  },
+
+  perfectmoney: {
+    key: "perfectmoney",
+    webhook: "perfectmoney",
+    currencies: ["USD", "EUR"],
+    required: ["payeeAccount", "passphrase"],
+    fields: [
+      { name: "payeeAccount", label: "Account", hint: "The U-number the money arrives in" },
+      { name: "payeeName", label: "Payee name" },
+      {
+        name: "passphrase",
+        label: "Alternate passphrase",
+        type: "password",
+        hint: "Set it in Perfect Money under Settings. It is what proves a payment; without it the callback is refused.",
+      },
+      { name: "prefix", label: "Reference prefix", hint: "Prepended to the payment id, e.g. NOVA" },
+    ],
+    async prepare(ctx) {
+      // There is no API to call: the payer is sent through Perfect Money's own
+      // form and the shop is told about it afterwards by a signed POST.
+      return {
+        kind: "form",
+        url: "https://perfectmoney.com/api/step1.asp",
+        fields: {
+          PAYEE_ACCOUNT: ctx.config.payeeAccount,
+          PAYEE_NAME: ctx.config.payeeName || "Balance top-up",
+          PAYMENT_ID: ctx.reference,
+          PAYMENT_AMOUNT: ctx.amount.toFixed(2),
+          PAYMENT_UNITS: ctx.currency.toUpperCase(),
+          STATUS_URL: `${ctx.appUrl}/api/webhooks/${ctx.panelToken}/perfectmoney`,
+          PAYMENT_URL: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          PAYMENT_URL_METHOD: "GET",
+          NOPAYMENT_URL: `${ctx.appUrl}/dashboard/wallet/${ctx.transactionId}`,
+          NOPAYMENT_URL_METHOD: "GET",
+          SUGGESTED_MEMO: ctx.reference,
+        },
+      };
     },
   },
 
