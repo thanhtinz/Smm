@@ -229,6 +229,45 @@ ones are not, because a crawler sent to a 404 remembers the address as broken.
 | ----- | ---- | ----- |
 | ![](docs/screenshots/63-blog.png) | ![](docs/screenshots/65-blog-post.png) | ![](docs/screenshots/62-admin-blog.png) |
 
+## Installable on a phone
+
+The panel is a progressive web app: a customer can add it to their home
+screen and it opens in its own window, with no address bar. This market is
+almost entirely phones, and somebody who checks an order twice a day is
+exactly who an icon is for.
+
+Nothing about it is a file in the repository, because a deployment serves
+many panels and each needs its own. The manifest is built per request from
+the panel's own name, tagline, theme and locale; the icon is drawn from its
+initials and its primary colour when no file has been uploaded. Overrides —
+app name, the twelve characters that fit under an icon, a square icon file,
+which page the icon opens — live beside the rest of the branding in
+Settings.
+
+There are two switches, because they are two different commitments:
+
+| Switch                | What it does                                                    |
+| --------------------- | --------------------------------------------------------------- |
+| Installable on a phone | The manifest, the icon and the install offer                     |
+| Keep working offline   | The service worker, which stays on the reader's device           |
+
+**The service worker caches no page.** Almost every byte this panel sends
+depends on who asked — the reader's balance, their orders, a support agent's
+queue — so the only things it keeps are the build's own hashed assets, which
+are public and identical for everybody, and one offline page. Navigations go
+to the network and fall back to that page when there is none. Nothing under
+`/api` is touched at all. The alternative, caching pages so the app opens
+instantly offline, would mean one customer's balance sitting in a cache the
+next person to sign in on that phone could be served from.
+
+Turning the offline switch off does not merely stop new registrations: it
+tells the workers already out there to drop their caches and unregister. A
+switch that only applied to people who had not visited yet would not be one.
+
+| Offline | Feature switches |
+| ------- | ---------------- |
+| ![](docs/screenshots/67-offline.png) | ![](docs/screenshots/68-admin-features.png) |
+
 ## Support desk
 
 Saved replies are written once by an admin and inserted by anyone on the desk.

@@ -559,6 +559,70 @@ khách nhìn thấy. `.svg` bị từ chối, ảnh 733 KB bị từ chối bằ
 KB của panel (chứ không phải bằng giới hạn body 2 MB của server action), bốn ảnh
 vượt ngưỡng ba bị từ chối, và **không lần nào ghi ra một dòng nào**. 19/19.
 
+## Thêm: cài được lên điện thoại (PWA)
+
+Bạn hỏi "làm PWA chưa" — chưa có gì cả: không manifest, không service worker,
+không icon ứng dụng.
+
+**Vì sao đáng làm ở đúng panel này.** Khách của thị trường này gần như toàn bộ
+dùng điện thoại, và người mua SMM là người **quay lại mỗi ngày** để xem đơn
+chạy tới đâu. Đó đúng là kiểu người mà một cái icon trên màn hình chính có
+nghĩa. Không có gì trong đây cần app store.
+
+**Không có file tĩnh nào cả**, vì một deployment phục vụ nhiều panel và mỗi
+panel cần một bộ khác nhau. Manifest dựng theo từng request từ tên, tagline,
+theme và ngôn ngữ của chính panel đó; icon **vẽ ra** từ chữ cái đầu và màu chính
+của panel khi chưa ai upload file nào. Manifest tĩnh của Next (`app/manifest.ts`)
+sinh một lần lúc build, nên nó sẽ đưa tên và màu của panel gốc lên điện thoại
+của đại lý — đúng thứ một manifest không được phép sai.
+
+Operator ghi đè được: tên ứng dụng, mười hai ký tự nằm dưới icon, file icon
+vuông, trang mà icon mở ra, và khung của cửa sổ. Tất cả nằm cạnh phần thương
+hiệu trong Cài đặt, không thêm trang admin nào.
+
+**Hai công tắc, vì đó là hai cam kết khác nhau.** "Cài được lên điện thoại" là
+manifest, icon và lời mời cài — nó không để lại gì trên máy ai. "Chạy được khi
+mất mạng" là service worker, thứ **sống lâu hơn lượt truy cập**.
+
+**Service worker không cache trang nào.** Gần như mọi byte panel gửi đi đều phụ
+thuộc vào người hỏi — số dư, đơn hàng, hàng chờ ticket của nhân viên — nên nó
+chỉ giữ tài nguyên build (đã băm, công khai, giống nhau với mọi người) và **một
+trang offline**. Điều hướng đi ra mạng trước, mất mạng mới rơi về trang đó.
+`/api` không đụng tới. Cách còn lại — cache trang để mở app tức thì khi offline
+— nghĩa là số dư của một khách nằm trong cache mà **người tiếp theo đăng nhập
+trên chính cái điện thoại đó** có thể được phục vụ từ đấy. Panel SMM không đáng
+đánh đổi như vậy.
+
+**Tắt công tắc offline không chỉ là ngừng đăng ký mới**: nó bảo những worker đã
+nằm ngoài kia xoá cache và tự gỡ. Một công tắc chỉ áp dụng cho người chưa từng
+ghé thì không phải công tắc.
+
+**Chứng minh (23/23 + 7/7).** Trên bản production thật, trình duyệt thật:
+manifest được link, parse ra đúng tên panel, `start_url` là `/dashboard`,
+`scope` là `/`, có icon `maskable`; icon sinh ra vẽ chữ đầu trên đúng màu chính;
+worker cài xong và **nắm quyền điều khiển trang**; `/offline` nằm trong precache
+và tài nguyên build được cache, **không một trang đăng nhập nào lọt vào cache**
+và không có gì từ `/api`; tắt công tắc thì worker bị gỡ (0 registration), cache
+bị xoá (0 cache) và `/sw.js` trả 404; tắt cả tính năng thì không còn thẻ link và
+route manifest trả 404; ghi đè của operator ra đúng manifest, và `start_url` trỏ
+sang tên miền khác **bị từ chối chứ không xuất bản** — một manifest có
+`start_url` khác origin bị trình duyệt bỏ nguyên cái, nên lỗi đó sẽ làm panel
+lặng lẽ hết cài được mà không có gì trên màn hình nói ra.
+
+**Phần offline phải thử bằng cách tắt hẳn server.** `context.setOffline` của
+Playwright đặt trên target của trang, **không chạm tới target của service
+worker**, nên `fetch` trong worker vẫn ra được mạng: bài test kiểu đó xanh mà
+không chứng minh gì. Thử lại bằng cách `SIGKILL` server thật — kiểm chắc chắn
+không còn ai nghe cổng 3000 — rồi điều hướng: trang offline hiện ra, **giữ
+nguyên địa chỉ khách vừa xin** (nên bấm thử lại là thử lại đúng trang đó), có
+nút thử lại, **không nói gì về người đọc** (một bản cache dùng chung cho tất
+cả), và giao diện vẫn đúng màu panel vì CSS nằm trong cache tài nguyên.
+
+**Cố ý không làm:** đẩy thông báo (push). Nó cần khoá VAPID, một chỗ lưu
+subscription và quyền hỏi ngay lần đầu ghé — và panel đã có thông báo trong ứng
+dụng lẫn email. Muốn có thì nó là một mục riêng, không phải phần đuôi của mục
+này.
+
 ---
 
 ## Đã cân nhắc và loại

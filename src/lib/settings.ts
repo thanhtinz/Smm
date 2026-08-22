@@ -21,6 +21,21 @@ export const settingDefinitions = {
   // to find somewhere to host it first.
   "site.logoUrl": { group: "branding", type: "image", value: "" },
   "site.faviconUrl": { group: "branding", type: "image", value: "" },
+  // Installed-app identity. Each falls back to the panel's own branding when
+  // left empty, so a panel is installable without filling any of this in.
+  "pwa.name": { group: "branding", type: "text", value: "" },
+  "pwa.shortName": { group: "branding", type: "text", value: "" },
+  "pwa.iconUrl": { group: "branding", type: "image", value: "" },
+  // Where the icon opens. The dashboard rather than the home page: somebody
+  // who installed the panel is a customer, and the home page is written to
+  // persuade a stranger.
+  "pwa.startUrl": { group: "branding", type: "text", value: "/dashboard" },
+  "pwa.display": {
+    group: "branding",
+    type: "select",
+    value: "standalone",
+    options: ["standalone", "minimal-ui", "browser"],
+  },
   "site.supportEmail": { group: "branding", type: "text", value: "support@novapanel.io" },
   "site.telegram": { group: "branding", type: "text", value: "" },
   // Zalo is how this market actually reaches support; a phone number or a
@@ -139,6 +154,15 @@ export const settingDefinitions = {
   "affiliate.enabled": { group: "features", type: "boolean", value: true },
   "auth.registrationOpen": { group: "features", type: "boolean", value: true },
   "api.enabled": { group: "features", type: "boolean", value: true },
+  // Installable on a phone. The manifest on its own changes nothing for a
+  // reader who does not install, which is why it is on: this market is mostly
+  // phones, and a customer who checks an order twice a day is exactly who an
+  // icon on the home screen is for.
+  "pwa.enabled": { group: "features", type: "boolean", value: true },
+  // The service worker is the half that outlives the visit — it stays on the
+  // reader's device until something removes it — so it gets its own switch,
+  // and turning it off actively unregisters what is already out there.
+  "pwa.offline": { group: "features", type: "boolean", value: true },
 
   // --- Orders -------------------------------------------------------------
   "order.minCharge": { group: "order", type: "number", value: 0 },

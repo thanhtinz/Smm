@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Be_Vietnam_Pro, Playfair_Display, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import ThemeStyles from "@/components/theme-styles";
@@ -9,6 +9,9 @@ import { getCurrentPanel, panelBaseUrl } from "@/lib/tenancy";
 import { headers } from "next/headers";
 import { PATHNAME_HEADER } from "@/lib/panel-host";
 import { LANDING_MODE, chosenLayout } from "@/lib/landing";
+import { MANIFEST_PATH } from "@/lib/pwa";
+import { panelTheme } from "@/lib/pwa-server";
+import RegisterServiceWorker from "@/components/pwa/register";
 
 /**
  * The panel's faces.
@@ -47,16 +50,20 @@ const fontVars = `${bodyFont.variable} ${displayFont.variable} ${monoFont.variab
 
 export async function generateMetadata(): Promise<Metadata> {
   if (!(await getCurrentPanel())) return { title: "Not found" };
-  const [name, tagline, description, favicon, indexable, google, bing, base] = await Promise.all([
-    getSetting("site.name"),
-    getSetting("site.tagline"),
-    getSetting("site.description"),
-    getSetting("site.faviconUrl"),
-    isIndexable(),
-    getSetting("seo.googleVerification"),
-    getSetting("seo.bingVerification"),
-    panelBaseUrl(),
-  ]);
+  const [name, tagline, description, favicon, indexable, google, bing, base, installable, appName, shortName] =
+    await Promise.all([
+      getSetting("site.name"),
+      getSetting("site.tagline"),
+      getSetting("site.description"),
+      getSetting("site.faviconUrl"),
+      isIndexable(),
+      getSetting("seo.googleVerification"),
+      getSetting("seo.bingVerification"),
+      panelBaseUrl(),
+      getSetting("pwa.enabled"),
+      getSetting("pwa.name"),
+      getSetting("pwa.shortName"),
+    ]);
 
   return {
     // Every relative URL below and in every page resolves against the panel's
@@ -75,12 +82,42 @@ export async function generateMetadata(): Promise<Metadata> {
     // Only when one is set — Next falls back to /favicon.ico otherwise, and
     // an empty icons entry would suppress that.
     ...(favicon ? { icons: { icon: favicon as string } } : {}),
+    // Only when the operator has left it on — the link is what makes a browser
+    // fetch the manifest, and a link to a route answering 404 is a console
+    // error on every page of the panel.
+    ...(installable
+      ? {
+          manifest: MANIFEST_PATH,
+          appleWebApp: {
+            capable: true,
+            // Safari reads this and nothing else for the name under the icon.
+            title: String(appName || shortName || name || ""),
+            // The panel paints its own background behind the status bar, so
+            // the bar should not paint one of its own on top of it.
+            statusBarStyle: "black-translucent",
+          },
+        }
+      : {}),
     openGraph: {
       title: name as string,
       description: (tagline as string) || (description as string),
       ...(favicon ? { images: [favicon as string] } : {}),
     },
   };
+}
+
+/**
+ * The colour a browser paints its own chrome with — the address bar on
+ * Android, the area behind the status bar in an installed app.
+ *
+ * The panel's default skin, not the reader's: this is read before any of the
+ * page is, and a value that followed a cookie would flash the wrong colour on
+ * every first paint.
+ */
+export async function generateViewport(): Promise<Viewport> {
+  if (!(await getCurrentPanel())) return {};
+  const theme = await panelTheme();
+  return { themeColor: theme.background };
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
@@ -117,7 +154,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <ThemeStyles />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <RegisterServiceWorker enabled={Boolean(ctx.settings["pwa.enabled"]) && Boolean(ctx.settings["pwa.offline"])} />
+      </body>
     </html>
   );
 }

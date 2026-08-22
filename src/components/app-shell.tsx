@@ -13,6 +13,7 @@ import { dateFormats } from "@/lib/dates";
 import { renderNotification } from "@/lib/notify";
 import { displayMoney } from "@/lib/currency";
 import type { AppContext } from "@/lib/context";
+import InstallButton from "@/components/pwa/install-button";
 
 export type NavItem = {
   href: string;
@@ -87,7 +88,11 @@ export default async function AppShell({
           {groups.length < 2 && catalogue && <NavTree platforms={catalogue.platforms} title={catalogue.title} />}
         </nav>
 
-        <div className="border-t border-[var(--border)] p-3">
+        <div className="space-y-2 border-t border-[var(--border)] p-3">
+          {/* Renders nothing unless the browser has actually offered to
+              install, so the sidebar does not carry a button that explains it
+              cannot do anything. */}
+          {Boolean(settings["pwa.enabled"]) && <InstallButton label={t("pwa.install")} />}
           <Link href="/dashboard/wallet" className="card card-pad block !p-3.5 transition-colors hover:bg-[var(--surface2)]">
             <span className="muted flex items-center gap-1.5 text-[0.68rem] font-semibold tracking-widest uppercase">
               <Icon name="wallet" size={13} />
