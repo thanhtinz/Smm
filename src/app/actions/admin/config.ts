@@ -76,6 +76,30 @@ export async function saveSettingsAction(_prev: ActionResult, form: FormData): P
 
 // ---------------------------------------------------------- payment methods
 
+export type ProbeResult = { ok: boolean; message: string };
+
+/**
+ * Asks one gateway whether it currently works.
+ *
+ * Reads the stored configuration rather than anything from the form, because
+ * the answer has to be about what a customer would meet — and because the
+ * secrets never leave the server in the first place. An operator who has just
+ * typed a new key saves it, then tests it.
+ */
+export async function testPaymentMethodAction(id: string): Promise<ProbeResult> {
+  const t = await readerMessages();
+  const admin = await requireAdmin();
+
+  const method = await db.paymentMethod.findUnique({ where: { id } });
+  if (!method) return { ok: false, message: t("adm.methodMissing") };
+
+  const { probeMethod } = await import("@/lib/payments/probe-online");
+  const verdict = await probeMethod(method.driver, method.config);
+
+  await logActivity(admin.id, "admin.method.test", `${method.code}: ${verdict.ok ? "ok" : verdict.key}`);
+  return { ok: verdict.ok, message: t(verdict.key as "probe.ok", verdict.vars) };
+}
+
 export async function savePaymentMethodAction(_prev: ActionResult, form: FormData): Promise<ActionResult> {
   const t = await readerMessages();
   const admin = await requireAdmin();

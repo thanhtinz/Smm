@@ -1,7 +1,7 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
-import { savePaymentMethodAction, type ActionResult } from "@/app/actions/admin/config";
+import { useActionState, useMemo, useState, useTransition } from "react";
+import { savePaymentMethodAction, testPaymentMethodAction, type ActionResult } from "@/app/actions/admin/config";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
@@ -192,9 +192,38 @@ function MethodForm({
     return result;
   }, {});
 
+  // The test reads what is stored, not what is on screen, so an operator who
+  // has just typed a key saves first. Saying so is better than testing the old
+  // key and reporting success.
+  const [probe, setProbe] = useState<{ ok: boolean; message: string } | null>(null);
+  const [testing, startTest] = useTransition();
+
   return (
     <form action={action} className="space-y-4" noValidate>
       <input type="hidden" name="id" value={row.id} />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            setProbe(null);
+            startTest(async () => setProbe(await testPaymentMethodAction(row.id)));
+          }}
+          disabled={testing}
+          className="btn btn-ghost btn-sm"
+        >
+          <Icon name={testing ? "spinner" : "zap"} size={15} />
+          {testing ? labels.testing : labels.testConnection}
+        </button>
+        <span className="muted text-xs">{labels.testHint}</span>
+      </div>
+
+      {probe && (
+        <div className={`alert ${probe.ok ? "alert-success" : "alert-danger"}`} role="status">
+          <Icon name={probe.ok ? "checkCircle" : "alert"} size={16} />
+          <span>{probe.message}</span>
+        </div>
+      )}
 
       {state.error && (
         <div className="alert alert-danger" role="alert">
