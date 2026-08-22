@@ -5,7 +5,8 @@ import { useActionState, useMemo, useState } from "react";
 import { createDepositAction, type DepositState } from "@/app/actions/wallet";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
-import { Icon, type IconName } from "@/components/icons";
+import MethodMark from "@/components/method-mark";
+import { Icon } from "@/components/icons";
 import { formatCount } from "@/lib/numbers";
 
 export type MethodOption = {
@@ -13,6 +14,8 @@ export type MethodOption = {
   code: string;
   name: string;
   icon: string;
+  image: string;
+  color: string;
   description: string;
   currencies: string[];
   minAmount: number;
@@ -129,13 +132,8 @@ export default function DepositForm({
                   onChange={() => setMethodId(m.id)}
                   className="sr-only"
                 />
-                <span
-                  className={`mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                    m.id === methodId ? "text-[var(--primary)]" : "muted"
-                  }`}
-                  style={{ background: "var(--surface2)" }}
-                >
-                  <Icon name={m.icon as IconName} size={18} />
+                <span className="mt-0.5">
+                  <MethodMark method={m} box={36} size={18} />
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex flex-wrap items-center gap-2">

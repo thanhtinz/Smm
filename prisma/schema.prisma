@@ -628,7 +628,17 @@ model PaymentMethod {
   name         String
   driver       String // implementation key
   enabled      Boolean       @default(false)
-  icon         String        @default("wallet")
+  icon         String        @default("wallet") // svg icon key, used when image is empty
+  /// The gateway's own logo. Uploaded in admin, because a brand mark drawn
+  /// from memory is a wrong brand mark — the operator takes it from the
+  /// gateway's own press kit. Empty falls back to the icon above, which is
+  /// why a panel that never uploads one still looks finished.
+  image        String        @default("") // /uploads/<file> or an external URL
+  /// The gateway's own colour, which the icon is tinted with. A colour is a
+  /// fact about a brand rather than a drawing of one, so these are seeded
+  /// accurately and every method looks like itself even before anyone
+  /// uploads a logo.
+  color        String        @default("#6366f1")
   description  String        @default("")
   config       String        @default("{}") // JSON credentials, edited in admin
   currencies   String        @default("[]") // JSON array of accepted currency codes

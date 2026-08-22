@@ -117,6 +117,10 @@ export async function savePaymentMethodAction(_prev: ActionResult, form: FormDat
     where: { id },
     data: {
       name: String(form.get("name") ?? method.name).trim() || method.name,
+      image: String(form.get("image") ?? method.image).trim(),
+      // A colour the browser could not produce is not a colour; the stored one
+      // stands rather than the field being blanked by a stray value.
+      color: /^#[0-9a-fA-F]{6}$/.test(String(form.get("color") ?? "")) ? String(form.get("color")) : method.color,
       description: String(form.get("description") ?? "").trim(),
       enabled: bool(form, "enabled"),
       minAmount: num(form, "minAmount"),

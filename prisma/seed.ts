@@ -527,6 +527,7 @@ async function main() {
       code: "seapay",
       name: inVietnamese ? "SePay — Chuyển khoản ngân hàng" : "SePay — Vietnam bank transfer",
       driver: "seapay",
+      color: "#0B57D0",
       icon: "qrcode",
       description: inVietnamese
         ? "Chuyển khoản ngân hàng nội địa, tự động cộng tiền qua webhook SePay."
@@ -550,6 +551,7 @@ async function main() {
       code: "paypal",
       name: "PayPal",
       driver: "paypal",
+      color: "#003087",
       icon: "paypal",
       description: inVietnamese ? "Trả bằng số dư PayPal hoặc thẻ quốc tế." : "Pay with a PayPal balance or any major card.",
       enabled: true,
@@ -565,6 +567,7 @@ async function main() {
       code: "link",
       name: inVietnamese ? "Thẻ quốc tế (Link by Stripe)" : "Link by Stripe",
       driver: "link",
+      color: "#635BFF",
       icon: "link",
       description: inVietnamese ? "Thanh toán một chạm bằng Link, thẻ và ví điện tử." : "One-click checkout with Link, cards and wallets.",
       enabled: true,
@@ -580,6 +583,8 @@ async function main() {
       code: "crypto",
       name: inVietnamese ? "Tiền mã hoá" : "Crypto",
       driver: "crypto",
+      color: "#F7931A",
+      image: "/payments/bitcoin.svg",
       icon: "bitcoin",
       description: inVietnamese
         ? "Trả bằng USDT, BTC hoặc coin khác; cộng tiền khi mạng xác nhận."
@@ -597,6 +602,7 @@ async function main() {
       code: "cryptomus",
       name: inVietnamese ? "Cryptomus" : "Cryptomus",
       driver: "cryptomus",
+      color: "#00B67A",
       icon: "bitcoin",
       description: inVietnamese
         ? "Trả bằng USDT, BTC hoặc coin khác qua Cryptomus."
@@ -612,6 +618,8 @@ async function main() {
       code: "binancepay",
       name: "Binance Pay",
       driver: "binancepay",
+      color: "#F0B90B",
+      image: "/payments/binance.svg",
       icon: "bitcoin",
       description: inVietnamese
         ? "Trả thẳng từ số dư Binance, không mất phí mạng."
@@ -627,6 +635,7 @@ async function main() {
       code: "payeer",
       name: "Payeer",
       driver: "payeer",
+      color: "#1E4F7E",
       icon: "wallet",
       description: inVietnamese ? "Ví Payeer." : "The Payeer wallet.",
       enabled: false,
@@ -640,6 +649,7 @@ async function main() {
       code: "perfectmoney",
       name: "Perfect Money",
       driver: "perfectmoney",
+      color: "#E30613",
       icon: "wallet",
       description: inVietnamese ? "Ví Perfect Money." : "The Perfect Money wallet.",
       enabled: false,
@@ -653,6 +663,7 @@ async function main() {
       code: "coinbase",
       name: "Coinbase Commerce",
       driver: "coinbase",
+      color: "#0052FF",
       icon: "bitcoin",
       description: inVietnamese ? "Trả bằng crypto qua Coinbase Commerce." : "Pay in crypto through Coinbase Commerce.",
       enabled: false,
@@ -666,6 +677,7 @@ async function main() {
       code: "coinpayments",
       name: "CoinPayments",
       driver: "coinpayments",
+      color: "#0A6EDB",
       icon: "bitcoin",
       description: inVietnamese ? "Trả bằng crypto qua CoinPayments." : "Pay in crypto through CoinPayments.",
       enabled: false,
@@ -679,6 +691,8 @@ async function main() {
       code: "oxapay",
       name: "OxaPay",
       driver: "oxapay",
+      color: "#00A3FF",
+      image: "/payments/tether.svg",
       icon: "bitcoin",
       description: inVietnamese ? "Trả bằng crypto qua OxaPay." : "Pay in crypto through OxaPay.",
       enabled: false,
@@ -692,6 +706,7 @@ async function main() {
       code: "razorpay",
       name: inVietnamese ? "Razorpay (Ấn Độ)" : "Razorpay (India)",
       driver: "razorpay",
+      color: "#0C2451",
       icon: "creditCard",
       description: inVietnamese
         ? "Thẻ, UPI và ví Ấn Độ qua Razorpay."
@@ -707,6 +722,8 @@ async function main() {
       code: "midtrans",
       name: inVietnamese ? "Midtrans (Indonesia)" : "Midtrans (Indonesia)",
       driver: "midtrans",
+      color: "#0B7EC8",
+      image: "/payments/mastercard.svg",
       icon: "creditCard",
       description: inVietnamese
         ? "Thẻ, chuyển khoản và ví Indonesia qua Midtrans."
@@ -722,6 +739,7 @@ async function main() {
       code: "xendit",
       name: inVietnamese ? "Xendit (Đông Nam Á)" : "Xendit (Southeast Asia)",
       driver: "xendit",
+      color: "#4573FF",
       icon: "creditCard",
       description: inVietnamese
         ? "Ví và ngân hàng Indonesia, Philippines qua Xendit."
@@ -737,6 +755,7 @@ async function main() {
       code: "payos",
       name: inVietnamese ? "PayOS — QR ngân hàng" : "PayOS — Vietnam bank QR",
       driver: "payos",
+      color: "#1E9BE0",
       icon: "qrcode",
       description: inVietnamese
         ? "Quét mã VietQR, tự động cộng tiền qua PayOS."
@@ -752,6 +771,7 @@ async function main() {
       code: "merchantqr",
       name: inVietnamese ? "QR ngân hàng (dán mã của bạn)" : "Merchant QR (paste your own)",
       driver: "merchantqr",
+      color: "#0F766E",
       icon: "qrcode",
       description: inVietnamese
         ? "DuitNow, QRPh, KHQR hay mã EMVCo bất kỳ: dán mã tĩnh của bạn, panel chèn số tiền."
@@ -769,6 +789,7 @@ async function main() {
       code: "promptpay",
       name: inVietnamese ? "PromptPay (Thái Lan)" : "PromptPay (Thailand)",
       driver: "promptpay",
+      color: "#003D7C",
       icon: "qrcode",
       description: inVietnamese
         ? "Quét mã bằng app ngân hàng Thái Lan."
@@ -784,6 +805,7 @@ async function main() {
       code: "paynow",
       name: inVietnamese ? "PayNow (Singapore)" : "PayNow (Singapore)",
       driver: "paynow",
+      color: "#7B1FA2",
       icon: "qrcode",
       description: inVietnamese
         ? "Quét mã bằng app ngân hàng Singapore."
@@ -799,6 +821,7 @@ async function main() {
       code: "qris",
       name: inVietnamese ? "QRIS (Indonesia)" : "QRIS (Indonesia)",
       driver: "qris",
+      color: "#E31E24",
       icon: "qrcode",
       description: inVietnamese
         ? "Quét mã bằng app ngân hàng hoặc ví Indonesia."
@@ -814,6 +837,7 @@ async function main() {
       code: "upi",
       name: inVietnamese ? "UPI (Ấn Độ)" : "UPI (India)",
       driver: "upi",
+      color: "#097939",
       icon: "qrcode",
       description: inVietnamese
         ? "Quét mã hoặc mở app UPI."
@@ -832,6 +856,7 @@ async function main() {
       code: "momo",
       name: "MoMo",
       driver: "momo",
+      color: "#A50064",
       icon: "wallet",
       description: "Pay from the MoMo wallet.",
       enabled: false,
@@ -845,6 +870,7 @@ async function main() {
       code: "zalopay",
       name: "ZaloPay",
       driver: "zalopay",
+      color: "#0068FF",
       icon: "wallet",
       description: "Pay from the ZaloPay wallet.",
       enabled: false,
@@ -858,6 +884,7 @@ async function main() {
       code: "viettelpay",
       name: "ViettelPay",
       driver: "viettelpay",
+      color: "#EE0033",
       icon: "wallet",
       description: inVietnamese ? "Thanh toán qua ví ViettelPay." : "Pay from the ViettelPay wallet.",
       enabled: false,
@@ -871,6 +898,7 @@ async function main() {
       code: "manual_bank",
       name: inVietnamese ? "Chuyển khoản thủ công" : "Manual bank transfer",
       driver: "manual",
+      color: "#64748B",
       icon: "bank",
       description: inVietnamese
         ? "Chuyển khoản rồi nhân viên cộng tiền vào số dư cho bạn."
@@ -886,7 +914,10 @@ async function main() {
     await db.paymentMethod.upsert({
       where: { panelId_code: { panelId: PANEL, code: m.code } },
       create: { ...m, panelId: PANEL },
-      update: { name: m.name, driver: m.driver },
+      // Colour and logo are refreshed on every seed: they are the panel's
+      // presentation rather than the operator's configuration, and a panel
+      // installed before this existed should get them too.
+      update: { name: m.name, driver: m.driver, color: m.color ?? "#6366f1", image: (m as { image?: string }).image ?? "" },
     });
   }
 

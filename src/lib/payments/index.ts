@@ -1054,6 +1054,8 @@ export async function getAvailableMethods() {
       name: row.name,
       driver: row.driver,
       icon: row.icon,
+      image: row.image,
+      color: row.color,
       description: row.description,
       currencies: methodCurrencies(row.driver, row.currencies),
       minAmount: row.minAmount,

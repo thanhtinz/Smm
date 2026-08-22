@@ -1,11 +1,17 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { savePaymentMethodAction, type ActionResult } from "@/app/actions/admin/config";
 import { Field, TextInput } from "@/components/ui/field";
 import SubmitButton from "@/components/ui/submit-button";
 import EntityDrawer from "@/components/admin/entity-drawer";
-import { Icon, type IconName } from "@/components/icons";
+import CopyField from "@/components/ui/copy-field";
+import ImageUpload from "@/components/admin/image-upload";
+import MethodMark from "@/components/method-mark";
+import { paginate } from "@/lib/paging";
+import { Icon } from "@/components/icons";
+
+const PER_PAGE = 8;
 
 export type DriverField = { name: string; label: string; type?: string; options?: string[]; hint?: string };
 
@@ -15,6 +21,10 @@ export type MethodRow = {
   name: string;
   driver: string;
   icon: string;
+  image: string;
+  color: string;
+  /** Where this gateway should be told to post, when it has a callback. */
+  callbackUrl: string;
   description: string;
   enabled: boolean;
   configured: boolean;
@@ -40,18 +50,52 @@ export default function PaymentMethodManager({
   labels: Record<string, string>;
 }) {
   const [editing, setEditing] = useState<MethodRow | null>(null);
+  const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+
+  // Twenty-four methods and growing. Searching by name, code or driver is how
+  // an operator finds one; the page size keeps the grid to a screenful.
+  const found = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return rows;
+    return rows.filter((r) => `${r.name} ${r.code} ${r.driver}`.toLowerCase().includes(q));
+  }, [rows, query]);
+
+  // A search that shortens the list can leave the reader past the end of it,
+  // which is why the page number is clamped rather than trusted.
+  const { items: shown, page: current, pages } = paginate(found, page, PER_PAGE);
 
   return (
     <>
-      <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-2xl font-bold tracking-tight">{labels.title}</h2>
+        <div className="relative min-w-56 flex-1 sm:max-w-xs">
+          <span className="muted pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
+            <Icon name="search" size={15} />
+          </span>
+          <label className="sr-only" htmlFor="method-search">
+            {labels.search}
+          </label>
+          <input
+            id="method-search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(0);
+            }}
+            placeholder={labels.search}
+            className="field ps-11"
+          />
+        </div>
+      </div>
+
+      {found.length === 0 && <p className="muted card card-pad py-12 text-center text-sm">{labels.noneFound}</p>}
 
       <div className="grid gap-3 md:grid-cols-2">
-        {rows.map((row) => (
+        {shown.map((row) => (
           <article key={row.id} className="card card-pad">
             <div className="flex items-start gap-3">
-              <span className="surface-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
-                <Icon name={row.icon as IconName} size={19} />
-              </span>
+              <MethodMark method={row} box={40} />
               <div className="min-w-0 flex-1">
                 <h3 className="truncate font-semibold">{row.name}</h3>
                 <p className="muted font-mono text-xs">{row.code}</p>
@@ -89,6 +133,32 @@ export default function PaymentMethodManager({
           </article>
         ))}
       </div>
+
+      {pages > 1 && (
+        <nav className="flex items-center justify-center gap-2" aria-label={labels.title}>
+          <button
+            type="button"
+            onClick={() => setPage(current - 1)}
+            disabled={current === 0}
+            className="btn btn-ghost btn-sm"
+            aria-label={labels.previous}
+          >
+            <Icon name="chevronLeft" size={15} />
+          </button>
+          <span className="muted text-sm tabular-nums">
+            {labels.pageOf.replace("{page}", String(current + 1)).replace("{pages}", String(pages))}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage(current + 1)}
+            disabled={current >= pages - 1}
+            className="btn btn-ghost btn-sm"
+            aria-label={labels.next}
+          >
+            <Icon name="chevronRight" size={15} />
+          </button>
+        </nav>
+      )}
 
       <EntityDrawer closeLabel={labels.close} open={editing !== null} title={editing?.name ?? ""} onClose={() => setEditing(null)}>
         {editing && (
@@ -133,8 +203,37 @@ function MethodForm({
         </div>
       )}
 
+      {row.callbackUrl && (
+        <CopyField
+          label={labels.webhookUrl}
+          value={row.callbackUrl}
+          copyLabel={labels.copy}
+          copiedLabel={labels.copied}
+          mono
+        />
+      )}
+
       <Field name="name" label={labels.name}>
         <TextInput name="name" defaultValue={row.name} />
+      </Field>
+
+      <ImageUpload
+        name="image"
+        value={row.image}
+        label={labels.logo}
+        hint={labels.logoHint}
+        uploadLabel={labels.upload}
+        removeLabel={labels.remove}
+      />
+
+      <Field name="color" label={labels.color}>
+        <input
+          id="color"
+          name="color"
+          type="color"
+          defaultValue={row.color || "#6366f1"}
+          className="field h-11 cursor-pointer p-1"
+        />
       </Field>
 
       <Field name="description" label={labels.description}>

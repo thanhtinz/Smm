@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Binance">
+  <circle cx="32" cy="32" r="32" fill="#F0B90B"/>
+  <g fill="#fff">
+    <path d="M32 14.6 38.2 20.8 32 27 25.8 20.8z"/>
+    <path d="M22.2 24.4 28.4 30.6 22.2 36.8 16 30.6z"/>
+    <path d="M41.8 24.4 48 30.6 41.8 36.8 35.6 30.6z"/>
+    <path d="M32 34.2 38.2 40.4 32 46.6 25.8 40.4z"/>
+    <path d="M32 24.4 38.2 30.6 32 36.8 25.8 30.6z"/>
+  </g>
+</svg>

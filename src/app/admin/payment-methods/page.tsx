@@ -4,7 +4,6 @@ import { getAppContext } from "@/lib/context";
 import { drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
 import { VIETQR_BANKS } from "@/lib/payments/vietqr";
 import PaymentMethodManager from "@/components/admin/payment-method-manager";
-import CopyField from "@/components/ui/copy-field";
 import { panelBaseUrl, requirePanel } from "@/lib/tenancy";
 import { ensureWebhookToken } from "@/lib/panels";
 
@@ -22,28 +21,18 @@ export default async function AdminPaymentMethodsPage() {
   const panel = await requirePanel();
   const token = await ensureWebhookToken(panel.id);
   const origin = await panelBaseUrl();
-  const callbacks = methods
-    .map((m) => ({ method: m, path: drivers[m.driver]?.webhook }))
-    .filter((row): row is { method: (typeof methods)[number]; path: string } => Boolean(row.path))
-    .map((row) => ({ name: row.method.name, url: `${origin}/api/webhooks/${token}/${row.path}` }));
+  // One per method, handed to that method's own drawer rather than listed
+  // above the page: with two dozen gateways the list was longer than the thing
+  // it belonged to, and an operator configuring one gateway wants one URL.
+  const callbackFor = new Map(
+    methods
+      .map((m) => [m.id, drivers[m.driver]?.webhook] as const)
+      .filter((pair): pair is readonly [string, string] => Boolean(pair[1]))
+      .map(([id, path]) => [id, `${origin}/api/webhooks/${token}/${path}`]),
+  );
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
-      {callbacks.length > 0 && (
-        <div className="card card-pad space-y-3">
-          {callbacks.map((cb) => (
-            <CopyField
-              key={cb.url}
-              label={`${t("admin.webhookUrl")} · ${cb.name}`}
-              value={cb.url}
-              copyLabel={t("wallet.copy")}
-              copiedLabel={t("wallet.copied")}
-              mono
-            />
-          ))}
-        </div>
-      )}
-
       <PaymentMethodManager
         currencyCodes={ctx.currencies.map((c) => c.code)}
         rows={methods.map((m) => {
@@ -59,6 +48,9 @@ export default async function AdminPaymentMethodsPage() {
             name: m.name,
             driver: m.driver,
             icon: m.icon,
+            image: m.image,
+            callbackUrl: callbackFor.get(m.id) ?? "",
+            color: m.color,
             description: m.description,
             enabled: m.enabled,
             configured: isConfigured(m.driver, config),
@@ -83,6 +75,19 @@ export default async function AdminPaymentMethodsPage() {
         labels={{
           close: t("common.close"),
           title: t("admin.paymentMethods"),
+          search: t("common.search"),
+          noneFound: t("common.none"),
+          previous: t("common.previous"),
+          next: t("common.next"),
+          pageOf: t("common.pageOf"),
+          webhookUrl: t("admin.webhookUrl"),
+          copy: t("wallet.copy"),
+          copied: t("wallet.copied"),
+          logo: t("admin.logo"),
+          logoHint: t("admin.logoHint"),
+          color: t("admin.color"),
+          upload: t("admin.upload"),
+          remove: t("admin.remove"),
           configure: t("admin.configure"),
           configured: t("admin.configured"),
           unconfigured: t("wallet.unavailable"),
