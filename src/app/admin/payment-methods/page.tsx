@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { getAppContext } from "@/lib/context";
 import { drivers, isConfigured, parseConfig, parseCurrencies } from "@/lib/payments";
+import { missingCurrencies, offerableCurrencies } from "@/lib/payments/currencies";
 import { VIETQR_BANKS } from "@/lib/payments/vietqr";
 import PaymentMethodManager from "@/components/admin/payment-method-manager";
 import { panelBaseUrl, requirePanel } from "@/lib/tenancy";
@@ -14,6 +15,7 @@ export default async function AdminPaymentMethodsPage() {
   const { t } = ctx;
 
   const methods = await db.paymentMethod.findMany({ orderBy: { position: "asc" } });
+  const panelCurrencies = ctx.currencies.map((c) => c.code);
 
   // The callbacks a gateway should be pointed at. They carry the panel in the
   // path, because a gateway posts from its own servers with no hostname of
@@ -34,7 +36,6 @@ export default async function AdminPaymentMethodsPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-5">
       <PaymentMethodManager
-        currencyCodes={ctx.currencies.map((c) => c.code)}
         rows={methods.map((m) => {
           const config = parseConfig(m.config);
           const driver = drivers[m.driver];
@@ -50,6 +51,10 @@ export default async function AdminPaymentMethodsPage() {
             icon: m.icon,
             image: m.image,
             callbackUrl: callbackFor.get(m.id) ?? "",
+            // Only what this rail can take *and* the panel has created; and
+            // when that leaves nothing, what the operator would have to create.
+            offerable: offerableCurrencies(driver?.currencies, panelCurrencies),
+            missingCurrencies: missingCurrencies(driver?.currencies, panelCurrencies),
             color: m.color,
             description: m.description,
             enabled: m.enabled,
@@ -86,6 +91,7 @@ export default async function AdminPaymentMethodsPage() {
           testConnection: t("admin.testConnection"),
           testing: t("admin.testing"),
           testHint: t("admin.testHint"),
+          noCurrency: t("admin.noCurrency"),
           logo: t("admin.logo"),
           logoHint: t("admin.logoHint"),
           color: t("admin.color"),

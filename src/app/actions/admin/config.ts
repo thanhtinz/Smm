@@ -11,6 +11,8 @@ import { invalidateDictionaries } from "@/lib/i18n";
 import { drivers, parseConfig } from "@/lib/payments";
 import type { ActionResult } from "./catalogue";
 import { readerMessages } from "@/lib/context";
+import { getCurrencies } from "@/lib/currency";
+import { usableCurrencies } from "@/lib/payments/currencies";
 
 export type { ActionResult };
 
@@ -94,7 +96,8 @@ export async function testPaymentMethodAction(id: string): Promise<ProbeResult> 
   if (!method) return { ok: false, message: t("adm.methodMissing") };
 
   const { probeMethod } = await import("@/lib/payments/probe-online");
-  const verdict = await probeMethod(method.driver, method.config);
+  const panel = (await getCurrencies()).map((c) => c.code);
+  const verdict = await probeMethod(method.driver, method.config, panel);
 
   await logActivity(admin.id, "admin.method.test", `${method.code}: ${verdict.ok ? "ok" : verdict.key}`);
   return { ok: verdict.ok, message: t(verdict.key as "probe.ok", verdict.vars) };
@@ -122,20 +125,15 @@ export async function savePaymentMethodAction(_prev: ActionResult, form: FormDat
     }
   }
 
-  // Narrowed to what the gateway can actually take. A domestic rail that only
-  // moves dong should not be configurable to accept dollars — see `currencies`
-  // on the Driver type.
-  const allowed = driver?.currencies;
-  const chosen = form
-    .getAll("currencies")
-    .map(String)
-    .filter(Boolean)
-    .filter((code) => !allowed || allowed.includes(code));
-  // Unticking every box does not make a dong-only rail take dollars: an empty
-  // list reads as "any currency" everywhere else, so a restricted driver keeps
-  // its own list instead. Stored rather than only enforced on the way out, so
-  // the boxes an operator sees are the ones that apply.
-  const currencies = allowed && chosen.length === 0 ? [...allowed] : chosen;
+  // Three lists decide this and the panel's own is the outermost: a currency
+  // nobody created cannot be ticked, cannot be saved, and cannot come back
+  // through the fallback. See src/lib/payments/currencies.ts.
+  const panel = (await getCurrencies()).map((c) => c.code);
+  const currencies = usableCurrencies({
+    rail: driver?.currencies,
+    chosen: form.getAll("currencies").map(String).filter(Boolean),
+    panel,
+  });
 
   await db.paymentMethod.update({
     where: { id },

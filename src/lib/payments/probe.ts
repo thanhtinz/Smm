@@ -53,6 +53,17 @@ export function verdictFromStatus(status: number): Verdict {
   return { ok: false, key: "probe.rejected", vars: { status } };
 }
 
+/**
+ * A method whose rail takes only currencies this panel has never created.
+ *
+ * Nothing is wrong with the credentials; there is simply no currency a
+ * customer could pay in, so the method can never be chosen. Worth catching
+ * here because it looks exactly like a working method from every other angle.
+ */
+export function noCurrencyVerdict(missing: string[]): Verdict {
+  return { ok: false, key: "probe.noCurrency", vars: { codes: missing.join(", ") } };
+}
+
 /** A method that cannot be tested because it has not been filled in. */
 export function unconfiguredVerdict(missing: string[]): Verdict {
   return { ok: false, key: "probe.missing", vars: { fields: missing.join(", ") } };

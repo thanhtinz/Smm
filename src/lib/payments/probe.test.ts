@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/db", () => ({ db: {} }));
 
-const { isOffline, missingFields, probeOffline, unconfiguredVerdict, verdictFromStatus } = await import("./probe");
+const { isOffline, missingFields, noCurrencyVerdict, probeOffline, unconfiguredVerdict, verdictFromStatus } =
+  await import("./probe");
 const { seal, tlv } = await import("./emvco");
 
 /**
@@ -72,6 +73,18 @@ describe("unconfiguredVerdict", () => {
       ok: false,
       key: "probe.missing",
       vars: { fields: "keySecret, webhookSecret" },
+    });
+  });
+});
+
+describe("noCurrencyVerdict", () => {
+  // A method with no currency anyone can pay in looks healthy from every other
+  // angle: the keys are right, the gateway answers, and nobody can use it.
+  it("names the currency the operator would have to create", () => {
+    expect(noCurrencyVerdict(["SGD"])).toMatchObject({
+      ok: false,
+      key: "probe.noCurrency",
+      vars: { codes: "SGD" },
     });
   });
 });

@@ -25,6 +25,10 @@ export type MethodRow = {
   color: string;
   /** Where this gateway should be told to post, when it has a callback. */
   callbackUrl: string;
+  /** Currencies this rail can take that the panel has actually created. */
+  offerable: string[];
+  /** Currencies the rail could take that nobody has created yet. */
+  missingCurrencies: string[];
   description: string;
   enabled: boolean;
   configured: boolean;
@@ -42,11 +46,9 @@ export type MethodRow = {
 
 export default function PaymentMethodManager({
   rows,
-  currencyCodes,
   labels,
 }: {
   rows: MethodRow[];
-  currencyCodes: string[];
   labels: Record<string, string>;
 }) {
   const [editing, setEditing] = useState<MethodRow | null>(null);
@@ -165,7 +167,6 @@ export default function PaymentMethodManager({
           <MethodForm
             key={editing.id}
             row={editing}
-            currencyCodes={currencyCodes}
             labels={labels}
             onDone={() => setEditing(null)}
           />
@@ -177,12 +178,10 @@ export default function PaymentMethodManager({
 
 function MethodForm({
   row,
-  currencyCodes,
   labels,
   onDone,
 }: {
   row: MethodRow;
-  currencyCodes: string[];
   labels: Record<string, string>;
   onDone: () => void;
 }) {
@@ -271,23 +270,30 @@ function MethodForm({
 
       <div>
         <span className="label">{labels.currencies}</span>
-        <div className="flex flex-wrap gap-2">
-          {currencyCodes.map((code) => (
-            <label
-              key={code}
-              className="surface-2 flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm"
-            >
-              <input
-                type="checkbox"
-                name="currencies"
-                value={code}
-                defaultChecked={row.currencies.includes(code)}
-                className="h-4 w-4 accent-[var(--primary)]"
-              />
-              {code}
-            </label>
-          ))}
-        </div>
+        {row.offerable.length === 0 ? (
+          // Not an empty box: a sentence naming what to go and create.
+          <p className="muted text-sm">
+            {labels.noCurrency.replace("{codes}", row.missingCurrencies.join(", "))}
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {row.offerable.map((code) => (
+              <label
+                key={code}
+                className="surface-2 flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm"
+              >
+                <input
+                  type="checkbox"
+                  name="currencies"
+                  value={code}
+                  defaultChecked={row.currencies.includes(code)}
+                  className="h-4 w-4 accent-[var(--primary)]"
+                />
+                {code}
+              </label>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">

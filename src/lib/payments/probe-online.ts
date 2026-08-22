@@ -1,5 +1,15 @@
 import { parseConfig, type GatewayConfig } from "./index";
-import { isOffline, missingFields, probeOffline, unconfiguredVerdict, verdictFromStatus, type Verdict } from "./probe";
+import { drivers } from "./index";
+import { missingCurrencies, offerableCurrencies } from "./currencies";
+import {
+  isOffline,
+  missingFields,
+  noCurrencyVerdict,
+  probeOffline,
+  unconfiguredVerdict,
+  verdictFromStatus,
+  type Verdict,
+} from "./probe";
 
 /**
  * The calls behind "Test connection".
@@ -132,8 +142,15 @@ const PROBES: Record<string, (config: GatewayConfig) => Promise<Verdict>> = {
  * secrets do not leave the server, and the answer has to be about what a
  * customer would actually meet.
  */
-export async function probeMethod(driverKey: string, rawConfig: string): Promise<Verdict> {
+export async function probeMethod(driverKey: string, rawConfig: string, panelCurrencies: readonly string[] = []): Promise<Verdict> {
   const config = parseConfig(rawConfig);
+
+  // A rail whose every currency is missing can never be chosen by anyone, and
+  // it looks perfectly healthy from every other angle.
+  const rail = drivers[driverKey]?.currencies;
+  if (panelCurrencies.length > 0 && offerableCurrencies(rail, panelCurrencies).length === 0) {
+    return noCurrencyVerdict(missingCurrencies(rail, panelCurrencies));
+  }
 
   if (isOffline(driverKey)) return probeOffline(driverKey, config);
 

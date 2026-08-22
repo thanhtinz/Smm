@@ -522,6 +522,11 @@ async function main() {
   }
 
   // --- Payment methods ----------------------------------------------------
+  // No currency is written here. What a method may take is decided at read
+  // time from three lists — the rail's own capability, what the operator
+  // ticked, and the currencies the panel has actually created — and seeding a
+  // code the panel may never create is how PayNow ended up offering SGD to a
+  // panel that had no SGD. See src/lib/payments/currencies.ts.
   const methods = [
     {
       code: "seapay",
@@ -533,7 +538,6 @@ async function main() {
         ? "Chuyển khoản ngân hàng nội địa, tự động cộng tiền qua webhook SePay."
         : "Vietnamese domestic bank transfer, credited automatically by the SePay webhook.",
       enabled: true,
-      currencies: JSON.stringify(["VND"]),
       minAmount: 20000,
       maxAmount: 500000000,
       position: 0,
@@ -555,7 +559,6 @@ async function main() {
       icon: "paypal",
       description: inVietnamese ? "Trả bằng số dư PayPal hoặc thẻ quốc tế." : "Pay with a PayPal balance or any major card.",
       enabled: true,
-      currencies: JSON.stringify(["USD", "EUR"]),
       minAmount: 5,
       maxAmount: 10000,
       feePercent: 4.4,
@@ -571,7 +574,6 @@ async function main() {
       icon: "link",
       description: inVietnamese ? "Thanh toán một chạm bằng Link, thẻ và ví điện tử." : "One-click checkout with Link, cards and wallets.",
       enabled: true,
-      currencies: JSON.stringify(["USD", "EUR"]),
       minAmount: 5,
       maxAmount: 10000,
       feePercent: 2.9,
@@ -590,7 +592,6 @@ async function main() {
         ? "Trả bằng USDT, BTC hoặc coin khác; cộng tiền khi mạng xác nhận."
         : "Pay in USDT, BTC or another coin; credited once the network confirms.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 5,
       maxAmount: 50000,
       feePercent: 1,
@@ -608,7 +609,6 @@ async function main() {
         ? "Trả bằng USDT, BTC hoặc coin khác qua Cryptomus."
         : "Pay in USDT, BTC or another coin through Cryptomus.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 5,
       maxAmount: 50000,
       position: 20,
@@ -625,7 +625,6 @@ async function main() {
         ? "Trả thẳng từ số dư Binance, không mất phí mạng."
         : "Pay straight from a Binance balance, with no network fee.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 1,
       maxAmount: 50000,
       position: 21,
@@ -639,7 +638,6 @@ async function main() {
       icon: "wallet",
       description: inVietnamese ? "Ví Payeer." : "The Payeer wallet.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 1,
       maxAmount: 10000,
       position: 22,
@@ -653,7 +651,6 @@ async function main() {
       icon: "wallet",
       description: inVietnamese ? "Ví Perfect Money." : "The Perfect Money wallet.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 1,
       maxAmount: 10000,
       position: 23,
@@ -667,7 +664,6 @@ async function main() {
       icon: "bitcoin",
       description: inVietnamese ? "Trả bằng crypto qua Coinbase Commerce." : "Pay in crypto through Coinbase Commerce.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 5,
       maxAmount: 50000,
       position: 28,
@@ -681,7 +677,6 @@ async function main() {
       icon: "bitcoin",
       description: inVietnamese ? "Trả bằng crypto qua CoinPayments." : "Pay in crypto through CoinPayments.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 5,
       maxAmount: 50000,
       position: 29,
@@ -696,7 +691,6 @@ async function main() {
       icon: "bitcoin",
       description: inVietnamese ? "Trả bằng crypto qua OxaPay." : "Pay in crypto through OxaPay.",
       enabled: false,
-      currencies: JSON.stringify(["USD"]),
       minAmount: 1,
       maxAmount: 50000,
       position: 30,
@@ -712,7 +706,6 @@ async function main() {
         ? "Thẻ, UPI và ví Ấn Độ qua Razorpay."
         : "Cards, UPI and Indian wallets through Razorpay.",
       enabled: false,
-      currencies: JSON.stringify(["INR"]),
       minAmount: 50,
       maxAmount: 500000,
       position: 31,
@@ -729,7 +722,6 @@ async function main() {
         ? "Thẻ, chuyển khoản và ví Indonesia qua Midtrans."
         : "Cards, bank transfer and Indonesian wallets through Midtrans.",
       enabled: false,
-      currencies: JSON.stringify(["IDR"]),
       minAmount: 10000,
       maxAmount: 20000000,
       position: 32,
@@ -745,7 +737,6 @@ async function main() {
         ? "Ví và ngân hàng Indonesia, Philippines qua Xendit."
         : "Indonesian and Philippine wallets and banks through Xendit.",
       enabled: false,
-      currencies: JSON.stringify(["IDR", "PHP"]),
       minAmount: 10000,
       maxAmount: 20000000,
       position: 33,
@@ -761,7 +752,6 @@ async function main() {
         ? "Quét mã VietQR, tự động cộng tiền qua PayOS."
         : "Scan a VietQR code; credited automatically through PayOS.",
       enabled: false,
-      currencies: JSON.stringify(["VND"]),
       minAmount: 20000,
       maxAmount: 500000000,
       position: 34,
@@ -777,7 +767,6 @@ async function main() {
         ? "DuitNow, QRPh, KHQR hay mã EMVCo bất kỳ: dán mã tĩnh của bạn, panel chèn số tiền."
         : "DuitNow, QRPh, KHQR or any EMVCo code: paste your static code and the panel puts the amount in.",
       enabled: false,
-      currencies: JSON.stringify([]),
       minAmount: 0,
       position: 35,
       config: JSON.stringify({ staticPayload: "", country: "", payeeName: "" }),
@@ -795,7 +784,6 @@ async function main() {
         ? "Quét mã bằng app ngân hàng Thái Lan."
         : "Scan with any Thai banking app.",
       enabled: false,
-      currencies: JSON.stringify(["THB"]),
       minAmount: 50,
       maxAmount: 500000,
       position: 24,
@@ -811,7 +799,6 @@ async function main() {
         ? "Quét mã bằng app ngân hàng Singapore."
         : "Scan with any Singapore banking app.",
       enabled: false,
-      currencies: JSON.stringify(["SGD"]),
       minAmount: 2,
       maxAmount: 20000,
       position: 25,
@@ -827,7 +814,6 @@ async function main() {
         ? "Quét mã bằng app ngân hàng hoặc ví Indonesia."
         : "Scan with any Indonesian bank or wallet app.",
       enabled: false,
-      currencies: JSON.stringify(["IDR"]),
       minAmount: 10000,
       maxAmount: 20000000,
       position: 26,
@@ -843,7 +829,6 @@ async function main() {
         ? "Quét mã hoặc mở app UPI."
         : "Scan the code, or open it in any UPI app.",
       enabled: false,
-      currencies: JSON.stringify(["INR"]),
       minAmount: 50,
       maxAmount: 100000,
       position: 27,
@@ -860,7 +845,6 @@ async function main() {
       icon: "wallet",
       description: "Pay from the MoMo wallet.",
       enabled: false,
-      currencies: JSON.stringify(["VND"]),
       minAmount: 10000,
       maxAmount: 50000000,
       position: 1,
@@ -874,7 +858,6 @@ async function main() {
       icon: "wallet",
       description: "Pay from the ZaloPay wallet.",
       enabled: false,
-      currencies: JSON.stringify(["VND"]),
       minAmount: 10000,
       maxAmount: 50000000,
       position: 2,
@@ -888,7 +871,6 @@ async function main() {
       icon: "wallet",
       description: inVietnamese ? "Thanh toán qua ví ViettelPay." : "Pay from the ViettelPay wallet.",
       enabled: false,
-      currencies: JSON.stringify(["VND"]),
       minAmount: 10000,
       maxAmount: 50000000,
       position: 3,
@@ -904,7 +886,6 @@ async function main() {
         ? "Chuyển khoản rồi nhân viên cộng tiền vào số dư cho bạn."
         : "Transfer manually and an operator credits your balance.",
       enabled: false,
-      currencies: JSON.stringify(["VND", "USD"]),
       minAmount: 50000,
       position: 5,
       config: JSON.stringify({ instructions: "", accountNumber: "", accountName: "", bankName: "" }),

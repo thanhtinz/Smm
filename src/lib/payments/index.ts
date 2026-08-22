@@ -1,4 +1,6 @@
 import { db } from "@/lib/db";
+import { getCurrencies } from "@/lib/currency";
+import { usableCurrencies } from "./currencies";
 
 export type GatewayConfig = Record<string, string>;
 
@@ -999,11 +1001,17 @@ export function parseCurrencies(raw: string): string[] {
  * choice falls back to what it can take rather than to everything, and a
  * stored list from before that restriction existed is narrowed on the way out.
  */
-export function methodCurrencies(driverKey: string, stored: string): string[] {
-  const chosen = parseCurrencies(stored);
-  const allowed = drivers[driverKey]?.currencies;
-  if (!allowed) return chosen;
-  return chosen.length === 0 ? [...allowed] : chosen.filter((code) => allowed.includes(code));
+/**
+ * What a method may offer, once the panel's own currencies are taken into
+ * account.
+ *
+ * `panel` is the list of codes created on the currencies page. Without it a
+ * method could offer a currency nothing in the panel can price — which is
+ * exactly what happened: PayNow shipped with SGD and no panel has SGD unless
+ * somebody created it.
+ */
+export function methodCurrencies(driverKey: string, stored: string, panel: readonly string[]): string[] {
+  return usableCurrencies({ rail: drivers[driverKey]?.currencies, chosen: parseCurrencies(stored), panel });
 }
 
 /**
@@ -1045,7 +1053,12 @@ export function isConfigured(driverKey: string, config: GatewayConfig): boolean 
 }
 
 export async function getAvailableMethods() {
-  const rows = await db.paymentMethod.findMany({ where: { enabled: true }, orderBy: { position: "asc" } });
+  const [rows, currencies] = await Promise.all([
+    db.paymentMethod.findMany({ where: { enabled: true }, orderBy: { position: "asc" } }),
+    getCurrencies(),
+  ]);
+  const panel = currencies.map((c) => c.code);
+
   return rows.map((row) => {
     const config = parseConfig(row.config);
     return {
@@ -1057,7 +1070,7 @@ export async function getAvailableMethods() {
       image: row.image,
       color: row.color,
       description: row.description,
-      currencies: methodCurrencies(row.driver, row.currencies),
+      currencies: methodCurrencies(row.driver, row.currencies, panel),
       minAmount: row.minAmount,
       maxAmount: row.maxAmount,
       feePercent: row.feePercent,
